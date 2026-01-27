@@ -1,0 +1,1 @@
+window.FUN_CONTENT = ["Why did the cat nap? Too much meow-ving."];

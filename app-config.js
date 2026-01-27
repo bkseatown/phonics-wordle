@@ -1,7 +1,4 @@
 window.APP_CONFIG = {
-  DEFAULTS: {
-    focus: "mixed",
-    wordLength: 5,
-    guesses: 6
-  }
+  letters: [3,4,5],
+  guesses: [4,5,6]
 };
