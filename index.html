@@ -1,37 +1,48 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Phonics Wordle</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
-  <h1>Phonics Wordle</h1>
+  <header>
+    <h1>Phonics Wordle</h1>
+    <div class="controls">
+      <button id="btnHelp">How to Play</button>
+      <button id="btnWord">Word</button>
+      <button id="btnSentence">Sentence</button>
+      <button id="btnVoice">Voice</button>
+      <label>Focus
+        <select id="focusSelect"></select>
+      </label>
+      <label>Letters
+        <select id="lengthSelect"></select>
+      </label>
+      <label>Guesses
+        <select id="guessSelect"></select>
+      </label>
+      <label>Teacher word (hidden)
+        <input id="teacherInput" placeholder="Enter 2–10 letters"/>
+      </label>
+      <button id="btnSetWord">Set Word</button>
+      <button id="btnNext">Next Word →</button>
+    </div>
+  </header>
 
-  <div id="controls">
-    <button id="tab-how">How to Play</button>
-    <button id="tab-word">Word</button>
-    <button id="tab-sentence">Sentence</button>
+  <main>
+    <div id="board"></div>
+    <div id="keyboard"></div>
+  </main>
 
-    <label>Focus <select id="focusSelect"></select></label>
-    <label>Letters <select id="lettersSelect"></select></label>
-    <label>Guesses <select id="guessesSelect"></select></label>
+  <div id="modal" class="hidden">
+    <div id="modalContent"></div>
+    <button id="modalClose">Close</button>
   </div>
 
-  <div id="panel-how" class="panel">Guess the word using phonics patterns.</div>
-  <div id="panel-word" class="panel hidden"></div>
-  <div id="panel-sentence" class="panel hidden"></div>
-
-  <div id="board"></div>
-  <div id="keyboard"></div>
-
   <script src="app-config.js"></script>
-  <script src="words-core-cvc.js"></script>
-  <script src="words-core-blends.js"></script>
-  <script src="words-core-heart.js"></script>
-  <script src="words-fun-content.js"></script>
-  <script src="words-loader.js"></script>
+  <script src="words.js"></script>
   <script src="app-core.js"></script>
 </body>
 </html>

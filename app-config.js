@@ -1,4 +1,6 @@
-window.APP_CONFIG = {
-  letters: [3,4,5],
-  guesses: [4,5,6]
-};
+(() => {
+  window.APP_CONFIG = {
+    DEFAULTS: { focus: "none", wordLength: 5, guesses: 6 },
+    FEATURES: { enableVoice: false }
+  };
+})();
