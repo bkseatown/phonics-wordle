@@ -211,7 +211,7 @@ window.WORD_ENTRIES = {
     "sofa": { syllables: "so-fa", tags: ["schwa"], def: "Couch.", sentence: "Sit on the sofa." },
     "banana": { syllables: "ba-nan-a", tags: ["schwa", "multisyllable"], def: "Yellow fruit.", sentence: "Peel the banana." },
     "zebra": { syllables: "ze-bra", tags: ["schwa"], def: "Striped animal.", sentence: "The zebra runs." },
-    "about": { syllables: "a-bout", tags: ["schwa", "vowel-team"], def: "Regarding.", sentence: "Tell me about it." },
+    "about": { syllables: "a-bout", tags: ["schwa", "vowel-team"], def: "Talking about something.", sentence: "Tell me about it." },
     "lemon": { syllables: "lem-on", tags: ["schwa"], def: "Sour fruit.", sentence: "Yellow lemon." },
     "panda": { syllables: "pan-da", tags: ["schwa"], def: "Black and white bear.", sentence: "Panda eats bamboo." },
     "camel": { syllables: "cam-el", tags: ["schwa"], def: "Humped animal.", sentence: "Camels live in sand." },

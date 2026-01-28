@@ -1,443 +1,337 @@
 /* =========================================
-   PHONICS WORDLE - FINAL GOLD MASTER
+   DECODE THE WORD - LOGIC (FINAL POLISH)
    ========================================= */
 
-const CONFIG = {
-    voice: false,    
-    confetti: true,
-    filter: 'all',
-    length: 'any',
-    largeText: false
-};
+const MAX_GUESSES = 6;
+let CURRENT_WORD_LENGTH = 5; 
+let currentWord = "";
+let currentEntry = null;
+let guesses = [];
+let currentGuess = "";
+let gameOver = false;
+let isFirstLoad = true; // Flag for forcing 5x6 grid on start
 
-const JOKES_AND_FACTS = [
-    { type: "Joke", text: "Why did the cookie go to the hospital? Because he felt crummy!" },
-    { type: "Fact", text: "Did you know? Octopuses have three hearts!" },
-    { type: "Joke", text: "What do you call a sleeping dinosaur? A dino-snore!" },
-    { type: "Fact", text: "Honey is the only food that never spoils." },
-    { type: "Joke", text: "Why was the math book sad? It had too many problems." },
-    { type: "Fact", text: "A group of flamingos is called a 'flamboyance'." },
-    { type: "Joke", text: "What falls in winter but never gets hurt? Snow!" },
-    { type: "Fact", text: "Sloths can hold their breath longer than dolphins." },
-    { type: "Joke", text: "What has hands but cannot clap? A clock!" },
-    { type: "Fact", text: "Butterflies taste with their feet." }
-];
-
-let state = {
-    target: "",
-    syllables: "",
-    grid: [],
-    row: 0,
-    guess: "",
-    over: false,
-    pool: [],
-    customGame: false 
-};
-
+// DOM Elements
 const board = document.getElementById("game-board");
-const toast = document.getElementById("toast");
+const keyboard = document.getElementById("keyboard");
+const modal = document.getElementById("modal");
+const teacherModal = document.getElementById("teacher-modal");
+const welcomeModal = document.getElementById("welcome-modal");
 
-// ---------------------------------------------------------
-// INITIALIZATION
-// ---------------------------------------------------------
+document.addEventListener("DOMContentLoaded", () => {
+    initControls();
+    initKeyboard();
+    startNewGame();
+    checkFirstTimeVisitor(); 
+});
 
-function init() {
-    // 1. Check First Time Visitor
-    if (!localStorage.getItem('hasVisited')) {
-        const welcomeModal = document.getElementById('welcome-modal-overlay');
-        if (welcomeModal) welcomeModal.classList.remove('hidden');
-        localStorage.setItem('hasVisited', 'true');
-    }
-
-    if (!loadPool()) return;
-
-    // Pick random word
-    const rawWord = state.pool[Math.floor(Math.random() * state.pool.length)];
-    const data = window.WORD_ENTRIES && window.WORD_ENTRIES[rawWord] ? window.WORD_ENTRIES[rawWord] : {};
+function initControls() {
+    document.getElementById("new-word-btn").addEventListener("click", () => startNewGame());
     
-    state.target = rawWord;
-    state.syllables = data.syllables || rawWord; 
-    state.customGame = false; 
+    // Play Again / Reset
+    document.getElementById("play-again-btn").addEventListener("click", () => {
+        closeModal();
+        startNewGame();
+    });
     
-    resetGame();
+    // Welcome Modal Button
+    document.getElementById("start-playing-btn").addEventListener("click", () => {
+        welcomeModal.classList.add("hidden");
+    });
+
+    // Dropdowns
+    document.getElementById("length-select").addEventListener("change", (e) => {
+        const val = e.target.value;
+        CURRENT_WORD_LENGTH = val === 'any' ? 5 : parseInt(val);
+        startNewGame();
+    });
+    document.getElementById("pattern-select").addEventListener("change", () => startNewGame());
+
+    // Teacher Mode
+    document.getElementById("teacher-btn").addEventListener("click", () => {
+        teacherModal.classList.remove("hidden");
+        document.getElementById("custom-word-input").focus();
+    });
+    document.getElementById("set-word-btn").addEventListener("click", handleTeacherSubmit);
+    
+    // Close Btns
+    document.querySelector(".close-btn").addEventListener("click", closeModal);
+    document.querySelector(".close-teacher").addEventListener("click", () => teacherModal.classList.add("hidden"));
+    
+    // Audio
+    document.getElementById("speak-btn").addEventListener("click", speakWord);
 }
 
-function loadPool() {
-    if (!window.WORD_ENTRIES) {
-        console.error("Dictionary (words.js) not loaded.");
-        return false;
-    }
-    const keys = Object.keys(window.WORD_ENTRIES);
-    let filtered = keys;
+// --- GAME LOOP ---
 
-    // Apply Filter
-    if (CONFIG.filter !== 'all') {
-        filtered = keys.filter(k => {
-            const d = window.WORD_ENTRIES[k];
-            const allTags = (d.tags || []).concat(d.focus || []);
-            return allTags.some(t => t.includes(CONFIG.filter));
-        });
-    }
-
-    // Apply Length
-    if (CONFIG.length !== 'any') {
-        const targetLen = parseInt(CONFIG.length);
-        filtered = filtered.filter(k => k.length === targetLen);
-    }
-
-    state.pool = filtered;
-
-    // Fallback: If filter returns 0 words, reset to 'all'
-    if (state.pool.length === 0) {
-        showToast(`No words found. Resetting filter.`);
-        document.getElementById('length-select').value = 'any';
-        CONFIG.length = 'any';
-        state.pool = keys; 
-    }
-    return true;
-}
-
-function resetGame() {
-    state.row = 0;
-    state.guess = "";
-    state.over = false;
-    
+function startNewGame(customWord = null) {
+    gameOver = false;
+    guesses = [];
+    currentGuess = "";
     board.innerHTML = "";
-    document.getElementById("keyboard").innerHTML = "";
-    
-    createGrid();
-    createKeyboard();
-    
-    // Ensure game-state modals are closed
-    document.getElementById("modal-overlay").classList.add("hidden");
-    document.getElementById("teacher-menu").classList.add("hidden");
-}
+    clearKeyboardColors();
+    closeModal();
 
-// ---------------------------------------------------------
-// BOARD & KEYBOARD
-// ---------------------------------------------------------
-
-function createGrid() {
-    const len = state.target.length;
-    board.style.gridTemplateColumns = `repeat(${len}, 60px)`;
-    state.grid = [];
-
-    for (let r = 0; r < 6; r++) {
-        for (let c = 0; c < len; c++) {
-            const tile = document.createElement("div");
-            tile.className = "tile";
-            tile.id = `r${r}-c${c}`;
-            board.appendChild(tile);
-            state.grid.push(tile);
+    if (customWord) {
+        // Teacher Mode Path
+        currentWord = customWord.toLowerCase();
+        CURRENT_WORD_LENGTH = currentWord.length;
+        currentEntry = window.WORD_ENTRIES[currentWord] || {
+            def: "Teacher provided word.",
+            sentence: "You can do it!",
+            syllables: currentWord
+        };
+    } else {
+        // Standard Path
+        const wordData = getWordFromDictionary();
+        if (!wordData) {
+            alert("No words found for these settings. Try 'Mixed Review' or 'Any Length'.");
+            return;
+        }
+        currentWord = wordData.word;
+        currentEntry = wordData.entry;
+        
+        // If "Any Length" is selected, update internal length to match word
+        if (document.getElementById("length-select").value === 'any') {
+            CURRENT_WORD_LENGTH = currentWord.length;
         }
     }
+    
+    // Reset First Load Flag
+    isFirstLoad = false;
+
+    // Set Grid
+    board.style.gridTemplateColumns = `repeat(${CURRENT_WORD_LENGTH}, 1fr)`;
+    for (let i = 0; i < MAX_GUESSES * CURRENT_WORD_LENGTH; i++) {
+        const tile = document.createElement("div");
+        tile.classList.add("tile");
+        tile.id = `tile-${i}`;
+        board.appendChild(tile);
+    }
+    
+    console.log(`Target: ${currentWord}`);
 }
 
-function createKeyboard() {
-    const keys = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
-    const vowels = ['a', 'e', 'i', 'o', 'u', 'y'];
-    const kbd = document.getElementById("keyboard");
+function getWordFromDictionary() {
+    const pattern = document.getElementById("pattern-select").value;
+    const lenVal = document.getElementById("length-select").value;
     
-    keys.forEach(rowStr => {
-        const rowDiv = document.createElement("div");
-        rowDiv.className = "key-row";
-        rowStr.split("").forEach(char => {
-            const btn = document.createElement("button");
-            btn.className = "key";
-            if (vowels.includes(char)) btn.classList.add("vowel-key");
-            btn.textContent = char;
-            btn.id = "key-" + char;
-            btn.onclick = () => handleInput(char);
-            rowDiv.appendChild(btn);
-        });
-        
-        if (rowStr.startsWith("z")) {
-            const enter = document.createElement("button");
-            enter.className = "key action";
-            enter.textContent = "ENTER";
-            enter.onclick = submitGuess;
-            rowDiv.appendChild(enter);
+    // FORCE 5 LETTERS ON FIRST LOAD
+    // This ensures the app always looks like Wordle (5x6) when it first opens
+    // even if "Any Length" is the default setting.
+    let targetLength = null;
+    if (lenVal !== 'any') {
+        targetLength = parseInt(lenVal);
+    } else if (isFirstLoad) {
+        targetLength = 5;
+    }
 
-            const del = document.createElement("button");
-            del.className = "key action";
-            del.textContent = "⌫";
-            del.onclick = () => handleInput("Backspace");
-            rowDiv.prepend(del);
+    const candidates = Object.keys(window.WORD_ENTRIES).filter(word => {
+        const entry = window.WORD_ENTRIES[word];
+        
+        const lengthMatch = (targetLength === null) || (word.length === targetLength);
+        const patternMatch = (pattern === 'all') || (entry.tags && entry.tags.includes(pattern));
+        
+        return lengthMatch && patternMatch;
+    });
+
+    if (candidates.length === 0) return null;
+    const randomWord = candidates[Math.floor(Math.random() * candidates.length)];
+    return { word: randomWord, entry: window.WORD_ENTRIES[randomWord] };
+}
+
+// --- INPUT & GRID ---
+
+function initKeyboard() {
+    const rows = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
+    keyboard.innerHTML = "";
+    rows.forEach(rowStr => {
+        const rowDiv = document.createElement("div");
+        rowDiv.classList.add("keyboard-row");
+        rowStr.split("").forEach(char => {
+            const key = document.createElement("button");
+            key.textContent = char;
+            key.classList.add("key");
+            key.dataset.key = char;
+            key.addEventListener("click", () => handleInput(char));
+            rowDiv.appendChild(key);
+        });
+        if (rowStr === "zxcvbnm") {
+            const enter = createSpecialKey("ENTER", submitGuess);
+            const back = createSpecialKey("⌫", deleteLetter);
+            rowDiv.insertBefore(enter, rowDiv.firstChild);
+            rowDiv.appendChild(back);
         }
-        kbd.appendChild(rowDiv);
+        keyboard.appendChild(rowDiv);
+    });
+
+    document.addEventListener("keydown", (e) => {
+        if (gameOver) return;
+        const key = e.key.toLowerCase();
+        if (key === "enter") submitGuess();
+        else if (key === "backspace") deleteLetter();
+        else if (/^[a-z]$/.test(key)) handleInput(key);
     });
 }
 
-// ---------------------------------------------------------
-// GAME LOGIC
-// ---------------------------------------------------------
+function createSpecialKey(text, action) {
+    const btn = document.createElement("button");
+    btn.textContent = text;
+    btn.classList.add("key", "wide");
+    btn.addEventListener("click", action);
+    return btn;
+}
 
-function handleInput(key) {
-    if (state.over) return;
-    const len = state.target.length;
-    
-    if (key === "Backspace") {
-        state.guess = state.guess.slice(0, -1);
-    } else if (state.guess.length < len && /^[a-z]$/.test(key)) {
-        state.guess += key;
+function handleInput(char) {
+    if (currentGuess.length < CURRENT_WORD_LENGTH) {
+        currentGuess += char;
+        updateGrid();
     }
-    updateGrid();
+}
+
+function deleteLetter() {
+    if (currentGuess.length > 0) {
+        currentGuess = currentGuess.slice(0, -1);
+        updateGrid();
+    }
 }
 
 function updateGrid() {
-    const len = state.target.length;
-    for (let c = 0; c < len; c++) {
-        const tile = document.getElementById(`r${state.row}-c${c}`);
-        if (tile) {
-            tile.textContent = state.guess[c] || "";
-            tile.setAttribute("data-state", state.guess[c] ? "active" : "");
-        }
+    const rowOffset = guesses.length * CURRENT_WORD_LENGTH;
+    for (let i = 0; i < CURRENT_WORD_LENGTH; i++) {
+        const tile = document.getElementById(`tile-${rowOffset + i}`);
+        tile.textContent = "";
+        tile.classList.remove("pop");
+        tile.style.borderColor = "#d3d6da";
+    }
+    for (let i = 0; i < currentGuess.length; i++) {
+        const tile = document.getElementById(`tile-${rowOffset + i}`);
+        tile.textContent = currentGuess[i];
+        tile.classList.add("pop");
+        if (i === currentGuess.length - 1) tile.style.borderColor = "#888"; 
     }
 }
+
+// --- SCORING ---
 
 function submitGuess() {
-    if (state.over) return;
-    const guess = state.guess;
-    const target = state.target;
-    
-    // 1. Length Check
-    if (guess.length !== target.length) {
-        shakeRow();
+    if (currentGuess.length !== CURRENT_WORD_LENGTH) {
+        // Shake animation
+        const rowOffset = guesses.length * CURRENT_WORD_LENGTH;
+        const firstTile = document.getElementById(`tile-${rowOffset}`);
+        firstTile.style.transform = "translateX(5px)";
+        setTimeout(() => firstTile.style.transform = "none", 100);
         return;
     }
 
-    // 2. Dictionary Check REMOVED per request.
-    // Any word combination is allowed to test phonics sounds.
-    
-    const result = new Array(target.length).fill("gray");
-    const targetChars = target.split("");
-    const guessChars = guess.split("");
+    const result = checkWord(currentGuess);
+    revealRow(result);
+    guesses.push(currentGuess);
 
-    // Pass 1: Green
-    guessChars.forEach((char, i) => {
-        if (char === targetChars[i]) {
-            result[i] = "green";
-            targetChars[i] = null;
-            guessChars[i] = null;
+    if (currentGuess === currentWord) {
+        gameOver = true;
+        setTimeout(() => showModal(true), 1500);
+    } else if (guesses.length >= MAX_GUESSES) {
+        gameOver = true;
+        setTimeout(() => showModal(false), 1500);
+    } else {
+        currentGuess = "";
+    }
+}
+
+function checkWord(guess) {
+    const result = Array(CURRENT_WORD_LENGTH).fill("absent");
+    const targetArr = currentWord.split("");
+    const guessArr = guess.split("");
+
+    // Green Pass
+    for (let i = 0; i < CURRENT_WORD_LENGTH; i++) {
+        if (guessArr[i] === targetArr[i]) {
+            result[i] = "correct";
+            targetArr[i] = null;
+            guessArr[i] = null;
         }
-    });
-
-    // Pass 2: Yellow
-    guessChars.forEach((char, i) => {
-        if (char && targetChars.includes(char)) {
-            result[i] = "yellow";
-            targetChars[targetChars.indexOf(char)] = null; 
+    }
+    // Yellow Pass
+    for (let i = 0; i < CURRENT_WORD_LENGTH; i++) {
+        if (guessArr[i] && targetArr.includes(guessArr[i])) {
+            result[i] = "present";
+            targetArr[targetArr.indexOf(guessArr[i])] = null;
         }
-    });
+    }
+    return result;
+}
 
-    // Render & Animate
-    result.forEach((color, i) => {
-        const tile = document.getElementById(`r${state.row}-c${i}`);
+function revealRow(result) {
+    const rowOffset = guesses.length * CURRENT_WORD_LENGTH;
+    result.forEach((status, i) => {
         setTimeout(() => {
-            tile.classList.add("flip");
-            tile.classList.add(color);
+            const tile = document.getElementById(`tile-${rowOffset + i}`);
+            tile.classList.add(status);
             
-            const keyBtn = document.getElementById("key-" + guess[i]);
-            if (keyBtn) {
-                const isGreen = keyBtn.classList.contains("green");
-                const isYellow = keyBtn.classList.contains("yellow");
-                if (color === "green") {
-                    keyBtn.classList.remove("yellow", "gray"); keyBtn.classList.add("green");
-                } else if (color === "yellow" && !isGreen) {
-                    keyBtn.classList.remove("gray"); keyBtn.classList.add("yellow");
-                } else if (color === "gray" && !isGreen && !isYellow) {
-                    keyBtn.classList.add("gray");
+            // Keyboard Update
+            const key = document.querySelector(`.key[data-key="${currentGuess[i]}"]`);
+            if (key) {
+                const old = key.classList.contains("correct") ? 2 : key.classList.contains("present") ? 1 : 0;
+                const joy = status === "correct" ? 2 : status === "present" ? 1 : 0;
+                if (joy > old) {
+                    key.classList.remove("present", "absent");
+                    key.classList.add(status);
+                } else if (joy === 0 && old === 0) {
+                    key.classList.add("absent");
                 }
             }
-        }, i * 150); 
+        }, i * 200);
     });
-
-    // End Game Check
-    setTimeout(() => {
-        if (guess === target) {
-            state.over = true;
-            if (CONFIG.confetti && typeof confetti === 'function') {
-                confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
-            }
-            showModal(true);
-        } else if (state.row >= 5) {
-            state.over = true;
-            showModal(false);
-        } else {
-            state.row++;
-            state.guess = "";
-        }
-    }, target.length * 150 + 300);
 }
 
-function shakeRow() {
-    board.classList.add("shake");
-    setTimeout(() => board.classList.remove("shake"), 500);
+// --- UTILS ---
+
+function handleTeacherSubmit() {
+    const input = document.getElementById("custom-word-input");
+    const errorMsg = document.getElementById("teacher-error");
+    const word = input.value.trim().toLowerCase();
+
+    // UPDATED VALIDATION: Up to 10 letters
+    if (!word || word.length < 3 || word.length > 10 || !/^[a-z]+$/.test(word)) {
+        errorMsg.textContent = "Please enter a valid word (3-10 letters).";
+        return;
+    }
+    teacherModal.classList.add("hidden");
+    input.value = "";
+    errorMsg.textContent = "";
+    startNewGame(word);
 }
 
-function showToast(msg) {
-    toast.textContent = msg;
-    toast.classList.add("show");
-    setTimeout(() => toast.classList.remove("show"), 2000);
+function checkFirstTimeVisitor() {
+    // Show Welcome Modal if no localStorage key found
+    if (!localStorage.getItem("visited_decode_v2")) {
+        welcomeModal.classList.remove("hidden");
+        localStorage.setItem("visited_decode_v2", "true");
+    }
 }
-
-// ---------------------------------------------------------
-// MODALS
-// ---------------------------------------------------------
 
 function showModal(win) {
-    const data = (window.WORD_ENTRIES && window.WORD_ENTRIES[state.target]) 
-        ? window.WORD_ENTRIES[state.target] 
-        : { def: "Teacher Word", sentence: "Great job decoding!", tags: [] };
+    modal.classList.remove("hidden");
+    document.getElementById("modal-title").textContent = win ? "Great Job!" : "Nice Try!";
+    document.getElementById("modal-word").textContent = currentWord;
     
-    document.getElementById("modal-title").textContent = win ? "🎉 Fantastic!" : "Good Try!";
-    document.getElementById("reveal-word").textContent = state.syllables || state.target;
-    document.getElementById("reveal-def").textContent = data.def;
-    document.getElementById("reveal-sentence").textContent = data.sentence;
-    
-    // Tips
-    const tipBox = document.getElementById("reveal-tip");
-    let tipText = "";
-    const tags = data.tags || [];
+    const syllables = currentEntry.syllables || currentWord;
+    document.getElementById("modal-syllables").textContent = syllables.split("-").join(" • ");
 
-    if (tags.includes("magic-e")) tipText = "💡 Rule: Silent 'e' makes the vowel say its name.";
-    else if (tags.includes("digraph")) tipText = "💡 Rule: Two letters make ONE sound.";
-    else if (tags.includes("doubling")) tipText = "💡 Rule: 1-1-1 Rule! Double the last letter.";
-    
-    tipBox.textContent = tipText;
-    tipBox.style.display = tipText ? "block" : "none";
-
-    // Fun Content
-    const funBox = document.getElementById("fun-content-box");
-    if (win) {
-        const funItem = JOKES_AND_FACTS[Math.floor(Math.random() * JOKES_AND_FACTS.length)];
-        document.getElementById("fun-label").textContent = funItem.type === 'Joke' ? '😂 Joke:' : '🧠 Fact:';
-        document.getElementById("fun-text").textContent = funItem.text;
-        funBox.classList.remove("hidden");
-    } else {
-        funBox.classList.add("hidden");
-    }
-
-    document.getElementById("modal-overlay").classList.remove("hidden");
-    if (win && CONFIG.voice) speak(state.target);
+    document.getElementById("modal-def").textContent = currentEntry.def;
+    document.getElementById("modal-sentence").textContent = `"${currentEntry.sentence}"`;
 }
 
-function speak(text) {
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => v.name.includes("Google US English")) || voices[0];
-    if (preferred) u.voice = preferred;
-    u.rate = 0.9;
-    window.speechSynthesis.speak(u);
+function closeModal() {
+    modal.classList.add("hidden");
 }
 
-// ---------------------------------------------------------
-// TEACHER TOOLS
-// ---------------------------------------------------------
-
-function initTeacherMode() {
-    const inputField = document.getElementById("teacher-input");
-    const input = inputField.value.trim().toLowerCase();
-    
-    if (!input) {
-        showToast("Please type a word");
-        return;
-    }
-
-    const cleanWord = input.replace(/[^a-z]/g, "");
-    
-    // FIXED: Allowed up to 10 characters
-    if (cleanWord.length < 3 || cleanWord.length > 10) {
-        showToast("Word must be 3-10 letters");
-        return;
-    }
-
-    state.target = cleanWord;
-    state.syllables = input; 
-    state.customGame = true; 
-    
-    document.getElementById("teacher-menu").classList.add("hidden");
-    resetGame();
-    showToast(`Target set: ${cleanWord}`);
-    
-    inputField.value = "";
+function clearKeyboardColors() {
+    document.querySelectorAll(".key").forEach(k => k.classList.remove("correct", "present", "absent"));
 }
 
-// ---------------------------------------------------------
-// EVENT LISTENERS
-// ---------------------------------------------------------
-
-window.onclick = function(event) {
-    // FIXED: Exact ID matching for robust closing
-    const id = event.target.id;
-    if (id === 'modal-overlay') {
-        init(); // Win/Loss Modal Background -> Next Game
-    } else if (id === 'welcome-modal-overlay' || id === 'help-modal-overlay' || id === 'teacher-menu') {
-        event.target.classList.add('hidden'); // Close others
-    }
-};
-
-document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-        // Close all overlays
-        document.querySelectorAll('.tool-overlay, #modal-overlay, #welcome-modal-overlay, #help-modal-overlay').forEach(el => el.classList.add('hidden'));
-    }
-    
-    if (e.key === "Enter") {
-        if (!document.getElementById("modal-overlay").classList.contains("hidden")) {
-            init();
-        } else if (!document.getElementById("teacher-menu").classList.contains("hidden")) {
-            initTeacherMode();
-        } else {
-            submitGuess();
-        }
-    }
-
-    if (e.key === "Backspace") handleInput("Backspace");
-    else if (/^[a-z]$/i.test(e.key)) handleInput(e.key.toLowerCase());
-});
-
-// Buttons
-document.getElementById("btn-next-word").onclick = init;
-document.getElementById("modal-close").onclick = init; 
-
-document.getElementById("btn-voice").onclick = function() {
-    CONFIG.voice = !CONFIG.voice;
-    this.style.opacity = CONFIG.voice ? "1" : "0.5";
-    showToast(CONFIG.voice ? "Voice ON" : "Voice OFF");
-};
-
-document.getElementById("btn-size").onclick = function() {
-    CONFIG.largeText = !CONFIG.largeText;
-    document.body.classList.toggle("large-mode");
-};
-
-document.getElementById("btn-teacher").onclick = () => document.getElementById("teacher-menu").classList.remove("hidden");
-document.getElementById("teacher-close").onclick = () => document.getElementById("teacher-menu").classList.add("hidden");
-document.getElementById("btn-teacher-set").onclick = initTeacherMode;
-
-document.getElementById("btn-welcome-start").onclick = () => document.getElementById("welcome-modal-overlay").classList.add("hidden");
-
-// FIXED: Dedicated Help Modal Logic (No mutation)
-document.getElementById("btn-help").onclick = () => document.getElementById("help-modal-overlay").classList.remove("hidden");
-document.getElementById("help-close").onclick = () => document.getElementById("help-modal-overlay").classList.add("hidden");
-
-document.getElementById("btn-hear-word").onclick = () => speak(state.target);
-document.getElementById("btn-hear-sentence").onclick = () => {
-    const data = (window.WORD_ENTRIES && window.WORD_ENTRIES[state.target]) || { sentence: "You can do it!" };
-    speak(data.sentence);
-};
-
-document.getElementById("filter-select").onchange = (e) => { 
-    CONFIG.filter = e.target.value; 
-    init(); 
-    e.target.blur();
-};
-document.getElementById("length-select").onchange = (e) => { 
-    CONFIG.length = e.target.value; 
-    init(); 
-    e.target.blur(); 
-};
-
-window.onload = init;
+function speakWord() {
+    const u = new SpeechSynthesisUtterance(currentWord);
+    speechSynthesis.speak(u);
+}
