@@ -8,7 +8,6 @@
   <link rel="stylesheet" href="style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500&family=Lexend&display=swap" rel="stylesheet">
 
-  <!-- favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔤</text></svg>">
 </head>
 
@@ -21,19 +20,22 @@
       <button id="teacher-btn">🎓</button>
 
       <label>Focus</label>
-      <select>
-        <option>Mixed Review</option>
-        <option>CVC</option>
-        <option>Digraphs</option>
-        <option>Blends</option>
-      </select>
+      <select id="focus-select"></select>
 
       <label>Length</label>
-      <select>
+      <select id="length-select">
         <option selected>5</option>
       </select>
 
       <button id="new-word-btn">New Word</button>
+    </div>
+
+    <!-- FOCUS INFO PANEL -->
+    <div id="focus-panel" class="focus-panel">
+      <strong id="focus-title"></strong>
+      <p id="focus-desc"></p>
+      <p><strong>Examples:</strong> <span id="focus-examples"></span></p>
+      <p class="hint-text" id="focus-hint"></p>
     </div>
   </header>
 
@@ -48,10 +50,10 @@
     <div id="keyboard"></div>
   </main>
 
-  <!-- MODAL OVERLAY -->
+  <!-- MODAL -->
   <div id="overlay">
     <div class="modal">
-      <button id="close-modal" aria-label="Close">×</button>
+      <button id="close-modal">×</button>
       <h2>Welcome 👋</h2>
       <p>Pick a focus and decode the word.</p>
       <button id="start-btn">Start</button>
