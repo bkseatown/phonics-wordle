@@ -7,10 +7,9 @@ const CONFIG = {
     confetti: true,
     filter: 'all',
     length: 'any',
-    largeText: false // NEW: Font size preference
+    largeText: false
 };
 
-// SCHOOL-SAFE CONTENT (Jokes & Facts)
 const JOKES_AND_FACTS = [
     { type: "Joke", text: "Why did the cookie go to the hospital? Because he felt crummy!" },
     { type: "Fact", text: "Did you know? Octopuses have three hearts!" },
@@ -21,12 +20,7 @@ const JOKES_AND_FACTS = [
     { type: "Joke", text: "What falls in winter but never gets hurt? Snow!" },
     { type: "Fact", text: "Sloths can hold their breath longer than dolphins." },
     { type: "Joke", text: "What has hands but cannot clap? A clock!" },
-    { type: "Fact", text: "Butterflies taste with their feet." },
-    { type: "Joke", text: "Why did the pony get sent to his room? He couldn't stop horsing around." },
-    { type: "Joke", text: "What is a snake’s favorite subject? Hiss-tory." },
-    { type: "Fact", text: "Elephants are the only animals that can't jump." },
-    { type: "Joke", text: "How do you fix a cracked pumpkin? With a pumpkin patch!" },
-    { type: "Joke", text: "What kind of room has no doors or windows? A mushroom." }
+    { type: "Fact", text: "Butterflies taste with their feet." }
 ];
 
 let state = {
@@ -36,7 +30,8 @@ let state = {
     row: 0,
     guess: "",
     over: false,
-    pool: []
+    pool: [],
+    customGame: false // NEW: Tracks if this is a teacher-set word
 };
 
 const board = document.getElementById("game-board");
@@ -52,10 +47,10 @@ function loadPool() {
         showToast("Error: Dictionary missing");
         return false;
     }
-
     const keys = Object.keys(window.WORD_ENTRIES);
-
     let filtered = keys;
+
+    // Normal filtering logic...
     if (CONFIG.filter !== 'all') {
         filtered = keys.filter(k => {
             const d = window.WORD_ENTRIES[k];
@@ -71,6 +66,7 @@ function loadPool() {
 
     state.pool = filtered;
 
+    // Fallback
     if (state.pool.length === 0) {
         showToast(`No ${CONFIG.length}-letter words for this skill.`);
         document.getElementById('length-select').value = 'any';
@@ -97,6 +93,7 @@ function init() {
     
     state.target = rawWord;
     state.syllables = data.syllables || rawWord; 
+    state.customGame = false; // Reset teacher flag
     
     resetGame();
 }
@@ -112,8 +109,7 @@ function resetGame() {
     createGrid();
     createKeyboard();
     
-    modal.classList.add("hidden");
-    document.getElementById("modal-title").textContent = "";
+    closeAllModals(); // Helper to clear UI
 }
 
 // ---------------------------------------------------------
@@ -137,18 +133,13 @@ function createGrid() {
 }
 
 function createKeyboard() {
-    const keys = [
-        "qwertyuiop",
-        "asdfghjkl",
-        "zxcvbnm"
-    ];
+    const keys = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
     const vowels = ['a', 'e', 'i', 'o', 'u', 'y'];
     const kbd = document.getElementById("keyboard");
     
     keys.forEach(rowStr => {
         const rowDiv = document.createElement("div");
         rowDiv.className = "key-row";
-        
         rowStr.split("").forEach(char => {
             const btn = document.createElement("button");
             btn.className = "key";
@@ -209,7 +200,10 @@ function submitGuess() {
         shakeRow();
         return;
     }
-    if (!window.WORD_ENTRIES[guess]) {
+
+    // TEACHER FIX: If custom game, skip dictionary check!
+    // Otherwise, check dictionary.
+    if (!state.customGame && !window.WORD_ENTRIES[guess]) {
         shakeRow();
         showToast("Not in our dictionary");
         return;
@@ -242,23 +236,16 @@ function submitGuess() {
         setTimeout(() => {
             tile.classList.add("flip");
             tile.classList.add(color);
-            
-            // CLEANUP FLIP
-            tile.addEventListener('animationend', () => {
-                tile.classList.remove('flip');
-            }, { once: true });
+            tile.addEventListener('animationend', () => { tile.classList.remove('flip'); }, { once: true });
             
             const keyBtn = document.getElementById("key-" + guess[i]);
             if (keyBtn) {
                 const isGreen = keyBtn.classList.contains("green");
                 const isYellow = keyBtn.classList.contains("yellow");
-                
                 if (color === "green") {
-                    keyBtn.classList.remove("yellow", "gray");
-                    keyBtn.classList.add("green");
+                    keyBtn.classList.remove("yellow", "gray"); keyBtn.classList.add("green");
                 } else if (color === "yellow" && !isGreen) {
-                    keyBtn.classList.remove("gray");
-                    keyBtn.classList.add("yellow");
+                    keyBtn.classList.remove("gray"); keyBtn.classList.add("yellow");
                 } else if (color === "gray" && !isGreen && !isYellow) {
                     keyBtn.classList.add("gray");
                 }
@@ -299,33 +286,32 @@ function showToast(msg) {
 }
 
 // ---------------------------------------------------------
-// MODALS & FUN STUFF
+// MODALS & HELPERS
 // ---------------------------------------------------------
 
-function getFunContent() {
-    // Pick a random joke or fact
-    const item = JOKES_AND_FACTS[Math.floor(Math.random() * JOKES_AND_FACTS.length)];
-    return item;
+// Helper to clean up all modal states
+function closeAllModals() {
+    document.querySelectorAll('.tool-overlay, #modal-overlay, #help-modal-overlay').forEach(el => {
+        el.classList.add('hidden');
+    });
 }
 
 function showModal(win) {
-    const data = window.WORD_ENTRIES[state.target];
+    // If custom game, use generic data if missing
+    const data = window.WORD_ENTRIES[state.target] || { def: "Custom Teacher Word", sentence: "Great job!", tags: [] };
     
     document.getElementById("modal-title").textContent = win ? "🎉 Fantastic!" : "Good Try!";
     document.getElementById("reveal-word").textContent = state.syllables || state.target;
     document.getElementById("reveal-def").textContent = data.def;
     document.getElementById("reveal-sentence").textContent = data.sentence;
     
-    // Tips
     const tipBox = document.getElementById("reveal-tip");
     let tipText = "";
     const tags = data.tags || [];
 
+    // Tips logic...
     if (tags.includes("magic-e")) tipText = "💡 Rule: The silent 'e' makes the vowel say its name.";
     else if (tags.includes("digraph")) tipText = "💡 Rule: Two letters stuck together make ONE sound.";
-    else if (tags.includes("floss")) tipText = "💡 Rule: Double f, l, s, or z after short vowels.";
-    else if (tags.includes("r-controlled")) tipText = "💡 Rule: The 'r' changes the vowel's sound.";
-    else if (tags.includes("vowel-team")) tipText = "💡 Rule: Two vowels go walking, the first one talks.";
     else if (tags.includes("doubling")) tipText = "💡 Rule: 1-1-1 Rule! Double the last letter.";
     else if (tags.includes("schwa")) tipText = "💡 Rule: The unstressed vowel sounds like 'uh'.";
     else if (tags.includes("cvc")) tipText = "💡 Tip: Closed syllable. Short vowel.";
@@ -333,10 +319,10 @@ function showModal(win) {
     tipBox.textContent = tipText;
     tipBox.style.display = tipText ? "block" : "none";
 
-    // FUN FACT / JOKE LOGIC
+    // Fun Content
     const funBox = document.getElementById("fun-content-box");
     if (win) {
-        const funItem = getFunContent();
+        const funItem = JOKES_AND_FACTS[Math.floor(Math.random() * JOKES_AND_FACTS.length)];
         document.getElementById("fun-label").textContent = funItem.type === 'Joke' ? '😂 Joke:' : '🧠 Fun Fact:';
         document.getElementById("fun-text").textContent = funItem.text;
         funBox.classList.remove("hidden");
@@ -373,7 +359,6 @@ function initTeacherMode() {
     if (!input) return;
 
     const cleanWord = input.replace(/-/g, "");
-    
     if (cleanWord.length < 3 || cleanWord.length > 10) {
         showToast("Word must be 3-10 letters");
         return;
@@ -381,82 +366,89 @@ function initTeacherMode() {
 
     state.target = cleanWord;
     state.syllables = input;
+    state.customGame = true; // NEW: Flag this as a custom game
     
-    if (!window.WORD_ENTRIES[cleanWord]) {
-        window.WORD_ENTRIES[cleanWord] = {
-            def: "Teacher Custom Word",
-            sentence: "Great job decoding!",
-            tags: ["custom"]
-        };
-    }
+    // We don't need to inject into WORD_ENTRIES anymore for validity
+    // because submitGuess checks state.customGame
     
-    document.getElementById("teacher-menu").classList.add("hidden");
+    closeAllModals();
     resetGame();
     showToast(`Target: ${input}`);
 }
 
 // ---------------------------------------------------------
-// EVENT LISTENERS
+// GLOBAL EVENTS
 // ---------------------------------------------------------
 
+// 1. Unified Click-Outside Listener (The Fix for #1)
+window.onclick = function(event) {
+    if (event.target.classList.contains('tool-overlay') || 
+        event.target.id === 'modal-overlay' || 
+        event.target.id === 'help-modal-overlay') {
+        
+        // If it's the Game Over modal, advance game
+        if (event.target.id === 'modal-overlay') {
+            init();
+        } else {
+            // Otherwise just close it
+            closeAllModals();
+        }
+    }
+};
+
+// 2. Keyboard Handler
 document.addEventListener("keydown", (e) => {
-    if (!modal.classList.contains("hidden") && e.key === "Enter") {
-        init();
+    // Escape Key closes things
+    if (e.key === "Escape") {
+        closeAllModals();
         return;
     }
-    if (e.key === "Enter") submitGuess();
-    else if (e.key === "Backspace") handleInput("Backspace");
+    
+    // Enter Key Logic
+    const modalOpen = !modal.classList.contains("hidden");
+    if (e.key === "Enter") {
+        if (modalOpen) {
+            init(); // Advance game
+        } else {
+            submitGuess(); // Submit guess
+        }
+        return;
+    }
+
+    if (e.key === "Backspace") handleInput("Backspace");
     else if (/^[a-z]$/i.test(e.key)) handleInput(e.key.toLowerCase());
 });
 
-modal.addEventListener("click", (e) => {
-    // If clicking outside the card, next word
-    if (e.target === modal) init();
-});
-
-// GATEKEEPER FIX: Close button acts as Next Word
-document.getElementById("modal-close").onclick = init;
-
+// 3. UI Buttons
 document.getElementById("btn-next-word").onclick = init;
-document.getElementById("help-close").onclick = () => document.getElementById("help-modal-overlay").classList.add("hidden");
+document.getElementById("modal-close").onclick = init; // Close = Next Word
+document.getElementById("help-close").onclick = closeAllModals;
 
 document.getElementById("btn-voice").onclick = function() {
     CONFIG.voice = !CONFIG.voice;
-    const iconSpan = this.querySelector(".icon");
-    const labelSpan = this.querySelector(".btn-label");
-    if(iconSpan) iconSpan.textContent = CONFIG.voice ? "🔊" : "🔇";
-    if(labelSpan) labelSpan.textContent = CONFIG.voice ? "ON" : "OFF";
+    this.querySelector(".icon").textContent = CONFIG.voice ? "🔊" : "🔇";
+    this.querySelector(".btn-label").textContent = CONFIG.voice ? "ON" : "OFF";
 };
 
-// NEW: FONT SIZE TOGGLE
 document.getElementById("btn-size").onclick = function() {
     CONFIG.largeText = !CONFIG.largeText;
     document.body.classList.toggle("large-mode");
-    const iconSpan = this.querySelector(".icon");
-    iconSpan.textContent = CONFIG.largeText ? "A-" : "A+";
+    this.querySelector(".icon").textContent = CONFIG.largeText ? "A-" : "A+";
 };
 
 document.getElementById("btn-help").onclick = () => document.getElementById("help-modal-overlay").classList.remove("hidden");
 document.getElementById("btn-teacher").onclick = () => document.getElementById("teacher-menu").classList.remove("hidden");
 document.getElementById("btn-teacher-set").onclick = initTeacherMode;
-document.getElementById("btn-teacher-cancel").onclick = () => document.getElementById("teacher-menu").classList.add("hidden");
+document.getElementById("btn-teacher-cancel").onclick = closeAllModals;
 
 document.getElementById("btn-hear-word").onclick = () => speak(state.target);
 document.getElementById("btn-hear-sentence").onclick = () => {
-    const data = window.WORD_ENTRIES[state.target];
-    if (data) speak(data.sentence);
+    // Handle custom teacher words that might lack sentences
+    const data = window.WORD_ENTRIES[state.target] || { sentence: "Good luck!" };
+    speak(data.sentence);
 };
 
-document.getElementById("filter-select").onchange = (e) => {
-    CONFIG.filter = e.target.value;
-    init(); 
-    e.target.blur();
-};
-
-document.getElementById("length-select").onchange = (e) => {
-    CONFIG.length = e.target.value;
-    init();
-    e.target.blur();
-};
+document.getElementById("filter-select").onchange = (e) => { CONFIG.filter = e.target.value; init(); e.target.blur(); };
+document.getElementById("length-select").onchange = (e) => { CONFIG.length = e.target.value; init(); e.target.blur(); };
 
 window.onload = init;
