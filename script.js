@@ -1,5 +1,5 @@
 /* =========================================
-   DECODE THE WORD - FINAL STABLE BUILD
+   DECODE THE WORD - FINAL GOLD MASTER
    ========================================= */
 
 const MAX_GUESSES = 6;
@@ -31,12 +31,13 @@ document.addEventListener("DOMContentLoaded", () => {
     checkFirstTimeVisitor();
 });
 
-/* --- VOICE LOADING (Fixes "Voice not working") --- */
+/* --- VOICE LOADING (Premium Voice Fix) --- */
 function initVoiceLoader() {
     const load = () => {
         cachedVoices = window.speechSynthesis.getVoices();
     };
     load();
+    // Chrome/Safari often load voices asynchronously
     if (window.speechSynthesis.onvoiceschanged !== undefined) {
         window.speechSynthesis.onvoiceschanged = load;
     }
@@ -47,12 +48,25 @@ function speak(text) {
     window.speechSynthesis.cancel(); // Stop any previous speech
     const msg = new SpeechSynthesisUtterance(text);
     
-    // Pick best English voice
+    // 1. Get list of available voices
     let voices = cachedVoices.length ? cachedVoices : window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => (v.name.includes("Google") || v.name.includes("Samantha")) && v.lang.startsWith("en"));
     
+    // 2. Aggressive search for "Human-sounding" voices
+    // We check for these specific keywords that indicate high quality
+    let preferred = voices.find(v => /Google US English/i.test(v.name)); // Best Chrome voice
+    
+    if (!preferred) preferred = voices.find(v => /Google/i.test(v.name) && v.lang.startsWith("en"));
+    if (!preferred) preferred = voices.find(v => /Samantha/i.test(v.name)); // Best Mac voice
+    if (!preferred) preferred = voices.find(v => /Daniel/i.test(v.name));   // Best iOS voice
+    if (!preferred) preferred = voices.find(v => /Microsoft/i.test(v.name) && v.lang.startsWith("en")); // Best Windows voice
+    
+    // 3. Fallback to any English voice if premium ones fail
+    if (!preferred) preferred = voices.find(v => v.lang.startsWith("en"));
+
     if (preferred) msg.voice = preferred;
-    msg.rate = 0.9; // Slightly slower for clarity
+    msg.rate = 0.9; // 0.9 is the sweet spot for clarity without dragging
+    msg.pitch = 1.0;
+
     window.speechSynthesis.speak(msg);
 }
 
@@ -119,7 +133,7 @@ function initControls() {
 
     // Global Keyboard Listener
     window.addEventListener("keydown", (e) => {
-        // MODAL HANDLING (Fixes "Enter doesn't close")
+        // MODAL HANDLING
         if (isModalOpen()) {
             if (e.key === "Escape" || e.key === "Enter") {
                 // If teacher modal is open, Enter submits the word
