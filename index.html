@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500&family=Lexend&display=swap" rel="stylesheet">
 
-  <!-- kill favicon error -->
+  <!-- favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔤</text></svg>">
 </head>
 
@@ -39,12 +39,19 @@
 
   <main>
     <div id="board"></div>
+
+    <!-- HINT BUTTONS (RESTORED) -->
+    <div class="hint-actions">
+      <button id="hear-word">🔊 Hear Word</button>
+      <button id="hear-sentence">📝 Sentence</button>
+    </div>
+
     <div id="keyboard"></div>
   </main>
 
-  <!-- OVERLAY -->
+  <!-- OVERLAY + MODAL -->
   <div id="overlay" class="hidden">
-    <div id="modal" class="modal">
+    <div class="modal">
       <button id="close-modal">×</button>
       <h2 id="modal-title">Welcome</h2>
       <p id="modal-text">Pick a focus and decode the word.</p>

@@ -1,14 +1,14 @@
 document.addEventListener("DOMContentLoaded", function () {
 
-  // ----- MODAL (ONE AT A TIME) -----
+  /* ---------------- MODAL (ONE AT A TIME) ---------------- */
   var overlay = document.getElementById("overlay");
   var closeBtn = document.getElementById("close-modal");
-  var modalAction = document.getElementById("modal-action");
+  var actionBtn = document.getElementById("modal-action");
 
   function openModal(title, text, actionText) {
     document.getElementById("modal-title").textContent = title;
     document.getElementById("modal-text").textContent = text;
-    modalAction.textContent = actionText;
+    actionBtn.textContent = actionText;
     overlay.classList.remove("hidden");
   }
 
@@ -17,19 +17,22 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   closeBtn.onclick = closeModal;
-  modalAction.onclick = closeModal;
+  actionBtn.onclick = closeModal;
+
   overlay.onclick = function (e) {
     if (e.target === overlay) closeModal();
   };
 
   window.addEventListener("keydown", function (e) {
     if (!overlay.classList.contains("hidden")) {
-      if (e.key === "Escape" || e.key === "Enter") closeModal();
+      if (e.key === "Escape" || e.key === "Enter") {
+        closeModal();
+      }
       e.preventDefault();
     }
   });
 
-  // ----- BOARD -----
+  /* ---------------- BOARD ---------------- */
   var board = document.getElementById("board");
 
   function buildBoard() {
@@ -41,34 +44,56 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  // ----- KEYBOARD -----
+  /* ---------------- KEYBOARD ---------------- */
   var keyboard = document.getElementById("keyboard");
-  var keys = "QWERTYUIOPASDFGHJKLZXCVBNM";
+  var letters = "QWERTYUIOPASDFGHJKLZXCVBNM";
 
   function buildKeyboard() {
     keyboard.innerHTML = "";
-    for (var i = 0; i < keys.length; i++) {
-      var k = document.createElement("button");
-      k.className = "key";
-      k.textContent = keys[i];
-      keyboard.appendChild(k);
+    for (var i = 0; i < letters.length; i++) {
+      var key = document.createElement("button");
+      key.className = "key";
+      key.textContent = letters[i];
+      keyboard.appendChild(key);
     }
   }
 
-  // ----- BUTTONS -----
+  /* ---------------- HINT BUTTONS ---------------- */
+  var currentWord = "plant";
+  var currentSentence = "The plant grew in the sun.";
+
+  document.getElementById("hear-word").onclick = function () {
+    speak(currentWord);
+  };
+
+  document.getElementById("hear-sentence").onclick = function () {
+    speak(currentSentence);
+  };
+
+  function speak(text) {
+    var utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 0.9;
+    speechSynthesis.speak(utter);
+  }
+
+  /* ---------------- BUTTONS ---------------- */
   document.getElementById("teacher-btn").onclick = function () {
-    openModal("Teacher Mode", "Set a hidden word (coming next).", "OK");
+    openModal("Teacher Mode", "Teacher word setting coming next.", "OK");
   };
 
   document.getElementById("new-word-btn").onclick = function () {
-    openModal("New Word", "Board reset.", "OK");
     buildBoard();
   };
 
-  // ----- INIT -----
+  /* ---------------- INIT ---------------- */
   buildBoard();
   buildKeyboard();
-  openModal("Welcome 👋", "Pick a focus and decode the word.", "Start");
 
-  console.log("✅ Full app loaded");
+  // show welcome ONCE
+  if (!localStorage.getItem("decode_seen")) {
+    openModal("Welcome 👋", "Pick a focus and decode the word.", "Start");
+    localStorage.setItem("decode_seen", "1");
+  }
+
+  console.log("✅ Decode the Word loaded correctly");
 });
