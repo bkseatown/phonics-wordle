@@ -89,7 +89,6 @@
   }
 
   function fillSelect(select, values) {
-    if (!select) return;
     select.innerHTML = "";
     values.forEach(v => {
       const opt = document.createElement("option");
