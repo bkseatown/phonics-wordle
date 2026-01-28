@@ -4,125 +4,68 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Phonics Wordle</title>
+
   <link rel="stylesheet" href="./styles.css" />
-  <link rel="icon" href="./favicon.ico" />
+  <link rel="manifest" href="./manifest.json" />
+
+  <!-- Optional: prevents weird caching behavior on GH Pages -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
 </head>
+
 <body>
+  <!-- IMPORTANT: your app-core.js expects these IDs to exist -->
   <header class="app-header">
-    <div class="app-header-inner">
-      <div class="app-title">Phonics Wordle</div>
+    <h1 class="app-title">Phonics Wordle</h1>
 
-      <div class="controls">
-        <button id="help-btn" class="btn" type="button">How to Play</button>
-        <button id="hear-word" class="btn" type="button">Word</button>
-        <button id="hear-sentence" class="btn" type="button">Sentence</button>
-        <button id="voice-toggle" class="btn" type="button">Voice Off</button>
+    <div class="controls">
+      <button id="btn-help" class="btn">How to Play</button>
+      <button id="btn-word" class="btn">Word</button>
+      <button id="btn-sentence" class="btn">Sentence</button>
+      <button id="btn-voice" class="btn">Voice On</button>
 
-        <label class="ctl">Focus
-          <select id="focus-select" aria-label="Focus"></select>
-        </label>
+      <label class="ctl">
+        Focus
+        <select id="focus-select"></select>
+      </label>
 
-        <label class="ctl">Letters
-          <select id="length-select" aria-label="Letters"></select>
-        </label>
+      <label class="ctl">
+        Letters
+        <select id="length-select"></select>
+      </label>
 
-        <label class="ctl">Guesses
-          <select id="guess-select" aria-label="Guesses"></select>
-        </label>
+      <label class="ctl">
+        Guesses
+        <select id="tries-select"></select>
+      </label>
 
-        <label class="ctl teacher-ctl">Teacher word (hidden)
-          <input id="teacher-word" type="password" autocomplete="off" placeholder="Enter 2–10 letters" />
-        </label>
-        <button id="set-teacher-word" class="btn" type="button">Set Word</button>
-        <button id="next-word" class="btn" type="button">Next Word →</button>
-      </div>
+      <label class="ctl teacher">
+        Teacher word (hidden)
+        <input id="teacher-input" type="password" inputmode="text" autocomplete="off"
+               placeholder="Enter 2–10 letters" />
+      </label>
+      <button id="teacher-set" class="btn">Set Word</button>
+
+      <button id="btn-next" class="btn">Next Word →</button>
     </div>
   </header>
 
   <main class="app-main">
-    <div class="app-shell">
-      <div id="teacher-toast" class="toast" role="status" aria-live="polite"></div>
-
-      <section class="game-wrap" aria-label="Game">
-        <div id="game-board" class="board" aria-label="Game board"></div>
-        <div id="keyboard" class="keyboard" aria-label="Keyboard"></div>
-      </section>
-    </div>
+    <section id="board" class="board" aria-label="Guess board"></section>
+    <section id="keyboard" class="keyboard" aria-label="Keyboard"></section>
   </main>
 
-  <!-- How-to modal -->
-  <div id="howto-modal" class="modal" role="dialog" aria-modal="true">
-    <div class="modal-card">
-      <div class="modal-title">How to Play</div>
-
-      <div id="howto-text" class="modal-body">
-        <div><strong>Guess the word</strong> in the number of tries shown.</div>
-        <div>Use your keyboard or tap the on‑screen keys.</div>
-
-        <div class="howto-example" aria-label="Examples">
-          <div class="ex-row">
-            <div class="ex-tiles" aria-label="Example 1">
-              <div class="ex-tile ex-green">P</div>
-              <div class="ex-tile">L</div>
-              <div class="ex-tile">A</div>
-              <div class="ex-tile">N</div>
-              <div class="ex-tile">T</div>
-            </div>
-            <div class="ex-text">Green: <strong>P</strong> is correct and in the right spot.</div>
-          </div>
-
-          <div class="ex-row">
-            <div class="ex-tiles" aria-label="Example 2">
-              <div class="ex-tile">S</div>
-              <div class="ex-tile ex-yellow">L</div>
-              <div class="ex-tile">I</div>
-              <div class="ex-tile">P</div>
-              <div class="ex-tile">E</div>
-            </div>
-            <div class="ex-text">Yellow: <strong>L</strong> is in the word, but in the wrong spot.</div>
-          </div>
-
-          <div class="ex-row">
-            <div class="ex-tiles" aria-label="Example 3">
-              <div class="ex-tile">C</div>
-              <div class="ex-tile">R</div>
-              <div class="ex-tile ex-gray">U</div>
-              <div class="ex-tile">M</div>
-              <div class="ex-tile">B</div>
-            </div>
-            <div class="ex-text">Gray: <strong>U</strong> is not in the word.</div>
-          </div>
-        </div>
-
-        <div style="margin-top:10px; color:#6b7280;">
-          Tip: Change <strong>Focus</strong> to practice a specific phonics pattern.
-        </div>
-      </div>
-
-      <div class="modal-actions">
-        <button id="howto-close" class="btn primary" type="button">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- End-of-game modal -->
-  <div id="end-modal" class="modal" role="dialog" aria-modal="true">
-    <div class="modal-card">
-      <div class="modal-title" id="end-word"></div>
-      <div class="modal-body">
-        <div class="detail-row"><strong>Definition:</strong> <span id="end-definition"></span></div>
-        <div class="detail-row"><strong>Sentence:</strong> <span id="end-sentence"></span></div>
-        <div class="detail-row"><strong>Fun:</strong> <span id="end-fun"></span></div>
-      </div>
-      <div class="modal-actions">
-        <button id="end-close" class="btn primary" type="button">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Path-safe: app-core contains embedded fallbacks, but we also ship these files -->
+  <!-- LOAD ORDER MATTERS -->
   <script src="./app-config.js"></script>
-  <script src="./words.js"></script>
+
+  <!-- Word packs (MUST be relative ./ not / ) -->
+  <script src="./words-core-cvc.js"></script>
+  <script src="./words-core-blends.js"></script>
+  <script src="./words-core-heart.js"></script>
+  <script src="./words-fun-content.js"></script>
+  <script src="./words-loader.js"></script>
+
   <script src="./app-core.js"></script>
 </body>
 </html>
