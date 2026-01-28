@@ -1,12 +1,9 @@
 /* =========================================
-   PHONICS WORDLE - GOLD MASTER WORD LIST
+   PHONICS WORDLE - MASTER WORD LIST
    ========================================= */
 
 window.WORD_ENTRIES = {
-
-    // ==========================================
     // 1. CVC (Short Vowels)
-    // ==========================================
     "cat": { syllables: "cat", tags: ["cvc"], def: "Small pet that meows.", sentence: "The cat sat on the mat." },
     "dog": { syllables: "dog", tags: ["cvc"], def: "Loyal animal friend.", sentence: "My dog loves to run." },
     "bus": { syllables: "bus", tags: ["cvc"], def: "Large vehicle.", sentence: "The yellow bus stops here." },
@@ -33,9 +30,7 @@ window.WORD_ENTRIES = {
     "net": { syllables: "net", tags: ["cvc"], def: "Mesh for catching.", sentence: "Catch the fish in the net." },
     "pan": { syllables: "pan", tags: ["cvc"], def: "Tool for cooking.", sentence: "Cook eggs in the pan." },
 
-    // ==========================================
-    // 2. DIGRAPHS (sh, ch, th, ck, wh)
-    // ==========================================
+    // 2. DIGRAPHS
     "ship": { syllables: "ship", tags: ["digraph"], def: "Large boat.", sentence: "The ship sails on the sea." },
     "fish": { syllables: "fish", tags: ["digraph"], def: "Animal that swims.", sentence: "The fish has scales." },
     "chop": { syllables: "chop", tags: ["digraph"], def: "Cut into pieces.", sentence: "Chop the carrots." },
@@ -59,9 +54,7 @@ window.WORD_ENTRIES = {
     "rich": { syllables: "rich", tags: ["digraph"], def: "Having lots of money.", sentence: "The king was very rich." },
     "thick": { syllables: "thick", tags: ["digraph"], def: "Wide or heavy.", sentence: "The fog was thick." },
 
-    // ==========================================
-    // 3. BLENDS (st, bl, tr, nd, mp, cl...)
-    // ==========================================
+    // 3. BLENDS
     "stop": { syllables: "stop", tags: ["blend"], def: "To halt.", sentence: "Stop running." },
     "frog": { syllables: "frog", tags: ["blend"], def: "Green jumping animal.", sentence: "The frog eats flies." },
     "drum": { syllables: "drum", tags: ["blend"], def: "Instrument you hit.", sentence: "Bang on the drum." },
@@ -84,9 +77,7 @@ window.WORD_ENTRIES = {
     "trap": { syllables: "trap", tags: ["blend"], def: "Catching device.", sentence: "The mouse is in the trap." },
     "twin": { syllables: "twin", tags: ["blend"], def: "Born together.", sentence: "He is my twin." },
 
-    // ==========================================
-    // 4. FLOSS RULE (ff, ll, ss, zz)
-    // ==========================================
+    // 4. FLOSS RULE
     "hill": { syllables: "hill", tags: ["floss"], def: "Small mountain.", sentence: "Go up the hill." },
     "doll": { syllables: "doll", tags: ["floss"], def: "Toy person.", sentence: "Play with the doll." },
     "mess": { syllables: "mess", tags: ["floss"], def: "Untidy state.", sentence: "Clean up this mess." },
@@ -106,9 +97,7 @@ window.WORD_ENTRIES = {
     "well": { syllables: "well", tags: ["floss"], def: "Healthy.", sentence: "I hope you feel well." },
     "pass": { syllables: "pass", tags: ["floss"], def: "Go by.", sentence: "Let the car pass." },
 
-    // ==========================================
-    // 5. MAGIC E (a-e, i-e, o-e, u-e)
-    // ==========================================
+    // 5. MAGIC E
     "cake": { syllables: "cake", tags: ["magic-e"], def: "Baked dessert.", sentence: "Eat the chocolate cake." },
     "bike": { syllables: "bike", tags: ["magic-e"], def: "Bicycle.", sentence: "Ride your bike." },
     "home": { syllables: "home", tags: ["magic-e"], def: "Where you live.", sentence: "Let's go home." },
@@ -132,9 +121,7 @@ window.WORD_ENTRIES = {
     "shape": { syllables: "shape", tags: ["magic-e", "digraph"], def: "Form of an object.", sentence: "A circle is a shape." },
     "white": { syllables: "white", tags: ["magic-e", "digraph"], def: "Color of snow.", sentence: "The cloud is white." },
 
-    // ==========================================
-    // 6. VOWEL TEAMS (ai, ay, ea, ee, oa, ow, oo)
-    // ==========================================
+    // 6. VOWEL TEAMS
     "rain": { syllables: "rain", tags: ["vowel-team"], def: "Water from clouds.", sentence: "The rain falls down." },
     "boat": { syllables: "boat", tags: ["vowel-team"], def: "Water vehicle.", sentence: "Row the boat." },
     "tree": { syllables: "tree", tags: ["vowel-team", "blend"], def: "Tall plant.", sentence: "Climb the tree." },
@@ -158,9 +145,7 @@ window.WORD_ENTRIES = {
     "blue": { syllables: "blue", tags: ["vowel-team", "blend"], def: "Color of sky.", sentence: "The sky is blue." },
     "green": { syllables: "green", tags: ["vowel-team", "blend"], def: "Color of grass.", sentence: "Grass is green." },
 
-    // ==========================================
-    // 7. R-CONTROLLED (ar, or, er, ir, ur)
-    // ==========================================
+    // 7. R-CONTROLLED
     "car": { syllables: "car", tags: ["r-controlled"], def: "Auto.", sentence: "Drive the car." },
     "star": { syllables: "star", tags: ["r-controlled", "blend"], def: "Night light.", sentence: "Twinkle, little star." },
     "bird": { syllables: "bird", tags: ["r-controlled"], def: "Flying animal.", sentence: "The bird sings." },
@@ -184,19 +169,17 @@ window.WORD_ENTRIES = {
     "surf": { syllables: "surf", tags: ["r-controlled"], def: "Ride waves.", sentence: "Surf in the ocean." },
     "shark": { syllables: "shark", tags: ["r-controlled", "digraph"], def: "Sea predator.", sentence: "The shark has teeth." },
 
-    // ==========================================
-    // 8. DOUBLING RULE & SUFFIXES
-    // ==========================================
-    "runner": { syllables: "run-ner", tags: ["doubling", "suffix"], def: "One who runs.", sentence: "She is a fast runner." },
-    "hopping": { syllables: "hop-ping", tags: ["doubling", "suffix"], def: "Jumping.", sentence: "The bunny is hopping." },
-    "sitting": { syllables: "sit-ting", tags: ["doubling", "suffix"], def: "Seated.", sentence: "He is sitting down." },
-    "winning": { syllables: "win-ning", tags: ["doubling", "suffix"], def: "First place.", sentence: "We are winning!" },
-    "bigger": { syllables: "big-ger", tags: ["doubling", "suffix"], def: "Larger size.", sentence: "My pumpkin is bigger." },
-    "hottest": { syllables: "hot-test", tags: ["doubling", "suffix"], def: "Highest heat.", sentence: "Summer is the hottest." },
-    "swimmer": { syllables: "swim-mer", tags: ["doubling", "suffix"], def: "One who swims.", sentence: "He is a good swimmer." },
-    "getting": { syllables: "get-ting", tags: ["doubling", "suffix"], def: "Becoming.", sentence: "It is getting late." },
-    "rubbing": { syllables: "rub-bing", tags: ["doubling", "suffix"], def: "Friction.", sentence: "Rubbing his eyes." },
-    "cutting": { syllables: "cut-ting", tags: ["doubling", "suffix"], def: "Slicing.", sentence: "Cutting paper." },
+    // 8. DOUBLING RULE (1-1-1)
+    "runner": { syllables: "run-ner", tags: ["doubling"], def: "One who runs.", sentence: "She is a fast runner." },
+    "hopping": { syllables: "hop-ping", tags: ["doubling"], def: "Jumping.", sentence: "The bunny is hopping." },
+    "sitting": { syllables: "sit-ting", tags: ["doubling"], def: "Seated.", sentence: "He is sitting down." },
+    "winning": { syllables: "win-ning", tags: ["doubling"], def: "First place.", sentence: "We are winning!" },
+    "bigger": { syllables: "big-ger", tags: ["doubling"], def: "Larger size.", sentence: "My pumpkin is bigger." },
+    "hottest": { syllables: "hot-test", tags: ["doubling"], def: "Highest heat.", sentence: "Summer is the hottest." },
+    "swimmer": { syllables: "swim-mer", tags: ["doubling"], def: "One who swims.", sentence: "He is a good swimmer." },
+    "getting": { syllables: "get-ting", tags: ["doubling"], def: "Becoming.", sentence: "It is getting late." },
+    "rubbing": { syllables: "rub-bing", tags: ["doubling"], def: "Friction.", sentence: "Rubbing his eyes." },
+    "cutting": { syllables: "cut-ting", tags: ["doubling"], def: "Slicing.", sentence: "Cutting paper." },
     "puppy": { syllables: "pup-py", tags: ["doubling", "multisyllable"], def: "Baby dog.", sentence: "The puppy barks." },
     "kitten": { syllables: "kit-ten", tags: ["doubling", "multisyllable"], def: "Baby cat.", sentence: "The kitten purrs." },
     "funny": { syllables: "fun-ny", tags: ["doubling", "multisyllable"], def: "Amusing.", sentence: "That joke is funny." },
@@ -205,9 +188,28 @@ window.WORD_ENTRIES = {
     "madder": { syllables: "mad-der", tags: ["doubling", "suffix"], def: "More angry.", sentence: "He got madder." },
     "fitter": { syllables: "fit-ter", tags: ["doubling", "suffix"], def: "More healthy.", sentence: "Run to get fitter." },
 
-    // ==========================================
-    // 9. SCHWA (The 'uh' sound)
-    // ==========================================
+    // 9. PREFIXES
+    "unhappy": { syllables: "un-hap-py", tags: ["prefix"], def: "Sad.", sentence: "He was unhappy with the rain." },
+    "redo": { syllables: "re-do", tags: ["prefix"], def: "Do again.", sentence: "Please redo your work." },
+    "preheat": { syllables: "pre-heat", tags: ["prefix"], def: "Heat before.", sentence: "Preheat the oven." },
+    "dislike": { syllables: "dis-like", tags: ["prefix"], def: "To not like.", sentence: "I dislike cold soup." },
+    "unlock": { syllables: "un-lock", tags: ["prefix", "ck"], def: "Open a lock.", sentence: "Unlock the door." },
+    "remake": { syllables: "re-make", tags: ["prefix", "magic-e"], def: "Make again.", sentence: "Remake the bed." },
+    "prepay": { syllables: "pre-pay", tags: ["prefix", "vowel-team"], def: "Pay before.", sentence: "Prepay for gas." },
+    "unsafe": { syllables: "un-safe", tags: ["prefix", "magic-e"], def: "Dangerous.", sentence: "It is unsafe to run here." },
+    "preview": { syllables: "pre-view", tags: ["prefix", "vowel-team"], def: "Look before.", sentence: "Preview the movie." },
+
+    // 10. SUFFIXES
+    "cats": { syllables: "cats", tags: ["suffix"], def: "More than one cat.", sentence: "The two cats played." },
+    "jumped": { syllables: "jump-ed", tags: ["suffix"], def: "Did jump.", sentence: "He jumped over the rug." },
+    "slowly": { syllables: "slow-ly", tags: ["suffix"], def: "At a slow speed.", sentence: "Walk slowly on the ice." },
+    "action": { syllables: "ac-tion", tags: ["suffix"], def: "Doing something.", sentence: "Lights, camera, action!" },
+    "played": { syllables: "play-ed", tags: ["suffix", "vowel-team"], def: "Did play.", sentence: "We played soccer." },
+    "helper": { syllables: "help-er", tags: ["suffix"], def: "One who helps.", sentence: "Be a good helper." },
+    "kindly": { syllables: "kind-ly", tags: ["suffix"], def: "In a nice way.", sentence: "She spoke kindly." },
+    "wishing": { syllables: "wish-ing", tags: ["suffix", "digraph"], def: "Hoping for.", sentence: "I am wishing for snow." },
+
+    // 11. SCHWA
     "sofa": { syllables: "so-fa", tags: ["schwa"], def: "Couch.", sentence: "Sit on the sofa." },
     "banana": { syllables: "ba-nan-a", tags: ["schwa", "multisyllable"], def: "Yellow fruit.", sentence: "Peel the banana." },
     "zebra": { syllables: "ze-bra", tags: ["schwa"], def: "Striped animal.", sentence: "The zebra runs." },
@@ -225,9 +227,7 @@ window.WORD_ENTRIES = {
     "llama": { syllables: "lla-ma", tags: ["schwa", "floss"], def: "Woolly animal.", sentence: "The llama spits." },
     "extra": { syllables: "ex-tra", tags: ["schwa"], def: "More than needed.", sentence: "Have an extra cookie." },
 
-    // ==========================================
-    // 10. MULTISYLLABLE & COMPOUND
-    // ==========================================
+    // 12. MULTISYLLABLE & COMPOUND
     "basket": { syllables: "bas-ket", tags: ["multisyllable"], def: "Woven container.", sentence: "Put apples in the basket." },
     "magnet": { syllables: "mag-net", tags: ["multisyllable"], def: "Attracts metal.", sentence: "The magnet sticks." },
     "picnic": { syllables: "pic-nic", tags: ["multisyllable"], def: "Outdoor meal.", sentence: "Let's have a picnic." },
@@ -252,4 +252,21 @@ window.WORD_ENTRIES = {
     "insect": { syllables: "in-sect", tags: ["multisyllable"], def: "Bug.", sentence: "Ants are an insect." },
     "dentist": { syllables: "den-tist", tags: ["multisyllable"], def: "Tooth doctor.", sentence: "The dentist helps teeth." },
     "doctor": { syllables: "doc-tor", tags: ["multisyllable", "r-controlled"], def: "Heals sick people.", sentence: "The doctor helps you." }
+};
+
+// FOCUS INFO FOR UI PANEL
+window.FOCUS_INFO = {
+    "all": { title: "Mixed Review", desc: "A mix of all phonics patterns.", hint: "Practice everything you know!", examples: "cat, ship, cake" },
+    "cvc": { title: "CVC Words", desc: "Consonant-Vowel-Consonant with short vowels.", hint: "Listen for the short vowel sound in the middle.", examples: "cat, pig, sun" },
+    "digraph": { title: "Digraphs", desc: "Two letters that make one sound.", hint: "Look for sh, ch, th, wh, or ck.", examples: "ship, chop, duck", quick: ["sh", "ch", "th", "wh", "ck"] },
+    "blend": { title: "Blends", desc: "Two consonants where you hear each sound.", hint: "Slide the sounds together.", examples: "stop, frog, nest", quick: ["st", "bl", "gr", "cl", "fl", "tr"] },
+    "floss": { title: "FLOSS Rule", desc: "Double f, l, s, or z at the end of a short word.", hint: "Check the ending letters.", examples: "hill, mess, buzz", quick: ["ff", "ll", "ss", "zz"] },
+    "magic-e": { title: "Magic E", desc: "Silent e makes the vowel say its name.", hint: "The 'e' at the end is quiet!", examples: "cake, bike, home" },
+    "vowel-team": { title: "Vowel Teams", desc: "Two vowels working together to make one sound.", hint: "Often the first one does the talking.", examples: "rain, boat, tree", quick: ["ai", "ay", "ee", "ea", "oa"] },
+    "r-controlled": { title: "R-Controlled", desc: "The letter r changes the vowel sound.", hint: "The 'r' is bossy!", examples: "car, bird, corn", quick: ["ar", "er", "ir", "or", "ur"] },
+    "prefix": { title: "Prefixes", desc: "Parts added to the beginning of a word.", hint: "Look for re-, un-, pre-, or dis-.", examples: "unhappy, redo", quick: ["un", "re", "pre", "dis"] },
+    "suffix": { title: "Suffixes", desc: "Parts added to the end of a word.", hint: "Look for -s, -ed, -ing, or -tion.", examples: "cats, jumped", quick: ["s", "ed", "ing", "tion", "ly"] },
+    "doubling": { title: "Doubling Rule", desc: "Double the final consonant before adding a suffix.", hint: "Think: 1-1-1 (1 syllable, 1 vowel, 1 consonant).", examples: "runner, hopping" },
+    "schwa": { title: "Schwa", desc: "Unstressed vowel sound that sounds like 'uh'.", hint: "Vowels in lazy syllables often sound like schwa.", examples: "sofa, about, lemon" },
+    "multisyllable": { title: "Multisyllable", desc: "Words with more than one beat.", hint: "Break the word into smaller parts.", examples: "basket, magnet, picnic" }
 };
