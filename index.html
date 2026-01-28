@@ -1,65 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Decode the Word</title>
-
-  <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500&family=Lexend&display=swap" rel="stylesheet">
-
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔤</text></svg>">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Decode the Word</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Lexend:wght@400;600&display=swap" rel="stylesheet">
 </head>
+<body tabindex="-1">
 
-<body>
-  <header>
-    <h1>Decode the Word</h1>
+    <div id="toast-container"></div>
+    <div id="banner-container" class="banner hidden"></div>
 
-    <div class="controls">
-      <button id="case-toggle">abc</button>
-      <button id="teacher-btn">🎓</button>
+    <header>
+        <div class="header-top">
+            <h1>Decode the Word</h1>
+            <div class="header-actions">
+                <button id="case-toggle" class="text-btn">abc</button>
+                <button id="teacher-btn" class="icon-btn" title="Teacher Mode">🎓</button>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="pattern-select">Focus:</label>
+                <select id="pattern-select">
+                    <option value="all">Mixed Review</option> 
+                    <option value="cvc">CVC (Short Vowels)</option>
+                    <option value="digraph">Digraphs (sh, ch)</option>
+                    <option value="blend">Blends (st, bl)</option>
+                    <option value="floss">FLOSS Rule</option>
+                    <option value="magic-e">Magic E</option>
+                    <option value="vowel-team">Vowel Teams</option>
+                    <option value="r-controlled">R-Controlled</option>
+                    <option value="prefix">Prefixes (un, re)</option>
+                    <option value="suffix">Suffixes (ed, ing)</option>
+                    <option value="doubling">Doubling (1-1-1)</option>
+                    <option value="schwa">Schwa</option>
+                    <option value="multisyllable">Multisyllable</option>
+                </select>
+            </div>
 
-      <label>Focus</label>
-      <select id="focus-select"></select>
+            <div class="control-group">
+                <label for="length-select">Length:</label>
+                <select id="length-select">
+                    <option value="any">Any</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5" selected>5</option>
+                    <option value="6">6</option>
+                </select>
+            </div>
+            
+            <button id="new-word-btn" title="Skip / New Word">New Word ↻</button>
+        </div>
 
-      <label>Length</label>
-      <select id="length-select">
-        <option selected>5</option>
-      </select>
+        <div class="focus-panel">
+            <div class="focus-header">
+                <strong id="focus-title">Focus Title</strong>
+                <button id="hear-word-hint" class="icon-btn" title="Hear Word">🔊</button>
+            </div>
+            <div id="focus-desc">Description of the rule.</div>
+            <div id="focus-hint" class="hint-text">Hint text...</div>
+            <div id="focus-examples" style="margin-top:2px; color:#666; font-style:italic;">Ex: ...</div>
+            <div id="quick-tiles-row" class="quick-row hidden"></div>
+        </div>
+    </header>
 
-      <button id="new-word-btn">New Word</button>
-    </div>
-
-    <!-- FOCUS INFO PANEL -->
-    <div id="focus-panel" class="focus-panel">
-      <strong id="focus-title"></strong>
-      <p id="focus-desc"></p>
-      <p><strong>Examples:</strong> <span id="focus-examples"></span></p>
-      <p class="hint-text" id="focus-hint"></p>
-    </div>
-  </header>
-
-  <main>
-    <div id="board"></div>
-
-    <div class="hint-actions">
-      <button id="hear-word">🔊 Hear Word</button>
-      <button id="hear-sentence">📝 Sentence</button>
-    </div>
+    <main>
+        <div id="game-board"></div>
+        <button id="hear-sentence-hint" class="text-btn" style="margin-bottom: 10px; width: 100%; max-width: 300px;">💡 Hear Sentence Hint</button>
+    </main>
 
     <div id="keyboard"></div>
-  </main>
 
-  <!-- MODAL -->
-  <div id="overlay">
-    <div class="modal">
-      <button id="close-modal">×</button>
-      <h2>Welcome 👋</h2>
-      <p>Pick a focus and decode the word.</p>
-      <button id="start-btn">Start</button>
+    <div id="modal-overlay" class="hidden">
+        
+        <div id="modal" class="modal hidden">
+            <div class="modal-content">
+                <span class="close-btn top-right-x">&times;</span>
+                <h2 id="modal-title">Great Job!</h2>
+                <div class="stat-box">
+                    <div id="modal-word" class="stat-word">WORD</div>
+                    <div id="modal-syllables" class="stat-syllables">w • o • r • d</div>
+                    <div id="modal-def" class="stat-def">Definition here.</div>
+                    <div id="modal-sentence" class="stat-sentence">"Sentence here."</div>
+                </div>
+                <div style="display:flex; gap:10px; justify-content:center;">
+                    <button id="speak-btn" class="action-btn">🔊 Say Word</button>
+                    <button id="play-again-btn" class="primary-btn">Play Again</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="teacher-modal" class="modal hidden">
+            <div class="modal-content teacher-content">
+                <span class="close-teacher top-right-x">&times;</span>
+                <h2>Teacher Mode</h2>
+                <p>Set a masked word (3-10 letters) for the student.</p>
+                <div class="masked-input-container">
+                    <input type="password" id="custom-word-input" placeholder="Enter secret word" autocomplete="off">
+                    <button id="toggle-mask" type="button">👁️</button>
+                </div>
+                <p id="teacher-error" class="error-msg"></p>
+                <button id="set-word-btn" class="primary-btn">Set Word & Play</button>
+            </div>
+        </div>
+
+        <div id="welcome-modal" class="modal hidden">
+            <div class="modal-content welcome-content">
+                <span class="close-btn top-right-x">&times;</span>
+                <h2>Welcome! 👋</h2>
+                <p>Let's practice decoding. Pick a focus and guess the secret word!</p>
+                <ul class="welcome-steps">
+                    <li>1. Pick a <strong>Phonics Focus</strong>.</li>
+                    <li>2. Type your guess.</li>
+                    <li>3. Green means <strong>Perfect</strong>!</li>
+                </ul>
+                <button id="start-playing-btn" class="primary-btn">Start Decoding</button>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <script src="script.js"></script>
+    <script src="words.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
