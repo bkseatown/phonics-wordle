@@ -1,1 +1,0 @@
-window.WORD_BANK = PHONICS_DATA.words;
