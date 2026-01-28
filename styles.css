@@ -239,3 +239,8 @@ button:focus {
     transition: none !important;
   }
 }
+
+
+/* STABLE GRID OVERRIDES */
+#game-board{display:flex;flex-direction:column;align-items:center;gap:10px;}
+.row{display:flex;gap:10px;}

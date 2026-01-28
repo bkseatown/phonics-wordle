@@ -282,10 +282,12 @@
   function endGame(win) {
     gameOver = true;
 
-    endWordEl.textContent = targetWord;
-    endDefEl.textContent = currentEntry?.definition || "";
-    endSentenceEl.textContent = currentEntry?.sentence || "";
+    const answerWord = targetWord;
+    const answerEntry = currentEntry;
 
+    endWordEl.textContent = answerWord;
+    endDefEl.textContent = answerEntry?.definition || "";
+    endSentenceEl.textContent = answerEntry?.sentence || "";
     if (DATA.FUN_CONTENT?.length) {
       endFunEl.textContent =
         DATA.FUN_CONTENT[Math.floor(Math.random() * DATA.FUN_CONTENT.length)];
