@@ -19,12 +19,12 @@
                         <span class="btn-label">OFF</span>
                     </button>
                     <button id="btn-size" class="icon-btn" aria-label="Toggle Text Size">
-                        <span class="icon">A+</span>
+                        <span class="icon">Aa</span>
                         <span class="btn-label">Size</span>
                     </button>
                     <button id="btn-teacher" class="icon-btn" aria-label="Teacher Tools">
                         <span class="icon">🎓</span>
-                        <span class="btn-label">Teacher</span>
+                        <span class="btn-label">Teach</span>
                     </button>
                     <button id="btn-help" class="icon-btn" aria-label="Help">
                         <span class="icon">❓</span>
@@ -37,11 +37,11 @@
         <div id="teacher-menu" class="hidden tool-overlay">
             <div class="modal-content">
                 <h3>Teacher Tools</h3>
-                <p><strong>Step 1:</strong> You set the word (e.g. <em>mag-net-ic</em>).<br><strong>Step 2:</strong> Students guess using letters only.</p>
-                <input type="text" id="teacher-input" placeholder="e.g. mag-net-ic" autocomplete="off">
+                <p>Enter a target word (e.g. <em>magnetic</em>).<br>Students will guess using letters only.</p>
+                <input type="text" id="teacher-input" placeholder="e.g. magnetic" autocomplete="off" style="width: 100%; padding: 10px; margin-bottom: 10px; font-size: 1.2rem;">
                 <div class="btn-row">
-                    <button id="btn-teacher-set" class="primary-btn small">Set Word</button>
-                    <button id="btn-teacher-cancel" class="action-btn small">Cancel</button>
+                    <button id="btn-teacher-set" class="primary-btn">Set Word</button>
+                    <button id="btn-teacher-cancel" class="action-btn" style="margin-top: 10px; width: 100%;">Cancel</button>
                 </div>
             </div>
         </div>
@@ -92,9 +92,25 @@
 
     <div id="toast">Message Here</div>
 
+    <div id="welcome-modal-overlay" class="hidden">
+        <div class="modal-content">
+            <span class="welcome-emoji">👋</span>
+            <h2>Let's Decode!</h2>
+            <p>Say the sounds as you type to find the hidden word.</p>
+            
+            <ul class="welcome-list">
+                <li><span class="color-dot green"></span> Right sound, right spot!</li>
+                <li><span class="color-dot yellow"></span> Right sound, wrong spot.</li>
+                <li><span class="color-dot gray"></span> Not in the word.</li>
+            </ul>
+
+            <button id="btn-welcome-start" class="primary-btn">Start Playing</button>
+        </div>
+    </div>
+
     <div id="modal-overlay" class="hidden">
         <div class="modal-content">
-            <button id="modal-close">×</button>
+            <button id="modal-close" class="close-x">×</button>
             <h2 id="modal-title">Great Job!</h2>
             
             <div class="word-reveal-card">
@@ -123,7 +139,7 @@
 
     <div id="help-modal-overlay" class="hidden">
         <div class="modal-content">
-            <button id="help-close">×</button>
+            <button id="help-close" class="close-x">×</button>
             <h2>How to Decode</h2>
             <div class="instructional-content">
                 <p><strong>Goal:</strong> Map sounds to letters to find the hidden word.</p>
