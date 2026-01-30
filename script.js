@@ -129,7 +129,8 @@ function startNewGame(customWord = null) {
 }
 
 function getWordFromDictionary() {
-    const pattern = document.getElementById("pattern-select").value;
+    const patternRaw = document.getElementById("pattern-select").value;
+    const pattern = (patternRaw === "all") ? "mixed" : patternRaw;
     const lenVal = document.getElementById("length-select").value;
     
     // First load forces 5 letters if 'any' is selected to maintain grid look
@@ -148,13 +149,17 @@ function getWordFromDictionary() {
 }
 
 function updateFocusPanel() {
-    const pat = document.getElementById("pattern-select").value;
-    const info = window.FOCUS_INFO[pat] || window.FOCUS_INFO.all;
-    
-    document.getElementById("focus-title").textContent = info.title;
-    document.getElementById("focus-desc").textContent = info.desc;
-    document.getElementById("focus-hint").textContent = info.hint;
-    document.getElementById("focus-examples").textContent = `Ex: ${info.examples}`;
+    const rawPat = document.getElementById("pattern-select").value;
+    const pat = (rawPat === "all") ? "mixed" : rawPat;
+    const info = (window.FOCUS_INFO && (window.FOCUS_INFO[pat] || window.FOCUS_INFO.mixed || window.FOCUS_INFO.all)) || null;
+    if (!info) return;
+
+    document.getElementById("focus-title").textContent = info.label || info.title || "Practice";
+    document.getElementById("focus-desc").textContent = info.desc || "";
+    document.getElementById("focus-hint").textContent = info.hint || "";
+
+    const ex = Array.isArray(info.examples) ? info.examples.join(", ") : (info.examples || "");
+    document.getElementById("focus-examples").textContent = ex ? `Try: ${ex}` : "";
 
     const quickRow = document.getElementById("quick-tiles-row");
     if (info.quick) {
