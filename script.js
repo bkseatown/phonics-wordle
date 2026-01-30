@@ -1,14 +1,8 @@
-
-// ===== DOM SAFE GUARDS =====
-const patternSelect = document.getElementById("pattern-select");
-const lengthSelect = document.getElementById("length-select");
-const focusTitleEl = document.getElementById("focus-title");
-const focusDescEl = document.getElementById("focus-desc");
 /* =========================================
-   DECODE THE WORD - GOLD MASTER (With Studio)
+   DECODE THE WORD - FINAL GOLD MASTER (WITH RECORDING STUDIO)
    ========================================= */
 
-let MAX_GUESSES = 6;
+const MAX_GUESSES = 6;
 let CURRENT_WORD_LENGTH = 5;
 let currentWord = "";
 let currentEntry = null;
@@ -38,17 +32,19 @@ function initDB() {
     request.onupgradeneeded = (event) => {
         db = event.target.result;
         if (!db.objectStoreNames.contains(STORE_NAME)) {
-            db.createObjectStore(STORE_NAME);
+            db.createObjectStore(STORE_NAME); // Key will be "word_type" e.g. "cat_word"
         }
     };
     request.onsuccess = (event) => {
         db = event.target.result;
+        console.log("Audio DB Ready");
     };
     request.onerror = (event) => {
         console.error("DB Error", event);
     };
 }
 
+// Helper: Save Audio Blob
 function saveAudioToDB(key, blob) {
     if (!db) return;
     const tx = db.transaction(STORE_NAME, "readwrite");
@@ -56,6 +52,7 @@ function saveAudioToDB(key, blob) {
     store.put(blob, key);
 }
 
+// Helper: Get Audio Blob
 function getAudioFromDB(key) {
     return new Promise((resolve) => {
         if (!db) return resolve(null);
@@ -68,12 +65,13 @@ function getAudioFromDB(key) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    initDB();
+    initDB(); // Start DB
     initControls();
     initKeyboard();
     initVoiceLoader();
-    initStudio();
+    initStudio(); // Init Studio Logic
     
+    // Start game logic
     startNewGame();
     checkFirstTimeVisitor();
 });
@@ -89,19 +87,25 @@ function initVoiceLoader() {
     }
 }
 
+// UPDATED SPEAK FUNCTION: Checks DB first, then falls back to Robot
 async function speak(text, type = "word") {
     if (!text) return;
     window.speechSynthesis.cancel(); 
 
-    // 1. Check for Teacher Recording in DB
+    // 1. Check for Teacher Recording
+    // Key format: "cat_word" or "cat_sentence"
+    // Since sentences are long, we hash them or just use "word_sentence" if tied to currentWord
+    
     let dbKey = "";
     if (type === "word") {
         dbKey = `${text.toLowerCase()}_word`;
     } else {
-        // Sentence matching logic
+        // For sentences, we rely on the currentWord context 
+        // Logic: if text matches currentEntry.sentence, use currentWord_sentence
         if (currentEntry && text === currentEntry.sentence) {
             dbKey = `${currentWord.toLowerCase()}_sentence`;
         } else {
+            // Fallback for generic text -> no recording likely
             dbKey = "unknown"; 
         }
     }
@@ -113,17 +117,18 @@ async function speak(text, type = "word") {
         const url = URL.createObjectURL(blob);
         const audio = new Audio(url);
         audio.play();
+        // Clean up URL after play
         audio.onended = () => URL.revokeObjectURL(url);
-        return; 
+        return; // Skip synthesis
     }
 
-    // 2. Fallback to Robot (Best Available)
+    // 2. Fallback to Synthesis (Robot)
     const msg = new SpeechSynthesisUtterance(text);
     
     let voices = cachedVoices.length ? cachedVoices : window.speechSynthesis.getVoices();
     let preferred = null;
 
-    // Prioritize Premium/Enhanced voices
+    // Intelligent Selection (Gold Master Logic)
     preferred = voices.find(v => /Google US English/i.test(v.name));
     if (!preferred) preferred = voices.find(v => /Google/i.test(v.name) && v.lang.startsWith("en-US"));
     if (!preferred) preferred = voices.find(v => (/Enhanced|Premium|Siri/i.test(v.name) && v.lang.startsWith("en-US")));
@@ -142,6 +147,7 @@ async function speak(text, type = "word") {
 
 /* --- CONTROLS & EVENTS --- */
 function initControls() {
+    // Buttons
     document.getElementById("new-word-btn").onclick = () => {
         document.getElementById("new-word-btn").blur(); 
         startNewGame();
@@ -151,6 +157,7 @@ function initControls() {
         toggleCase();
     };
     
+    // Selects 
     document.getElementById("pattern-select").onchange = () => {
         document.getElementById("pattern-select").blur();
         startNewGame();
@@ -162,21 +169,22 @@ function initControls() {
         startNewGame();
     };
 
+    // Teacher Mode
     document.getElementById("teacher-btn").onclick = openTeacherMode;
     document.getElementById("set-word-btn").onclick = handleTeacherSubmit;
-    document.getElementById("open-studio-btn").onclick = openStudioSetup;
+    document.getElementById("open-studio-btn").onclick = openStudioSetup; // New
     document.getElementById("toggle-mask").onclick = () => {
         const inp = document.getElementById("custom-word-input");
         inp.type = inp.type === "password" ? "text" : "password";
         inp.focus();
     };
 
+    // Hints
     document.getElementById("hear-word-hint").onclick = () => {
         if (!isModalOpen()) speak(currentWord, "word");
     };
     document.getElementById("hear-sentence-hint").onclick = () => {
         if (!isModalOpen() && currentEntry) {
-            // No toast, just speak
             speak(currentEntry.sentence, "sentence");
         }
     };
@@ -188,6 +196,7 @@ function initControls() {
         startNewGame();
     };
 
+    // Modal Closing Logic 
     document.querySelectorAll(".close-btn, .close-teacher, .close-studio, #start-playing-btn").forEach(btn => {
         btn.addEventListener("click", closeModal);
     });
@@ -196,10 +205,11 @@ function initControls() {
         if (e.target === modalOverlay) closeModal();
     };
 
-    // GLOBAL KEYBOARD LISTENER (Capture Phase)
+    // Global Keyboard Listener
     window.addEventListener("keydown", (e) => {
         if (isModalOpen()) {
-            if (!studioModal.classList.contains("hidden")) return; // Allow typing in studio
+            // Allow studio typing in text areas
+            if (!studioModal.classList.contains("hidden")) return;
 
             if (e.key === "Escape" || e.key === "Enter") {
                 if (!teacherModal.classList.contains("hidden") && e.key === "Enter") {
@@ -230,11 +240,12 @@ function isModalOpen() {
     return !modalOverlay.classList.contains("hidden");
 }
 
-/* --- STUDIO LOGIC --- */
+/* --- RECORDING STUDIO LOGIC (THE WIZARD) --- */
 let studioList = [];
 let studioIndex = 0;
 let mediaRecorder = null;
 let audioChunks = [];
+let recordingType = ""; // "word" or "sentence"
 
 function initStudio() {
     document.getElementById("studio-source-select").onchange = (e) => {
@@ -268,39 +279,47 @@ async function startStudioSession() {
     let rawList = [];
 
     if (source === "focus") {
+        // Get words from current focus or all
         const pattern = document.getElementById("pattern-select").value;
         const allWords = Object.keys(window.WORD_ENTRIES);
+        
         rawList = allWords.filter(w => {
             const e = window.WORD_ENTRIES[w];
             return pattern === 'all' || (e.tags && e.tags.includes(pattern));
         });
     } else {
+        // Parse pasted text
         const text = document.getElementById("studio-paste-input").value;
         rawList = text.split(/\r?\n/).map(s => s.trim().toLowerCase()).filter(s => s && /^[a-z]+$/.test(s));
     }
 
     if (rawList.length === 0) {
-        alert("No words found.");
+        alert("No words found to record.");
         return;
     }
 
+    // Filter Logic
     studioList = [];
     for (let w of rawList) {
+        // Get entry or create dummy
         const entry = window.WORD_ENTRIES[w] || { sentence: `The word is ${w}.` };
         
+        // If skip existing, check DB
         if (skipExisting) {
             const hasWord = await getAudioFromDB(`${w}_word`);
             const hasSent = await getAudioFromDB(`${w}_sentence`);
-            if (hasWord && hasSent) continue; 
+            if (hasWord && hasSent) continue; // Skip if BOTH exist
         }
+        
         studioList.push({ word: w, sentence: entry.sentence });
     }
 
     if (studioList.length === 0) {
-        alert("All words already have recordings!");
+        alert("All words in this list already have recordings!");
         return;
     }
 
+    // Start Wizard
     studioIndex = 0;
     document.getElementById("studio-setup-view").classList.add("hidden");
     document.getElementById("studio-record-view").classList.remove("hidden");
@@ -319,6 +338,7 @@ function loadStudioItem() {
     document.getElementById("studio-word-display").textContent = item.word.toUpperCase();
     document.getElementById("studio-sentence-display").value = item.sentence;
 
+    // Reset Buttons
     resetRecordButtons();
 }
 
@@ -336,6 +356,7 @@ function resetRecordButtons() {
     playW.disabled = true;
     playS.disabled = true;
 
+    // Check if audio exists to enable play buttons immediately
     const w = studioList[studioIndex].word;
     getAudioFromDB(`${w}_word`).then(b => { if(b) playW.disabled = false; });
     getAudioFromDB(`${w}_sentence`).then(b => { if(b) playS.disabled = false; });
@@ -343,13 +364,16 @@ function resetRecordButtons() {
 
 function toggleRecording(type) {
     if (mediaRecorder && mediaRecorder.state === "recording") {
+        // Stop
         mediaRecorder.stop();
         return;
     }
 
+    // Start
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
         mediaRecorder = new MediaRecorder(stream);
         audioChunks = [];
+        recordingType = type;
 
         mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
         
@@ -360,6 +384,7 @@ function toggleRecording(type) {
             
             saveAudioToDB(key, blob);
             
+            // UI Update
             const btn = document.getElementById(type === "word" ? "record-word-btn" : "record-sentence-btn");
             btn.textContent = "Re-Record";
             btn.classList.remove("recording");
@@ -368,22 +393,12 @@ function toggleRecording(type) {
             playBtn.disabled = false;
 
             document.getElementById("recording-status").textContent = "Saved!";
-            setTimeout(() => {
-                document.getElementById("recording-status").textContent = "";
-                // Auto-advance check
-                if (document.getElementById("studio-auto-advance").checked) {
-                    // Check if both exist now
-                    getAudioFromDB(`${word}_word`).then(w => {
-                        getAudioFromDB(`${word}_sentence`).then(s => {
-                            if (w && s) setTimeout(nextStudioItem, 500);
-                        });
-                    });
-                }
-            }, 1000);
+            setTimeout(() => document.getElementById("recording-status").textContent = "", 1000);
         };
 
         mediaRecorder.start();
         
+        // UI Update
         const btn = document.getElementById(type === "word" ? "record-word-btn" : "record-sentence-btn");
         btn.textContent = "Stop ■";
         btn.classList.add("recording");
@@ -406,9 +421,18 @@ async function playPreview(type) {
 }
 
 function nextStudioItem() {
+    // Save updated sentence text if changed
+    const currentItem = studioList[studioIndex];
+    const currentWord = currentItem.word;
+    const newSentence = document.getElementById("studio-sentence-display").value;
+    
+    // Update logic: In a real app we'd update words.js, but here we just ensure the DB key aligns
+    // For now, we assume the teacher recorded the sentence displayed.
+    
     studioIndex++;
     loadStudioItem();
 }
+
 
 /* --- GAME LOGIC --- */
 function startNewGame(customWord = null) {
@@ -722,10 +746,4 @@ function confetti() {
         }, 10);
         setTimeout(() => c.remove(), 1600);
     }
-}
-
-// ===== MIC HARD STOP =====
-function stopAllTracks(stream) {
-  if (!stream) return;
-  stream.getTracks().forEach(t => t.stop());
 }
