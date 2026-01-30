@@ -1,5 +1,5 @@
 /* =========================================
-   DECODE THE WORD - FINAL GOLD MASTER (WITH RECORDING STUDIO)
+   DECODE THE WORD - CORE LOGIC (GOLD MASTER)
    ========================================= */
 
 const MAX_GUESSES = 6;
@@ -11,193 +11,55 @@ let currentGuess = "";
 let gameOver = false;
 let isFirstLoad = true;
 let isUpperCase = false;
-let cachedVoices = [];
 
-// DOM Elements
+// DOM
 const board = document.getElementById("game-board");
 const keyboard = document.getElementById("keyboard");
 const modalOverlay = document.getElementById("modal-overlay");
 const welcomeModal = document.getElementById("welcome-modal");
 const teacherModal = document.getElementById("teacher-modal");
-const studioModal = document.getElementById("recording-studio-modal");
 const gameModal = document.getElementById("modal");
 
-// --- AUDIO DATABASE SETUP (IndexedDB) ---
-const DB_NAME = "PhonicsAudioDB";
-const STORE_NAME = "audio_files";
-let db;
-
-function initDB() {
-    const request = indexedDB.open(DB_NAME, 1);
-    request.onupgradeneeded = (event) => {
-        db = event.target.result;
-        if (!db.objectStoreNames.contains(STORE_NAME)) {
-            db.createObjectStore(STORE_NAME); // Key will be "word_type" e.g. "cat_word"
-        }
-    };
-    request.onsuccess = (event) => {
-        db = event.target.result;
-        console.log("Audio DB Ready");
-    };
-    request.onerror = (event) => {
-        console.error("DB Error", event);
-    };
-}
-
-// Helper: Save Audio Blob
-function saveAudioToDB(key, blob) {
-    if (!db) return;
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const store = tx.objectStore(STORE_NAME);
-    store.put(blob, key);
-}
-
-// Helper: Get Audio Blob
-function getAudioFromDB(key) {
-    return new Promise((resolve) => {
-        if (!db) return resolve(null);
-        const tx = db.transaction(STORE_NAME, "readonly");
-        const store = tx.objectStore(STORE_NAME);
-        const req = store.get(key);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => resolve(null);
-    });
-}
-
 document.addEventListener("DOMContentLoaded", () => {
-    initDB(); // Start DB
     initControls();
     initKeyboard();
-    initVoiceLoader();
-    initStudio(); // Init Studio Logic
-    
-    // Start game logic
     startNewGame();
     checkFirstTimeVisitor();
 });
 
-/* --- VOICE LOADING & PLAYBACK --- */
-function initVoiceLoader() {
-    const load = () => {
-        cachedVoices = window.speechSynthesis.getVoices();
-    };
-    load();
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
-        window.speechSynthesis.onvoiceschanged = load;
-    }
-}
-
-// UPDATED SPEAK FUNCTION: Checks DB first, then falls back to Robot
-async function speak(text, type = "word") {
-    if (!text) return;
-    window.speechSynthesis.cancel(); 
-
-    // 1. Check for Teacher Recording
-    // Key format: "cat_word" or "cat_sentence"
-    // Since sentences are long, we hash them or just use "word_sentence" if tied to currentWord
-    
-    let dbKey = "";
-    if (type === "word") {
-        dbKey = `${text.toLowerCase()}_word`;
-    } else {
-        // For sentences, we rely on the currentWord context 
-        // Logic: if text matches currentEntry.sentence, use currentWord_sentence
-        if (currentEntry && text === currentEntry.sentence) {
-            dbKey = `${currentWord.toLowerCase()}_sentence`;
-        } else {
-            // Fallback for generic text -> no recording likely
-            dbKey = "unknown"; 
-        }
-    }
-
-    const blob = await getAudioFromDB(dbKey);
-    
-    if (blob) {
-        // Play Recorded Audio
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audio.play();
-        // Clean up URL after play
-        audio.onended = () => URL.revokeObjectURL(url);
-        return; // Skip synthesis
-    }
-
-    // 2. Fallback to Synthesis (Robot)
-    const msg = new SpeechSynthesisUtterance(text);
-    
-    let voices = cachedVoices.length ? cachedVoices : window.speechSynthesis.getVoices();
-    let preferred = null;
-
-    // Intelligent Selection (Gold Master Logic)
-    preferred = voices.find(v => /Google US English/i.test(v.name));
-    if (!preferred) preferred = voices.find(v => /Google/i.test(v.name) && v.lang.startsWith("en-US"));
-    if (!preferred) preferred = voices.find(v => (/Enhanced|Premium|Siri/i.test(v.name) && v.lang.startsWith("en-US")));
-    if (!preferred) preferred = voices.find(v => /Ava/i.test(v.name) && v.lang.startsWith("en-US"));
-    if (!preferred) preferred = voices.find(v => /Samantha/i.test(v.name) && v.lang.startsWith("en-US"));
-    if (!preferred) preferred = voices.find(v => /Microsoft/i.test(v.name) && v.lang.startsWith("en-US"));
-    if (!preferred) preferred = voices.find(v => v.lang === "en-US");
-    if (!preferred) preferred = voices.find(v => v.lang.startsWith("en"));
-
-    if (preferred) msg.voice = preferred;
-    msg.rate = 0.9; 
-    msg.pitch = 1.0;
-
-    window.speechSynthesis.speak(msg);
-}
-
-/* --- CONTROLS & EVENTS --- */
 function initControls() {
     // Buttons
-    document.getElementById("new-word-btn").onclick = () => {
-        document.getElementById("new-word-btn").blur(); 
-        startNewGame();
-    };
-    document.getElementById("case-toggle").onclick = (e) => {
-        e.target.blur();
-        toggleCase();
-    };
+    document.getElementById("new-word-btn").onclick = () => startNewGame();
+    document.getElementById("case-toggle").onclick = toggleCase;
     
-    // Selects 
-    document.getElementById("pattern-select").onchange = () => {
-        document.getElementById("pattern-select").blur();
-        startNewGame();
-    };
+    // Selects
+    document.getElementById("pattern-select").onchange = () => startNewGame();
     document.getElementById("length-select").onchange = (e) => {
         const val = e.target.value;
         CURRENT_WORD_LENGTH = val === 'any' ? 5 : parseInt(val);
-        e.target.blur();
         startNewGame();
     };
 
     // Teacher Mode
     document.getElementById("teacher-btn").onclick = openTeacherMode;
     document.getElementById("set-word-btn").onclick = handleTeacherSubmit;
-    document.getElementById("open-studio-btn").onclick = openStudioSetup; // New
     document.getElementById("toggle-mask").onclick = () => {
         const inp = document.getElementById("custom-word-input");
         inp.type = inp.type === "password" ? "text" : "password";
+        // Re-focus to keep typing
         inp.focus();
     };
 
     // Hints
-    document.getElementById("hear-word-hint").onclick = () => {
-        if (!isModalOpen()) speak(currentWord, "word");
-    };
+    document.getElementById("hear-word-hint").onclick = () => speak(currentWord);
     document.getElementById("hear-sentence-hint").onclick = () => {
-        if (!isModalOpen() && currentEntry) {
-            speak(currentEntry.sentence, "sentence");
-        }
+        showToast("Sentence hint shared!");
+        speak(currentEntry.sentence);
     };
-    document.getElementById("speak-btn").onclick = () => {
-        speak(currentWord, "word");
-    };
-    document.getElementById("play-again-btn").onclick = () => {
-        closeModal();
-        startNewGame();
-    };
+    document.getElementById("speak-btn").onclick = () => speak(currentWord);
 
-    // Modal Closing Logic 
-    document.querySelectorAll(".close-btn, .close-teacher, .close-studio, #start-playing-btn").forEach(btn => {
+    // Modal Closing Logic (Outside Click, Buttons, Esc)
+    document.querySelectorAll(".close-btn, .close-teacher, #start-playing-btn, #play-again-btn").forEach(btn => {
         btn.addEventListener("click", closeModal);
     });
 
@@ -207,18 +69,11 @@ function initControls() {
 
     // Global Keyboard Listener
     window.addEventListener("keydown", (e) => {
-        if (isModalOpen()) {
-            // Allow studio typing in text areas
-            if (!studioModal.classList.contains("hidden")) return;
-
-            if (e.key === "Escape" || e.key === "Enter") {
-                if (!teacherModal.classList.contains("hidden") && e.key === "Enter") {
-                    handleTeacherSubmit();
-                } else {
-                    closeModal(); 
-                }
-            }
-            return; 
+        // If modal is open, only allow Escape or Enter (if valid context)
+        if (!modalOverlay.classList.contains("hidden")) {
+            if (e.key === "Escape") closeModal();
+            if (e.key === "Enter" && !welcomeModal.classList.contains("hidden")) closeModal();
+            return;
         }
 
         if (gameOver) return;
@@ -228,213 +83,15 @@ function initControls() {
         else if (/^[a-z]$/i.test(e.key)) handleInput(e.key.toLowerCase());
     });
 
+    // Teacher Input Specifics (Prevent background typing)
     const tInput = document.getElementById("custom-word-input");
     tInput.addEventListener("keydown", (e) => {
-        e.stopImmediatePropagation(); 
+        e.stopPropagation(); // Stop game board from receiving keys
         if (e.key === "Enter") handleTeacherSubmit();
         if (e.key === "Escape") closeModal();
     });
 }
 
-function isModalOpen() {
-    return !modalOverlay.classList.contains("hidden");
-}
-
-/* --- RECORDING STUDIO LOGIC (THE WIZARD) --- */
-let studioList = [];
-let studioIndex = 0;
-let mediaRecorder = null;
-let audioChunks = [];
-let recordingType = ""; // "word" or "sentence"
-
-function initStudio() {
-    document.getElementById("studio-source-select").onchange = (e) => {
-        const pasteArea = document.getElementById("studio-paste-area");
-        pasteArea.classList.toggle("hidden", e.target.value !== "paste");
-    };
-
-    document.getElementById("start-studio-btn").onclick = startStudioSession;
-    document.getElementById("exit-studio-btn").onclick = closeModal;
-    
-    document.getElementById("record-word-btn").onclick = () => toggleRecording("word");
-    document.getElementById("record-sentence-btn").onclick = () => toggleRecording("sentence");
-    
-    document.getElementById("play-word-preview").onclick = () => playPreview("word");
-    document.getElementById("play-sentence-preview").onclick = () => playPreview("sentence");
-    
-    document.getElementById("next-item-btn").onclick = nextStudioItem;
-}
-
-function openStudioSetup() {
-    teacherModal.classList.add("hidden");
-    studioModal.classList.remove("hidden");
-    document.getElementById("studio-setup-view").classList.remove("hidden");
-    document.getElementById("studio-record-view").classList.add("hidden");
-}
-
-async function startStudioSession() {
-    const source = document.getElementById("studio-source-select").value;
-    const skipExisting = document.getElementById("studio-skip-existing").checked;
-    
-    let rawList = [];
-
-    if (source === "focus") {
-        // Get words from current focus or all
-        const pattern = document.getElementById("pattern-select").value;
-        const allWords = Object.keys(window.WORD_ENTRIES);
-        
-        rawList = allWords.filter(w => {
-            const e = window.WORD_ENTRIES[w];
-            return pattern === 'all' || (e.tags && e.tags.includes(pattern));
-        });
-    } else {
-        // Parse pasted text
-        const text = document.getElementById("studio-paste-input").value;
-        rawList = text.split(/\r?\n/).map(s => s.trim().toLowerCase()).filter(s => s && /^[a-z]+$/.test(s));
-    }
-
-    if (rawList.length === 0) {
-        alert("No words found to record.");
-        return;
-    }
-
-    // Filter Logic
-    studioList = [];
-    for (let w of rawList) {
-        // Get entry or create dummy
-        const entry = window.WORD_ENTRIES[w] || { sentence: `The word is ${w}.` };
-        
-        // If skip existing, check DB
-        if (skipExisting) {
-            const hasWord = await getAudioFromDB(`${w}_word`);
-            const hasSent = await getAudioFromDB(`${w}_sentence`);
-            if (hasWord && hasSent) continue; // Skip if BOTH exist
-        }
-        
-        studioList.push({ word: w, sentence: entry.sentence });
-    }
-
-    if (studioList.length === 0) {
-        alert("All words in this list already have recordings!");
-        return;
-    }
-
-    // Start Wizard
-    studioIndex = 0;
-    document.getElementById("studio-setup-view").classList.add("hidden");
-    document.getElementById("studio-record-view").classList.remove("hidden");
-    loadStudioItem();
-}
-
-function loadStudioItem() {
-    if (studioIndex >= studioList.length) {
-        alert("Session Complete!");
-        closeModal();
-        return;
-    }
-
-    const item = studioList[studioIndex];
-    document.getElementById("studio-progress").textContent = `${studioIndex + 1} / ${studioList.length}`;
-    document.getElementById("studio-word-display").textContent = item.word.toUpperCase();
-    document.getElementById("studio-sentence-display").value = item.sentence;
-
-    // Reset Buttons
-    resetRecordButtons();
-}
-
-function resetRecordButtons() {
-    const wordBtn = document.getElementById("record-word-btn");
-    const sentBtn = document.getElementById("record-sentence-btn");
-    const playW = document.getElementById("play-word-preview");
-    const playS = document.getElementById("play-sentence-preview");
-
-    wordBtn.textContent = "Record Word";
-    wordBtn.classList.remove("recording");
-    sentBtn.textContent = "Record Sentence";
-    sentBtn.classList.remove("recording");
-    
-    playW.disabled = true;
-    playS.disabled = true;
-
-    // Check if audio exists to enable play buttons immediately
-    const w = studioList[studioIndex].word;
-    getAudioFromDB(`${w}_word`).then(b => { if(b) playW.disabled = false; });
-    getAudioFromDB(`${w}_sentence`).then(b => { if(b) playS.disabled = false; });
-}
-
-function toggleRecording(type) {
-    if (mediaRecorder && mediaRecorder.state === "recording") {
-        // Stop
-        mediaRecorder.stop();
-        return;
-    }
-
-    // Start
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-        recordingType = type;
-
-        mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
-        
-        mediaRecorder.onstop = () => {
-            const blob = new Blob(audioChunks, { type: "audio/webm" });
-            const word = studioList[studioIndex].word;
-            const key = type === "word" ? `${word}_word` : `${word}_sentence`;
-            
-            saveAudioToDB(key, blob);
-            
-            // UI Update
-            const btn = document.getElementById(type === "word" ? "record-word-btn" : "record-sentence-btn");
-            btn.textContent = "Re-Record";
-            btn.classList.remove("recording");
-            
-            const playBtn = document.getElementById(type === "word" ? "play-word-preview" : "play-sentence-preview");
-            playBtn.disabled = false;
-
-            document.getElementById("recording-status").textContent = "Saved!";
-            setTimeout(() => document.getElementById("recording-status").textContent = "", 1000);
-        };
-
-        mediaRecorder.start();
-        
-        // UI Update
-        const btn = document.getElementById(type === "word" ? "record-word-btn" : "record-sentence-btn");
-        btn.textContent = "Stop ■";
-        btn.classList.add("recording");
-        document.getElementById("recording-status").textContent = "Recording...";
-
-    }).catch(err => {
-        console.error("Mic Error:", err);
-        alert("Could not access microphone.");
-    });
-}
-
-async function playPreview(type) {
-    const word = studioList[studioIndex].word;
-    const key = type === "word" ? `${word}_word` : `${word}_sentence`;
-    const blob = await getAudioFromDB(key);
-    if (blob) {
-        const audio = new Audio(URL.createObjectURL(blob));
-        audio.play();
-    }
-}
-
-function nextStudioItem() {
-    // Save updated sentence text if changed
-    const currentItem = studioList[studioIndex];
-    const currentWord = currentItem.word;
-    const newSentence = document.getElementById("studio-sentence-display").value;
-    
-    // Update logic: In a real app we'd update words.js, but here we just ensure the DB key aligns
-    // For now, we assume the teacher recorded the sentence displayed.
-    
-    studioIndex++;
-    loadStudioItem();
-}
-
-
-/* --- GAME LOGIC --- */
 function startNewGame(customWord = null) {
     gameOver = false;
     guesses = [];
@@ -447,17 +104,22 @@ function startNewGame(customWord = null) {
         currentWord = customWord.toLowerCase();
         CURRENT_WORD_LENGTH = currentWord.length;
         currentEntry = window.WORD_ENTRIES[currentWord] || { 
-            def: "Teacher set word.", sentence: "Can you decode this?", syllables: currentWord 
+            def: "Teacher word.", sentence: "Can you decode this?", syllables: currentWord 
         };
     } else {
         const data = getWordFromDictionary();
         currentWord = data.word;
         currentEntry = data.entry;
-        CURRENT_WORD_LENGTH = currentWord.length;
+        // If 'Any Length' is selected, update internal length to match the word
+        if (document.getElementById("length-select").value === 'any') {
+            CURRENT_WORD_LENGTH = currentWord.length;
+        }
     }
 
     isFirstLoad = false;
-    board.style.gridTemplateColumns = `repeat(${CURRENT_WORD_LENGTH}, 50px)`;
+    
+    // Build Grid
+    board.style.gridTemplateColumns = `repeat(${CURRENT_WORD_LENGTH}, 1fr)`;
     for (let i = 0; i < MAX_GUESSES * CURRENT_WORD_LENGTH; i++) {
         const tile = document.createElement("div");
         tile.className = "tile";
@@ -469,7 +131,9 @@ function startNewGame(customWord = null) {
 function getWordFromDictionary() {
     const pattern = document.getElementById("pattern-select").value;
     const lenVal = document.getElementById("length-select").value;
-    const targetLen = (lenVal === 'any') ? null : parseInt(lenVal);
+    
+    // First load forces 5 letters if 'any' is selected to maintain grid look
+    let targetLen = (lenVal === 'any') ? (isFirstLoad ? 5 : null) : parseInt(lenVal);
 
     const pool = Object.keys(window.WORD_ENTRIES).filter(w => {
         const e = window.WORD_ENTRIES[w];
@@ -478,16 +142,15 @@ function getWordFromDictionary() {
         return lenMatch && patMatch;
     });
 
-    if (pool.length === 0) return { word: "apple", entry: window.WORD_ENTRIES["apple"] };
-    const final = pool[Math.floor(Math.random() * pool.length)];
+    // Fallback if no words match filter
+    const final = pool.length ? pool[Math.floor(Math.random() * pool.length)] : "apple";
     return { word: final, entry: window.WORD_ENTRIES[final] };
 }
 
 function updateFocusPanel() {
     const pat = document.getElementById("pattern-select").value;
-    const info = window.FOCUS_INFO[pat] || window.FOCUS_INFO.all || { 
-        title: "Practice", desc: "General Review", hint: "Do your best!", examples: "" 
-    };
+    const info = window.FOCUS_INFO[pat] || window.FOCUS_INFO.all;
+    
     document.getElementById("focus-title").textContent = info.title;
     document.getElementById("focus-desc").textContent = info.desc;
     document.getElementById("focus-hint").textContent = info.hint;
@@ -501,8 +164,8 @@ function updateFocusPanel() {
             b.className = "q-tile";
             b.textContent = q;
             b.onclick = () => { 
+                // Insert full quick tile string
                 for(let c of q) handleInput(c); 
-                b.blur();
             };
             quickRow.appendChild(b);
         });
@@ -511,6 +174,8 @@ function updateFocusPanel() {
         quickRow.classList.add("hidden");
     }
 }
+
+// --- INPUT & GRID ---
 
 function initKeyboard() {
     const rows = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
@@ -523,10 +188,7 @@ function initKeyboard() {
             k.className = `key ${"aeiou".includes(char) ? 'vowel' : ''}`;
             k.textContent = isUpperCase ? char.toUpperCase() : char;
             k.dataset.key = char;
-            k.onclick = (e) => {
-                handleInput(char);
-                e.target.blur(); 
-            };
+            k.onclick = () => handleInput(char);
             rowDiv.appendChild(k);
         });
         if (r === "zxcvbnm") {
@@ -543,10 +205,7 @@ function createKey(txt, action, wide) {
     const b = document.createElement("button");
     b.textContent = txt;
     b.className = `key ${wide ? 'wide' : ''}`;
-    b.onclick = (e) => {
-        action();
-        e.target.blur();
-    };
+    b.onclick = action;
     return b;
 }
 
@@ -564,11 +223,15 @@ function deleteLetter() {
 
 function updateGrid() {
     const offset = guesses.length * CURRENT_WORD_LENGTH;
+    
+    // Clear current row
     for (let i = 0; i < CURRENT_WORD_LENGTH; i++) {
         const t = document.getElementById(`tile-${offset + i}`);
         t.textContent = "";
-        t.className = "tile"; 
+        t.className = "tile"; // reset
     }
+    
+    // Fill current row
     for (let i = 0; i < currentGuess.length; i++) {
         const t = document.getElementById(`tile-${offset + i}`);
         const char = currentGuess[i];
@@ -581,13 +244,29 @@ function toggleCase() {
     isUpperCase = !isUpperCase;
     document.getElementById("case-toggle").textContent = isUpperCase ? "ABC" : "abc";
     initKeyboard();
-    document.querySelectorAll(".tile").forEach(t => {
-        if(t.textContent) t.textContent = isUpperCase ? t.textContent.toUpperCase() : t.textContent.toLowerCase();
+    
+    // Refresh board to show new case
+    // 1. Previous guesses
+    guesses.forEach((g, rIdx) => {
+        const off = rIdx * CURRENT_WORD_LENGTH;
+        for(let i=0; i<CURRENT_WORD_LENGTH; i++) {
+            const t = document.getElementById(`tile-${off+i}`);
+            t.textContent = isUpperCase ? g[i].toUpperCase() : g[i];
+        }
     });
+    // 2. Current guess
+    const currOff = guesses.length * CURRENT_WORD_LENGTH;
+    for(let i=0; i<currentGuess.length; i++) {
+        const t = document.getElementById(`tile-${currOff+i}`);
+        t.textContent = isUpperCase ? currentGuess[i].toUpperCase() : currentGuess[i];
+    }
 }
+
+// --- GAME LOGIC ---
 
 function submitGuess() {
     if (currentGuess.length !== CURRENT_WORD_LENGTH) {
+        // Simple shake effect
         const offset = guesses.length * CURRENT_WORD_LENGTH;
         const first = document.getElementById(`tile-${offset}`);
         if(first) {
@@ -603,7 +282,6 @@ function submitGuess() {
 
     if (currentGuess === currentWord) {
         gameOver = true;
-        confetti(); 
         setTimeout(() => showEndModal(true), 1500);
     } else if (guesses.length >= MAX_GUESSES) {
         gameOver = true;
@@ -618,6 +296,7 @@ function evaluate(guess, target) {
     const tArr = target.split("");
     const gArr = guess.split("");
 
+    // Green pass
     gArr.forEach((c, i) => {
         if (c === tArr[i]) {
             res[i] = "correct";
@@ -625,6 +304,7 @@ function evaluate(guess, target) {
             gArr[i] = null;
         }
     });
+    // Yellow pass
     gArr.forEach((c, i) => {
         if (c && tArr.includes(c)) {
             res[i] = "present";
@@ -640,34 +320,27 @@ function revealColors(result, guess) {
         setTimeout(() => {
             const t = document.getElementById(`tile-${offset + i}`);
             t.classList.add(status);
-            t.classList.add("pop");
+            t.classList.add("pop"); // Animation
+
             const k = document.querySelector(`.key[data-key="${guess[i]}"]`);
             if (k) {
-                if (status === "correct") {
-                    k.classList.remove("present", "absent");
-                    k.classList.add("correct");
-                } else if (status === "present") {
-                    if (!k.classList.contains("correct")) {
-                        k.classList.remove("absent");
-                        k.classList.add("present");
-                    }
-                } else if (status === "absent") {
-                    if (!k.classList.contains("correct") && !k.classList.contains("present")) {
-                        k.classList.add("absent");
-                    }
-                }
+                // Priority: correct > present > absent
+                if (status === "correct") k.className = `key ${isUpperCase?'':'vowel' in k.classList} correct`;
+                else if (status === "present" && !k.classList.contains("correct")) k.className = `key ${isUpperCase?'':'vowel' in k.classList} present`;
+                else if (status === "absent" && !k.classList.contains("correct") && !k.classList.contains("present")) k.className = `key ${isUpperCase?'':'vowel' in k.classList} absent`;
             }
         }, i * 200);
     });
 }
 
+// --- MODALS & HELPERS ---
+
 function showEndModal(win) {
     modalOverlay.classList.remove("hidden");
     gameModal.classList.remove("hidden");
     document.getElementById("modal-title").textContent = win ? "Great Job!" : "Nice Try!";
-    
-    document.getElementById("modal-word").textContent = currentWord.toUpperCase();
-    document.getElementById("modal-syllables").textContent = currentEntry.syllables ? currentEntry.syllables.replace(/-/g, " • ") : currentWord;
+    document.getElementById("modal-word").textContent = currentWord;
+    document.getElementById("modal-syllables").textContent = currentEntry.syllables.replace(/-/g, " • ");
     document.getElementById("modal-def").textContent = currentEntry.def;
     document.getElementById("modal-sentence").textContent = `"${currentEntry.sentence}"`;
 }
@@ -688,7 +361,7 @@ function handleTeacherSubmit() {
         return;
     }
     closeModal();
-    showBanner("Word Set! Class is Ready.");
+    showToast("Teacher word accepted. Ready!");
     startNewGame(val);
 }
 
@@ -697,53 +370,41 @@ function closeModal() {
     welcomeModal.classList.add("hidden");
     teacherModal.classList.add("hidden");
     gameModal.classList.add("hidden");
-    studioModal.classList.add("hidden");
-    
-    if (document.activeElement) document.activeElement.blur();
-    document.body.focus();
 }
 
-function showBanner(msg) {
-    const b = document.getElementById("banner-container");
-    b.textContent = msg;
-    b.classList.remove("hidden");
-    b.classList.add("visible"); 
-    setTimeout(() => {
-        b.classList.remove("visible");
-        b.classList.add("hidden");
-    }, 3000);
+function showToast(msg) {
+    const t = document.createElement("div");
+    t.className = "toast";
+    t.textContent = msg;
+    document.getElementById("toast-container").appendChild(t);
+    setTimeout(() => t.remove(), 3000);
 }
 
 function checkFirstTimeVisitor() {
-    if (!localStorage.getItem("decode_v5_visited")) {
+    if (!localStorage.getItem("decode_v4_visited")) {
         modalOverlay.classList.remove("hidden");
         welcomeModal.classList.remove("hidden");
-        localStorage.setItem("decode_v5_visited", "true");
+        localStorage.setItem("decode_v4_visited", "true");
     }
 }
 
 function clearKeyboardColors() {
     document.querySelectorAll(".key").forEach(k => {
         k.classList.remove("correct", "present", "absent");
+        // Maintain vowel class if needed, or re-init logic handles it
+        // The loop in initKeyboard handles base classes
     });
+    // Re-run init to reset clean slate or just remove classes manually. 
+    // Easier to just re-init if toggling cases, but simple remove works.
+    initKeyboard(); 
 }
 
-function confetti() {
-    for (let i = 0; i < 50; i++) {
-        const c = document.createElement("div");
-        c.style.position = "fixed";
-        c.style.left = Math.random() * 100 + "vw";
-        c.style.top = "-10px";
-        c.style.width = "8px";
-        c.style.height = "8px";
-        c.style.backgroundColor = `hsl(${Math.random() * 360}, 70%, 50%)`;
-        c.style.zIndex = "2000";
-        c.style.transition = "top 1.5s ease-in, opacity 1.5s ease-in";
-        document.body.appendChild(c);
-        setTimeout(() => {
-            c.style.top = "110vh";
-            c.style.opacity = "0";
-        }, 10);
-        setTimeout(() => c.remove(), 1600);
-    }
+function speak(text) {
+    const msg = new SpeechSynthesisUtterance(text);
+    const voices = speechSynthesis.getVoices();
+    // Prefer natural sounding English voices (Google, Samantha, etc)
+    const preferred = voices.find(v => (v.name.includes("Google") || v.name.includes("Samantha")) && v.lang.startsWith("en"));
+    msg.voice = preferred || voices[0];
+    msg.rate = 0.9;
+    speechSynthesis.speak(msg);
 }
