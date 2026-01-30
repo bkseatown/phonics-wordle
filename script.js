@@ -21,7 +21,7 @@ const teacherModal = document.getElementById("teacher-modal");
 const gameModal = document.getElementById("modal");
 
 // Focus panel elements (assigned on DOMContentLoaded for safety)
-let focusTitleEl = null;
+let focusTitleEl = null, focusDescEl = null, focusHintEl = null, focusExamplesEl = null, patternSelect = null, lengthSelect = null;
 let focusDescEl = null;
 let focusExamplesEl = null;
 let focusHintEl = null;
@@ -31,19 +31,11 @@ document.addEventListener("DOMContentLoaded", () => {
     focusTitleEl = document.getElementById("focus-title");
     focusDescEl = document.getElementById("focus-desc");
     focusExamplesEl = document.getElementById("focus-examples");
-    focusHintEl = document.getElementById("focus-hint");
 
-    // Sanity checks: make sure data files loaded
-    if (!window.FOCUS_INFO || typeof window.FOCUS_INFO !== "object") {
-        console.error("FOCUS_INFO is missing. Check that phonics_focus_data.js (or words.js) is loaded before script.js.");
-        alert("Data file missing: FOCUS_INFO. Please ensure phonics_focus_data.js is loaded.");
-        return;
-    }
-    if (!window.WORD_ENTRIES || typeof window.WORD_ENTRIES !== "object") {
-        console.error("WORD_ENTRIES is missing. Check that phonics_focus_data.js (or words.js) is loaded before script.js.");
-        alert("Data file missing: WORD_ENTRIES. Please ensure phonics_focus_data.js is loaded.");
-        return;
-    }
+  // Cache dropdowns
+  patternSelect = document.getElementById('pattern-select');
+  lengthSelect = document.getElementById('length-select');
+    focusHintEl = document.getElementById("focus-hint");
 
     initControls();
     initKeyboard();
@@ -178,7 +170,6 @@ function startNewGame(customWord = null) {
 }
 
 function getWordFromDictionary() {
-  if (!window.WORD_ENTRIES || typeof window.WORD_ENTRIES !== "object") return null;
     if (!window.WORD_ENTRIES || typeof window.WORD_ENTRIES !== "object") {
         console.error("WORD_ENTRIES is missing. Check your <script> order: phonics_focus_data.js must load before script.js");
         return "cat";
