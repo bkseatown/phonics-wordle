@@ -1,5 +1,5 @@
 /* =========================================
-   DECODE THE WORD - CORE LOGIC (GOLD MASTER)
+   DECODE THE WORD - CORE LOGIC (FULL FIX)
    ========================================= */
 
 const MAX_GUESSES = 6;
@@ -12,7 +12,7 @@ let gameOver = false;
 let isFirstLoad = true;
 let isUpperCase = false;
 
-// DOM
+// DOM Elements
 const board = document.getElementById("game-board");
 const keyboard = document.getElementById("keyboard");
 const modalOverlay = document.getElementById("modal-overlay");
@@ -23,7 +23,16 @@ const gameModal = document.getElementById("modal");
 document.addEventListener("DOMContentLoaded", () => {
     initControls();
     initKeyboard();
-    startNewGame();
+    
+    // Safety check: Ensure data loaded before starting
+    if (window.WORD_ENTRIES) {
+        startNewGame();
+    } else {
+        console.error("Data file (phonics_focus_data.js) not loaded yet.");
+        // Fallback start if data is missing
+        startNewGame("seed"); 
+    }
+    
     checkFirstTimeVisitor();
 });
 
@@ -46,7 +55,6 @@ function initControls() {
     document.getElementById("toggle-mask").onclick = () => {
         const inp = document.getElementById("custom-word-input");
         inp.type = inp.type === "password" ? "text" : "password";
-        // Re-focus to keep typing
         inp.focus();
     };
 
@@ -54,11 +62,13 @@ function initControls() {
     document.getElementById("hear-word-hint").onclick = () => speak(currentWord);
     document.getElementById("hear-sentence-hint").onclick = () => {
         showToast("Sentence hint shared!");
-        speak(currentEntry.sentence);
+        if (currentEntry && currentEntry.sentence) {
+            speak(currentEntry.sentence);
+        }
     };
     document.getElementById("speak-btn").onclick = () => speak(currentWord);
 
-    // Modal Closing Logic (Outside Click, Buttons, Esc)
+    // Modal Closing Logic
     document.querySelectorAll(".close-btn, .close-teacher, #start-playing-btn, #play-again-btn").forEach(btn => {
         btn.addEventListener("click", closeModal);
     });
@@ -69,7 +79,6 @@ function initControls() {
 
     // Global Keyboard Listener
     window.addEventListener("keydown", (e) => {
-        // If modal is open, only allow Escape or Enter (if valid context)
         if (!modalOverlay.classList.contains("hidden")) {
             if (e.key === "Escape") closeModal();
             if (e.key === "Enter" && !welcomeModal.classList.contains("hidden")) closeModal();
@@ -83,13 +92,15 @@ function initControls() {
         else if (/^[a-z]$/i.test(e.key)) handleInput(e.key.toLowerCase());
     });
 
-    // Teacher Input Specifics (Prevent background typing)
+    // Teacher Input Specifics
     const tInput = document.getElementById("custom-word-input");
-    tInput.addEventListener("keydown", (e) => {
-        e.stopPropagation(); // Stop game board from receiving keys
-        if (e.key === "Enter") handleTeacherSubmit();
-        if (e.key === "Escape") closeModal();
-    });
+    if (tInput) {
+        tInput.addEventListener("keydown", (e) => {
+            e.stopPropagation();
+            if (e.key === "Enter") handleTeacherSubmit();
+            if (e.key === "Escape") closeModal();
+        });
+    }
 }
 
 function startNewGame(customWord = null) {
@@ -97,20 +108,29 @@ function startNewGame(customWord = null) {
     guesses = [];
     currentGuess = "";
     board.innerHTML = "";
+    
+    // Clear styles
     clearKeyboardColors();
     updateFocusPanel();
     
+    // Hide Modals if open (except welcome if first load)
+    if (!isFirstLoad) {
+        closeModal();
+    }
+
     if (customWord) {
         currentWord = customWord.toLowerCase();
         CURRENT_WORD_LENGTH = currentWord.length;
-        currentEntry = window.WORD_ENTRIES[currentWord] || { 
-            def: "Teacher word.", sentence: "Can you decode this?", syllables: currentWord 
-        };
+        // Try to find it in dictionary, otherwise use generic entry
+        currentEntry = window.WORD_ENTRIES && window.WORD_ENTRIES[currentWord] 
+            ? window.WORD_ENTRIES[currentWord] 
+            : { def: "Teacher word.", sentence: "Can you decode this?", syllables: currentWord };
     } else {
         const data = getWordFromDictionary();
         currentWord = data.word;
         currentEntry = data.entry;
-        // If 'Any Length' is selected, update internal length to match the word
+        
+        // Sync length
         if (document.getElementById("length-select").value === 'any') {
             CURRENT_WORD_LENGTH = currentWord.length;
         }
@@ -126,13 +146,19 @@ function startNewGame(customWord = null) {
         tile.id = `tile-${i}`;
         board.appendChild(tile);
     }
+    
+    console.log(`Game Started. Target: ${currentWord}`);
 }
 
 function getWordFromDictionary() {
+    // Safety check if data file isn't loaded
+    if (!window.WORD_ENTRIES) {
+        return { word: "seed", entry: { def: "Part of a plant", sentence: "Plant the seed.", syllables: "seed" }};
+    }
+
     const pattern = document.getElementById("pattern-select").value;
     const lenVal = document.getElementById("length-select").value;
     
-    // First load forces 5 letters if 'any' is selected to maintain grid look
     let targetLen = (lenVal === 'any') ? (isFirstLoad ? 5 : null) : parseInt(lenVal);
 
     const pool = Object.keys(window.WORD_ENTRIES).filter(w => {
@@ -142,36 +168,38 @@ function getWordFromDictionary() {
         return lenMatch && patMatch;
     });
 
-    // Fallback if no words match filter
     const final = pool.length ? pool[Math.floor(Math.random() * pool.length)] : "apple";
     return { word: final, entry: window.WORD_ENTRIES[final] };
 }
 
 function updateFocusPanel() {
-    const pat = document.getElementById("pattern-select").value;
-    const info = window.FOCUS_INFO[pat] || window.FOCUS_INFO.all;
-    
-    document.getElementById("focus-title").textContent = info.title;
-    document.getElementById("focus-desc").textContent = info.desc;
-    document.getElementById("focus-hint").textContent = info.hint;
-    document.getElementById("focus-examples").textContent = `Ex: ${info.examples}`;
+    if (!window.FOCUS_INFO) return; // Safety check
 
-    const quickRow = document.getElementById("quick-tiles-row");
-    if (info.quick) {
-        quickRow.innerHTML = "";
-        info.quick.forEach(q => {
-            const b = document.createElement("button");
-            b.className = "q-tile";
-            b.textContent = q;
-            b.onclick = () => { 
-                // Insert full quick tile string
-                for(let c of q) handleInput(c); 
-            };
-            quickRow.appendChild(b);
-        });
-        quickRow.classList.remove("hidden");
-    } else {
-        quickRow.classList.add("hidden");
+    const pat = document.getElementById("pattern-select").value;
+    const info = window.FOCUS_INFO[pat] || window.FOCUS_INFO.all || window.FOCUS_INFO.mixed;
+    
+    if (info) {
+        document.getElementById("focus-title").textContent = info.label || info.title;
+        document.getElementById("focus-desc").textContent = info.desc;
+        document.getElementById("focus-hint").textContent = info.hint;
+        document.getElementById("focus-examples").textContent = `Ex: ${info.examples}`;
+
+        const quickRow = document.getElementById("quick-tiles-row");
+        if (info.quick) {
+            quickRow.innerHTML = "";
+            info.quick.forEach(q => {
+                const b = document.createElement("button");
+                b.className = "q-tile";
+                b.textContent = q;
+                b.onclick = () => { 
+                    for(let c of q) handleInput(c); 
+                };
+                quickRow.appendChild(b);
+            });
+            quickRow.classList.remove("hidden");
+        } else {
+            quickRow.classList.add("hidden");
+        }
     }
 }
 
@@ -227,16 +255,20 @@ function updateGrid() {
     // Clear current row
     for (let i = 0; i < CURRENT_WORD_LENGTH; i++) {
         const t = document.getElementById(`tile-${offset + i}`);
-        t.textContent = "";
-        t.className = "tile"; // reset
+        if(t) {
+            t.textContent = "";
+            t.className = "tile"; 
+        }
     }
     
     // Fill current row
     for (let i = 0; i < currentGuess.length; i++) {
         const t = document.getElementById(`tile-${offset + i}`);
-        const char = currentGuess[i];
-        t.textContent = isUpperCase ? char.toUpperCase() : char;
-        t.className = "tile active";
+        if(t) {
+            const char = currentGuess[i];
+            t.textContent = isUpperCase ? char.toUpperCase() : char;
+            t.className = "tile active";
+        }
     }
 }
 
@@ -251,14 +283,14 @@ function toggleCase() {
         const off = rIdx * CURRENT_WORD_LENGTH;
         for(let i=0; i<CURRENT_WORD_LENGTH; i++) {
             const t = document.getElementById(`tile-${off+i}`);
-            t.textContent = isUpperCase ? g[i].toUpperCase() : g[i];
+            if(t) t.textContent = isUpperCase ? g[i].toUpperCase() : g[i];
         }
     });
     // 2. Current guess
     const currOff = guesses.length * CURRENT_WORD_LENGTH;
     for(let i=0; i<currentGuess.length; i++) {
         const t = document.getElementById(`tile-${currOff+i}`);
-        t.textContent = isUpperCase ? currentGuess[i].toUpperCase() : currentGuess[i];
+        if(t) t.textContent = isUpperCase ? currentGuess[i].toUpperCase() : currentGuess[i];
     }
 }
 
@@ -319,12 +351,13 @@ function revealColors(result, guess) {
     result.forEach((status, i) => {
         setTimeout(() => {
             const t = document.getElementById(`tile-${offset + i}`);
-            t.classList.add(status);
-            t.classList.add("pop"); // Animation
+            if(t) {
+                t.classList.add(status);
+                t.classList.add("pop"); 
+            }
 
             const k = document.querySelector(`.key[data-key="${guess[i]}"]`);
             if (k) {
-                // Priority: correct > present > absent
                 if (status === "correct") k.className = `key ${isUpperCase?'':'vowel' in k.classList} correct`;
                 else if (status === "present" && !k.classList.contains("correct")) k.className = `key ${isUpperCase?'':'vowel' in k.classList} present`;
                 else if (status === "absent" && !k.classList.contains("correct") && !k.classList.contains("present")) k.className = `key ${isUpperCase?'':'vowel' in k.classList} absent`;
@@ -340,9 +373,12 @@ function showEndModal(win) {
     gameModal.classList.remove("hidden");
     document.getElementById("modal-title").textContent = win ? "Great Job!" : "Nice Try!";
     document.getElementById("modal-word").textContent = currentWord;
-    document.getElementById("modal-syllables").textContent = currentEntry.syllables.replace(/-/g, " • ");
-    document.getElementById("modal-def").textContent = currentEntry.def;
-    document.getElementById("modal-sentence").textContent = `"${currentEntry.sentence}"`;
+    
+    if (currentEntry) {
+        document.getElementById("modal-syllables").textContent = currentEntry.syllables ? currentEntry.syllables.replace(/-/g, " • ") : currentWord;
+        document.getElementById("modal-def").textContent = currentEntry.def;
+        document.getElementById("modal-sentence").textContent = `"${currentEntry.sentence}"`;
+    }
 }
 
 function openTeacherMode() {
@@ -361,7 +397,7 @@ function handleTeacherSubmit() {
         return;
     }
     closeModal();
-    showToast("Teacher word accepted. Ready!");
+    showToast("Teacher word accepted!");
     startNewGame(val);
 }
 
@@ -376,8 +412,11 @@ function showToast(msg) {
     const t = document.createElement("div");
     t.className = "toast";
     t.textContent = msg;
-    document.getElementById("toast-container").appendChild(t);
-    setTimeout(() => t.remove(), 3000);
+    const container = document.getElementById("toast-container");
+    if(container) {
+        container.appendChild(t);
+        setTimeout(() => t.remove(), 3000);
+    }
 }
 
 function checkFirstTimeVisitor() {
@@ -391,18 +430,14 @@ function checkFirstTimeVisitor() {
 function clearKeyboardColors() {
     document.querySelectorAll(".key").forEach(k => {
         k.classList.remove("correct", "present", "absent");
-        // Maintain vowel class if needed, or re-init logic handles it
-        // The loop in initKeyboard handles base classes
     });
-    // Re-run init to reset clean slate or just remove classes manually. 
-    // Easier to just re-init if toggling cases, but simple remove works.
     initKeyboard(); 
 }
 
 function speak(text) {
+    if (!text) return;
     const msg = new SpeechSynthesisUtterance(text);
     const voices = speechSynthesis.getVoices();
-    // Prefer natural sounding English voices (Google, Samantha, etc)
     const preferred = voices.find(v => (v.name.includes("Google") || v.name.includes("Samantha")) && v.lang.startsWith("en"));
     msg.voice = preferred || voices[0];
     msg.rate = 0.9;
