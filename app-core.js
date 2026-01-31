@@ -681,12 +681,39 @@ function revealColors(result, guess) {
 function showEndModal(win) {
     modalOverlay.classList.remove("hidden");
     gameModal.classList.remove("hidden");
-    document.getElementById("modal-title").textContent = win ? "Great Job!" : "Nice Try!";
-    
-    document.getElementById("modal-word").textContent = currentWord.toUpperCase();
-    document.getElementById("modal-syllables").textContent = currentEntry.syllables ? currentEntry.syllables.replace(/-/g, " • ") : currentWord;
-    document.getElementById("modal-def").textContent = currentEntry.def;
-    document.getElementById("modal-sentence").textContent = `"${currentEntry.sentence}"`;
+
+    const titleEl = document.getElementById("modal-title");
+    const wordEl = document.getElementById("modal-word");
+    const sylEl = document.getElementById("modal-syllables");
+    const defEl = document.getElementById("modal-def");
+    const sentEl = document.getElementById("modal-sentence");
+
+    if (titleEl) titleEl.textContent = win ? "Great Job!" : "Nice Try!";
+    if (wordEl) wordEl.textContent = (currentWord || "").toUpperCase();
+
+    // Syllables can be: syllableText (string), syllables (array), or syllables (string)
+    let sylText = "";
+    if (currentEntry) {
+        if (typeof currentEntry.syllableText === "string" && currentEntry.syllableText.trim()) {
+            sylText = currentEntry.syllableText.trim();
+        } else if (Array.isArray(currentEntry.syllables) && currentEntry.syllables.length) {
+            sylText = currentEntry.syllables.join("-");
+        } else if (typeof currentEntry.syllables === "string" && currentEntry.syllables.trim()) {
+            sylText = currentEntry.syllables.trim();
+        }
+    }
+    if (!sylText) sylText = currentWord || "";
+
+    // Display syllables with bullets
+    if (sylEl) sylEl.textContent = sylText.replace(/-/g, " • ");
+
+    // Definition can be def or definition
+    const defText = (currentEntry && (currentEntry.def || currentEntry.definition)) ? (currentEntry.def || currentEntry.definition) : "";
+    if (defEl) defEl.textContent = defText || "";
+
+    // Sentence (safe quoting)
+const sentenceText = (currentEntry && typeof currentEntry.sentence === "string") ? currentEntry.sentence : "";
+if (sentEl) sentEl.textContent = sentenceText ? `"${sentenceText}"` : "";
 }
 
 function openTeacherMode() {
