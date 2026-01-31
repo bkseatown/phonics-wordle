@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#f6f7fb" />
+  <title>Decode the Word</title>
+
+  <link rel="icon" href="favicon.ico" />
+  <link rel="stylesheet" href="styles.css" />
+
+  <!--
+    IMPORTANT LOAD ORDER (do not change):
+    1) app-config.js
+    2) words.js
+    3) phonics_focus_data.js
+    4) jokes_facts_quotes_bank.js
+    5) app-core.js
+
+    APP-CORE PATCH NOTES (for your next step, in app-core.js):
+    - Replace hardcoded "audio/webm" blob type with feature-detected MIME (webm/opus → webm → mp4 → aac).
+    - Persist voice preference (store voiceURI + name + lang), restore on load, and add iOS gesture warm-up.
+    - Ensure mic cleanup runs on stop + when studio modal closes.
+  -->
+
+  <!-- Global helper for recording MIME detection (app-core.js can call pickAudioMime()) -->
+  <script>
+    function pickAudioMime() {
+      const candidates = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4",
+        "audio/aac"
+      ];
+      for (const m of candidates) {
+        try {
+          if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) {
+            return m;
+          }
+        } catch (_) {}
+      }
+      return "";
+    }
+  </script>
+
+  <!-- DATASETS + APP (defer preserves order) -->
+  <script src="app-config.js" defer></script>
+  <script src="words.js" defer></script>
+  <script src="phonics_focus_data.js" defer></script>
+  <script src="jokes_facts_quotes_bank.js" defer></script>
+  <script src="app-core.js" defer></script>
+</head>
+
+<body>
+  <header>
+    <h1>Decode the Word</h1>
+
+    <div class="controls">
+      <div class="row" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+        <button id="help-btn" type="button" aria-label="How to play">❓ Help</button>
+        <button id="voice-toggle" type="button" aria-label="Toggle voice">🔊 Voice On</button>
+        <button id="hear-word" type="button" aria-label="Hear the word">🔁 Hear Word</button>
+        <button id="hear-sentence" type="button" aria-label="Hear the sentence">🗣️ Hear Sentence</button>
+        <button id="projector-toggle" type="button" aria-label="Projector mode">📽️ Projector Mode</button>
+      </div>
+
+      <div class="row" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
+        <label for="focus-select" style="font-weight:600;">Focus</label>
+        <select id="focus-select" aria-label="Select focus"></select>
+
+        <label for="length-select" style="font-weight:600;">Length</label>
+        <select id="length-select" aria-label="Select word length"></select>
+
+        <label for="guess-select" style="font-weight:600;">Guesses</label>
+        <select id="guess-select" aria-label="Select number of guesses">
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6" selected>6</option>
+          <option value="7">7</option>
+          <option value="8">8</option>
+        </select>
+      </div>
+
+      <!-- Teacher-only: hidden in UI by default. (App logic currently uses teacher-word + set-teacher-word.) -->
+      <div class="row" style="margin-top:10px;">
+        <details>
+          <summary style="cursor:pointer; font-weight:700;">Teacher Tools</summary>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
+            <label for="teacher-word" style="font-weight:600;">Set Word</label>
+            <input id="teacher-word" type="password" autocomplete="off" inputmode="text"
+                   placeholder="Type a custom word…" aria-label="Teacher custom word" />
+            <button id="set-teacher-word" type="button">Set</button>
+
+            <!-- Recording Studio lives in a modal; app-core initializes it if #studio-modal exists.
+                 (Opening the modal can be done by teachers via your preferred trigger.) -->
+            <button type="button" onclick="document.getElementById('studio-modal')?.classList.add('open');">
+              🎙️ Recording Studio
+            </button>
+          </div>
+          <div style="margin-top:6px; color:#555; font-size:0.9rem;">
+            Tip: Keep this collapsed when students are playing.
+          </div>
+        </details>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="game-board" tabindex="0" aria-label="Game board"></div>
+    <div id="keyboard" aria-label="Keyboard"></div>
+  </main>
+
+  <!-- Toast (teacher feedback / system messages) -->
+  <div id="teacher-toast" class="toast" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- HOW TO MODAL -->
+  <div id="howto-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="howto-title">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 id="howto-title">How to Play</h2>
+        <button class="icon-btn" type="button" data-close="howto" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body" id="howto-text"></div>
+    </div>
+  </div>
+
+  <!-- END MODAL -->
+  <div id="end-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="end-title">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 id="end-title">Nice Try!</h2>
+        <button class="icon-btn" type="button" data-close="end" aria-label="Close">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div style="font-size:1.6rem; font-weight:800; letter-spacing:0.08em;" id="end-word">WORD</div>
+        <div style="margin-top:8px; font-weight:700;">Definition</div>
+        <div id="end-definition" style="color:#333;"></div>
+
+        <div style="margin-top:10px; font-weight:700;">Sentence</div>
+        <div id="end-sentence" style="color:#333;"></div>
+
+        <button id="end-more" type="button" class="primary-btn" style="margin-top:12px;">
+          More (Joke / Fact / Extra)
+        </button>
+
+        <div id="end-more-wrap" style="margin-top:12px;">
+          <div style="font-weight:700;">Enrichment</div>
+          <div id="end-enrichment" style="color:#333;"></div>
+
+          <div style="margin-top:10px; font-weight:700;">Fun</div>
+          <div id="end-fun-entry" style="color:#333;"></div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <button type="button" class="primary-btn" data-close="end">Play Again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECORDING STUDIO MODAL -->
+  <div id="studio-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="studio-title">
+    <div class="modal-card studio-card">
+      <div class="modal-head">
+        <h2 id="studio-title">🎙️ Recording Studio</h2>
+        <button class="icon-btn" type="button" data-close="studio" aria-label="Close">✕</button>
+      </div>
+
+      <div class="modal-body studio-body">
+        <div style="display:flex; gap:10px; align-items:center; justify-content:space-between;">
+          <div style="font-weight:700;">Mic Status</div>
+          <div id="mic-status" class="mic-status off">Mic OFF</div>
+        </div>
+
+        <div class="studio-block" data-type="word">
+          <h3>Word Recording</h3>
+          <p>Record yourself saying the target word clearly.</p>
+          <div class="studio-controls">
+            <button type="button">● Record</button>
+            <button type="button">■ Stop</button>
+            <button type="button">▶ Play</button>
+          </div>
+          <div class="studio-saved">Saved ✓</div>
+        </div>
+
+        <div class="studio-block" data-type="sentence">
+          <h3>Sentence Recording</h3>
+          <p>Record yourself reading the decodable sentence.</p>
+          <div class="studio-controls">
+            <button type="button">● Record</button>
+            <button type="button">■ Stop</button>
+            <button type="button">▶ Play</button>
+          </div>
+          <div class="studio-saved">Saved ✓</div>
+        </div>
+
+        <div style="font-size:0.9rem; color:#555;">
+          Recordings are stored locally on this device (IndexedDB). Students can play them back during practice.
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
