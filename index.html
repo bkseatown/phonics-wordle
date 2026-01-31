@@ -12,6 +12,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Lexend:wght@400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔤</text></svg>">
+    
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -23,6 +26,8 @@
         <div class="header-top">
             <h1>🔤 Decode the Word</h1>
             <div class="header-actions">
+                <button class="text-btn" id="progress-btn" title="View Progress">📊</button>
+                <button class="text-btn" id="phoneme-btn" title="Phoneme Guide">🎵</button>
                 <button class="text-btn" id="teacher-btn">Teacher</button>
                 <button class="icon-btn" id="case-toggle" title="Toggle Case">abc</button>
             </div>
@@ -33,15 +38,23 @@
                 <label for="pattern-select">Focus:</label>
                 <select id="pattern-select">
                     <option value="all">All Words</option>
-                    <option value="cvc">CVC (cat, dog)</option>
-                    <option value="magic-e">Magic E (cake, hope)</option>
-                    <option value="digraph">Digraphs (sh, ch, th)</option>
-                    <option value="blend">Blends (fl, st, br)</option>
-                    <option value="vowel-team">Vowel Teams (ai, oa, ee)</option>
-                    <option value="r-controlled">R-Controlled (ar, or, er)</option>
-                    <option value="floss">FLOSS Rule (stuff, hill)</option>
-                    <option value="welded">Welded Sounds (king, bank)</option>
-                    <option value="morphology">Morphology (prefixes, suffixes)</option>
+                    <optgroup label="Kindergarten - Grade 1">
+                        <option value="cvc">CVC - Short Vowels (cat, dog, sun)</option>
+                        <option value="digraph">Digraphs (sh, ch, th, wh, ck)</option>
+                        <option value="blend">Blends (st, bl, tr, fl)</option>
+                    </optgroup>
+                    <optgroup label="Grade 1 - Grade 2">
+                        <option value="magic-e">Magic E / CVCe (cake, hope, time)</option>
+                        <option value="floss">FLOSS Rule (stuff, hill, pass)</option>
+                        <option value="welded">Welded Sounds (king, bank, song)</option>
+                    </optgroup>
+                    <optgroup label="Grade 2 - Grade 3">
+                        <option value="vowel-team">Vowel Teams (rain, boat, see)</option>
+                        <option value="r-controlled">R-Controlled (car, bird, fern)</option>
+                    </optgroup>
+                    <optgroup label="Grade 3+">
+                        <option value="morphology">Morphology (prefixes, suffixes)</option>
+                    </optgroup>
                 </select>
             </div>
             
@@ -215,9 +228,155 @@
                 <div class="stat-syllables" id="modal-syllables">ap • ple</div>
                 <div class="stat-def" id="modal-def">A round fruit that grows on trees.</div>
                 <div class="stat-sentence" id="modal-sentence">"An apple a day keeps the doctor away."</div>
+                
+                <!-- Translation Section -->
+                <div id="translation-section" style="margin-top: 12px; padding: 8px; background: #f0f8ff; border-radius: 4px; display: none;">
+                    <label for="translate-to" style="font-size: 0.85rem; font-weight: 600;">Translate to:</label>
+                    <select id="translate-to" style="width: 100%; padding: 4px; margin: 4px 0;">
+                        <option value="">Choose Language...</option>
+                        <option value="es">Spanish / Español</option>
+                        <option value="zh">Chinese / 中文</option>
+                        <option value="ar">Arabic / العربية</option>
+                        <option value="vi">Vietnamese / Tiếng Việt</option>
+                        <option value="tl">Tagalog / Filipino</option>
+                        <option value="fr">French / Français</option>
+                        <option value="ko">Korean / 한국어</option>
+                        <option value="ru">Russian / Русский</option>
+                        <option value="pt">Portuguese / Português</option>
+                        <option value="hi">Hindi / हिन्दी</option>
+                    </select>
+                    <div id="translation-result" style="margin-top: 8px; font-size: 0.95rem; color: #2c3e50;"></div>
+                </div>
             </div>
-            <button class="action-btn" id="speak-btn">🔊 Hear the Word</button>
+            
+            <div style="display: flex; gap: 8px; margin-top: 10px;">
+                <button class="action-btn" id="speak-btn" style="flex: 1;">🔊 Hear Word</button>
+                <button class="action-btn" id="translate-btn" style="flex: 1;">🌍 Translate</button>
+                <button class="action-btn" id="decodable-btn" style="flex: 1;">📖 Read Text</button>
+            </div>
             <button class="primary-btn" id="play-again-btn" style="margin-top: 10px;">Play Again</button>
+        </div>
+    </div>
+
+    <!-- Decodable Texts Modal -->
+    <div id="decodable-modal" class="modal hidden">
+        <span class="close-decodable top-right-x">×</span>
+        <div class="modal-content">
+            <h2>📖 Decodable Reading Practice</h2>
+            <p style="font-size: 0.9rem; color: #666; margin-bottom: 12px;">Practice reading with texts that use words from your focus pattern.</p>
+            
+            <div id="decodable-text-list" style="max-height: 400px; overflow-y: auto;">
+                <!-- Texts will be populated here -->
+            </div>
+            
+            <button class="action-btn" id="close-decodable-btn" style="margin-top: 12px; width: 100%;">Close</button>
+        </div>
+    </div>
+
+    <!-- Progress Monitoring Modal -->
+    <div id="progress-modal" class="modal hidden">
+        <span class="close-progress top-right-x">×</span>
+        <div class="modal-content">
+            <h2>📊 Student Progress</h2>
+            <p style="font-size: 0.9rem; color: #666; margin-bottom: 12px;">Track learning over time</p>
+            
+            <div id="progress-stats" style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 12px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                    <div>
+                        <div style="font-size: 0.8rem; color: #666;">Words Attempted</div>
+                        <div style="font-size: 1.5rem; font-weight: bold;" id="stat-attempted">0</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.8rem; color: #666;">Words Correct</div>
+                        <div style="font-size: 1.5rem; font-weight: bold; color: var(--color-correct);" id="stat-correct">0</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.8rem; color: #666;">Success Rate</div>
+                        <div style="font-size: 1.5rem; font-weight: bold; color: #2c3e50;" id="stat-rate">0%</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.8rem; color: #666;">Avg. Guesses</div>
+                        <div style="font-size: 1.5rem; font-weight: bold;" id="stat-avg-guesses">0</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+                <strong>Recent Words:</strong>
+                <div id="recent-words" style="max-height: 200px; overflow-y: auto; margin-top: 8px; font-size: 0.9rem;">
+                    <!-- Recent words will appear here -->
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 8px;">
+                <button class="action-btn" id="export-data-btn" style="flex: 1;">📥 Export Data</button>
+                <button class="action-btn" id="clear-data-btn" style="flex: 1;">🗑️ Clear Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="words.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
+
+    <!-- Phoneme/Grapheme Guide Modal -->
+    <div id="phoneme-modal" class="modal hidden">
+        <span class="close-phoneme top-right-x">×</span>
+        <div class="modal-content">
+            <h2>🎵 Phoneme & Grapheme Guide</h2>
+            <p style="font-size: 0.9rem; color: #666; margin-bottom: 12px;">Sounds and letters that make them</p>
+            
+            <div style="max-height: 400px; overflow-y: auto;">
+                <div class="phoneme-section">
+                    <h3 style="font-size: 1.1rem; margin: 12px 0 8px;">Short Vowels</h3>
+                    <div class="phoneme-grid">
+                        <button class="phoneme-card" data-sound="a" data-example="cat">
+                            <div class="phoneme-letter">a</div>
+                            <div class="phoneme-example">as in cat</div>
+                        </button>
+                        <button class="phoneme-card" data-sound="e" data-example="bed">
+                            <div class="phoneme-letter">e</div>
+                            <div class="phoneme-example">as in bed</div>
+                        </button>
+                        <button class="phoneme-card" data-sound="i" data-example="pig">
+                            <div class="phoneme-letter">i</div>
+                            <div class="phoneme-example">as in pig</div>
+                        </button>
+                        <button class="phoneme-card" data-sound="o" data-example="dog">
+                            <div class="phoneme-letter">o</div>
+                            <div class="phoneme-example">as in dog</div>
+                        </button>
+                        <button class="phoneme-card" data-sound="u" data-example="cup">
+                            <div class="phoneme-letter">u</div>
+                            <div class="phoneme-example">as in cup</div>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="phoneme-section">
+                    <h3 style="font-size: 1.1rem; margin: 12px 0 8px;">Digraphs</h3>
+                    <div class="phoneme-grid">
+                        <button class="phoneme-card" data-sound="sh" data-example="ship">
+                            <div class="phoneme-letter">sh</div>
+                            <div class="phoneme-example">as in ship</div>
+                        </button>
+                        <button class="phoneme-card" data-sound="ch" data-example="chip">
+                            <div class="phoneme-letter">ch</div>
+                            <div class="phoneme-example">as in chip</div>
+                        </button>
+                        <button class="phoneme-card" data-sound="th" data-example="thin">
+                            <div class="phoneme-letter">th</div>
+                            <div class="phoneme-example">as in thin</div>
+                        </button>
+                        <button class="phoneme-card" data-sound="wh" data-example="whip">
+                            <div class="phoneme-letter">wh</div>
+                            <div class="phoneme-example">as in whip</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

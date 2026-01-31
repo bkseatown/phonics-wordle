@@ -70,6 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initKeyboard();
     initVoiceLoader(); 
     initStudio();
+    initNewFeatures(); // NEW: Initialize translation, progress, phoneme features
     
     startNewGame();
     checkFirstTimeVisitor();
@@ -179,6 +180,7 @@ function initControls() {
     
     document.getElementById("pattern-select").onchange = () => {
         document.getElementById("pattern-select").blur();
+        autoAdjustLength();
         startNewGame();
     };
     
@@ -251,6 +253,30 @@ function initControls() {
 
 function isModalOpen() {
     return !modalOverlay.classList.contains("hidden");
+}
+
+/* --- AUTO-ADJUST WORD LENGTH BASED ON PATTERN --- */
+function autoAdjustLength() {
+    const pattern = document.getElementById("pattern-select").value;
+    const lengthSelect = document.getElementById("length-select");
+    
+    // Auto-adjust length based on pattern
+    const lengthMap = {
+        'cvc': '3',           // CVC words are typically 3 letters
+        'digraph': 'any',     // Digraphs vary
+        'blend': 'any',       // Blends vary
+        'magic-e': '4',       // Magic E often 4 letters (like, hope)
+        'floss': 'any',       // FLOSS varies
+        'welded': 'any',      // Welded varies
+        'vowel-team': 'any',  // Vowel teams vary
+        'r-controlled': 'any', // R-controlled vary
+        'morphology': 'any',  // Morphology varies
+        'all': 'traditional'  // Default to 5
+    };
+    
+    if (lengthMap[pattern]) {
+        lengthSelect.value = lengthMap[pattern];
+    }
 }
 
 /* --- STUDIO LOGIC --- */
@@ -709,6 +735,9 @@ function revealColors(result, guess) {
 }
 
 function showEndModal(win) {
+    // Track progress
+    trackProgress(currentWord, win, guesses.length);
+    
     modalOverlay.classList.remove("hidden");
     gameModal.classList.remove("hidden");
     document.getElementById("modal-title").textContent = win ? "Great Job!" : "Nice Try!";
@@ -717,6 +746,11 @@ function showEndModal(win) {
     document.getElementById("modal-syllables").textContent = currentEntry.syllables ? currentEntry.syllables.replace(/-/g, " • ") : currentWord;
     document.getElementById("modal-def").textContent = currentEntry.def;
     document.getElementById("modal-sentence").textContent = `"${currentEntry.sentence}"`;
+    
+    // Reset translation section
+    document.getElementById("translation-section").style.display = 'none';
+    document.getElementById('translate-to').value = '';
+    document.getElementById('translation-result').textContent = '';
 }
 
 function openTeacherMode() {
@@ -745,6 +779,14 @@ function closeModal() {
     teacherModal.classList.add("hidden");
     gameModal.classList.add("hidden");
     studioModal.classList.add("hidden");
+    
+    // Close new modals
+    const decodableModal = document.getElementById("decodable-modal");
+    const progressModal = document.getElementById("progress-modal");
+    const phonemeModal = document.getElementById("phoneme-modal");
+    if (decodableModal) decodableModal.classList.add("hidden");
+    if (progressModal) progressModal.classList.add("hidden");
+    if (phonemeModal) phonemeModal.classList.add("hidden");
     
     if (document.activeElement) document.activeElement.blur();
     document.body.focus();
@@ -805,3 +847,251 @@ function confetti() {
         setTimeout(() => c.remove(), 1600);
     }
 }
+/* ==========================================
+   NEW FEATURES: Translation, Decodable Texts, Progress, Phoneme Guide
+   ========================================== */
+
+// Progress tracking data
+let progressData = {
+    wordsAttempted: 0,
+    wordsCorrect: 0,
+    recentWords: [],
+    totalGuesses: 0
+};
+
+// Load progress data from localStorage
+function loadProgressData() {
+    const saved = localStorage.getItem('decode_progress_data');
+    if (saved) {
+        try {
+            progressData = JSON.parse(saved);
+        } catch (e) {
+            console.error('Could not load progress data');
+        }
+    }
+}
+
+// Save progress data
+function saveProgressData() {
+    localStorage.setItem('decode_progress_data', JSON.stringify(progressData));
+}
+
+// Track game completion
+function trackProgress(word, won, numGuesses) {
+    progressData.wordsAttempted++;
+    if (won) progressData.wordsCorrect++;
+    progressData.totalGuesses += numGuesses;
+    
+    progressData.recentWords.unshift({
+        word: word,
+        won: won,
+        guesses: numGuesses,
+        date: new Date().toLocaleDateString()
+    });
+    
+    // Keep only last 20 words
+    if (progressData.recentWords.length > 20) {
+        progressData.recentWords = progressData.recentWords.slice(0, 20);
+    }
+    
+    saveProgressData();
+}
+
+// Initialize new features
+function initNewFeatures() {
+    loadProgressData();
+    
+    // Translation button
+    const translateBtn = document.getElementById('translate-btn');
+    if (translateBtn) {
+        translateBtn.onclick = () => {
+            const section = document.getElementById('translation-section');
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        };
+    }
+    
+    // Translation select
+    const translateSelect = document.getElementById('translate-to');
+    if (translateSelect) {
+        translateSelect.onchange = async () => {
+            const lang = translateSelect.value;
+            if (!lang) return;
+            
+            const resultDiv = document.getElementById('translation-result');
+            resultDiv.textContent = 'Translating...';
+            
+            // Use the word and definition
+            const word = currentWord;
+            const def = currentEntry.def || '';
+            
+            try {
+                // Simple translation using browser's built-in (if available)
+                // In production, you'd call a translation API
+                resultDiv.innerHTML = `<strong>${word}</strong> (${lang}): <i>Translation feature requires API key</i><br><small>Meaning: ${def}</small>`;
+            } catch (e) {
+                resultDiv.textContent = 'Translation unavailable';
+            }
+        };
+    }
+    
+    // Decodable texts button
+    const decodableBtn = document.getElementById('decodable-btn');
+    if (decodableBtn) {
+        decodableBtn.onclick = openDecodableTexts;
+    }
+    
+    // Progress button
+    const progressBtn = document.getElementById('progress-btn');
+    if (progressBtn) {
+        progressBtn.onclick = openProgressModal;
+    }
+    
+    // Phoneme button
+    const phonemeBtn = document.getElementById('phoneme-btn');
+    if (phonemeBtn) {
+        phonemeBtn.onclick = openPhonemeGuide;
+    }
+    
+    // Close buttons for new modals
+    document.querySelectorAll('.close-decodable, .close-progress, .close-phoneme').forEach(btn => {
+        btn.addEventListener('click', closeModal);
+    });
+    
+    const closeDecodableBtn = document.getElementById('close-decodable-btn');
+    if (closeDecodableBtn) {
+        closeDecodableBtn.onclick = closeModal;
+    }
+    
+    // Export data button
+    const exportBtn = document.getElementById('export-data-btn');
+    if (exportBtn) {
+        exportBtn.onclick = exportProgressData;
+    }
+    
+    // Clear data button
+    const clearBtn = document.getElementById('clear-data-btn');
+    if (clearBtn) {
+        clearBtn.onclick = () => {
+            if (confirm('Clear all progress data? This cannot be undone.')) {
+                progressData = {
+                    wordsAttempted: 0,
+                    wordsCorrect: 0,
+                    recentWords: [],
+                    totalGuesses: 0
+                };
+                saveProgressData();
+                openProgressModal(); // Refresh display
+            }
+        };
+    }
+    
+    // Phoneme card clicks
+    document.addEventListener('click', (e) => {
+        const card = e.target.closest('.phoneme-card');
+        if (card) {
+            const sound = card.dataset.sound;
+            const example = card.dataset.example;
+            speak(example, 'word');
+        }
+    });
+}
+
+// Open decodable texts
+function openDecodableTexts() {
+    if (!window.DECODABLE_TEXTS) {
+        alert('Decodable texts not loaded');
+        return;
+    }
+    
+    modalOverlay.classList.remove('hidden');
+    const decodableModal = document.getElementById('decodable-modal');
+    decodableModal.classList.remove('hidden');
+    
+    const listDiv = document.getElementById('decodable-text-list');
+    const pattern = document.getElementById('pattern-select').value;
+    
+    // Filter texts by current pattern
+    const texts = window.DECODABLE_TEXTS.filter(text => {
+        return pattern === 'all' || (text.tags && text.tags.some(tag => tag === pattern || pattern.includes(tag)));
+    });
+    
+    if (texts.length === 0) {
+        listDiv.innerHTML = '<p style="text-align: center; color: #666;">No texts available for this pattern.</p>';
+        return;
+    }
+    
+    listDiv.innerHTML = texts.map(text => `
+        <div class="decodable-text-card" onclick="readDecodableText('${text.title}')">
+            <div class="decodable-text-title">${text.title}</div>
+            <div class="decodable-text-level">${text.level}</div>
+            <div class="decodable-text-content">${text.content}</div>
+        </div>
+    `).join('');
+}
+
+// Read decodable text aloud
+function readDecodableText(title) {
+    const text = window.DECODABLE_TEXTS.find(t => t.title === title);
+    if (text) {
+        speak(text.content, 'sentence');
+    }
+}
+
+// Open progress modal
+function openProgressModal() {
+    modalOverlay.classList.remove('hidden');
+    const progressModal = document.getElementById('progress-modal');
+    progressModal.classList.remove('hidden');
+    
+    // Update stats
+    document.getElementById('stat-attempted').textContent = progressData.wordsAttempted;
+    document.getElementById('stat-correct').textContent = progressData.wordsCorrect;
+    
+    const rate = progressData.wordsAttempted > 0 
+        ? Math.round((progressData.wordsCorrect / progressData.wordsAttempted) * 100)
+        : 0;
+    document.getElementById('stat-rate').textContent = rate + '%';
+    
+    const avgGuesses = progressData.wordsAttempted > 0
+        ? (progressData.totalGuesses / progressData.wordsAttempted).toFixed(1)
+        : 0;
+    document.getElementById('stat-avg-guesses').textContent = avgGuesses;
+    
+    // Recent words
+    const recentDiv = document.getElementById('recent-words');
+    if (progressData.recentWords.length === 0) {
+        recentDiv.innerHTML = '<p style="color: #666;">No words played yet.</p>';
+    } else {
+        recentDiv.innerHTML = progressData.recentWords.map(w => `
+            <div style="padding: 6px; border-bottom: 1px solid #eee;">
+                <strong>${w.word}</strong> - 
+                ${w.won ? '✅' : '❌'} 
+                (${w.guesses} guesses) - 
+                <small>${w.date}</small>
+            </div>
+        `).join('');
+    }
+}
+
+// Export progress data
+function exportProgressData() {
+    const dataStr = JSON.stringify(progressData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `decode-progress-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    
+    URL.revokeObjectURL(url);
+    showToast('Progress data exported!');
+}
+
+// Open phoneme guide
+function openPhonemeGuide() {
+    modalOverlay.classList.remove('hidden');
+    const phonemeModal = document.getElementById('phoneme-modal');
+    phonemeModal.classList.remove('hidden');
+}
+
