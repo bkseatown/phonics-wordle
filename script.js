@@ -806,9 +806,9 @@ function showEndModal(win) {
     document.getElementById('translate-to').value = '';
     document.getElementById('translation-result').textContent = '';
     
-    // Show bonus content if won
+    // Show bonus content if won (after user has time to read word)
     if (win) {
-        setTimeout(showBonusContent, 800);
+        setTimeout(showBonusContent, 3000);  // 3 seconds instead of 800ms
     }
 }
 
@@ -854,7 +854,7 @@ function closeModal() {
     
     // Auto-start new game after closing win/loss modal
     if (wasGameModalOpen && gameOver) {
-        setTimeout(() => newGame(), 300);
+        setTimeout(() => startNewGame(), 300);
     }
 }
 
