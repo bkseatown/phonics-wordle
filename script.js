@@ -70,7 +70,8 @@ document.addEventListener("DOMContentLoaded", () => {
     initKeyboard();
     initVoiceLoader(); 
     initStudio();
-    initNewFeatures(); // NEW: Initialize translation, progress, phoneme features
+    initNewFeatures();
+    initVoiceSourceControls(); // NEW: Voice source toggle
     
     startNewGame();
     checkFirstTimeVisitor();
@@ -954,16 +955,44 @@ function initNewFeatures() {
             const translation = getWordTranslation(word, lang);
             
             if (translation) {
+                // Rich translation available from translations.js
                 resultDiv.innerHTML = `
-                    <strong>${word}</strong> → <strong>${translation.word}</strong>
-                    <br><small style="color: #666;">${translation.meaning}</small>
+                    <div style="padding: 12px; background: #e8f5e9; border-radius: 8px; border: 2px solid var(--color-correct);">
+                        <div style="color: var(--color-correct); font-weight: 600; margin-bottom: 8px;">✓ Translation Available</div>
+                        
+                        <div style="font-size: 1.2rem; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                            <strong>${word}</strong> 
+                            <span style="color: #999;">→</span> 
+                            <strong style="color: var(--color-correct);">${translation.word}</strong>
+                            ${translation.phonetic ? `<span style="font-size: 0.85rem; color: #666; font-style: italic;">(${translation.phonetic})</span>` : ''}
+                        </div>
+                        
+                        <div style="font-size: 0.95rem; color: #555; margin-bottom: 10px; line-height: 1.5;">
+                            ${translation.def || translation.meaning}
+                        </div>
+                        
+                        ${translation.sentence ? `
+                            <div style="padding: 8px; background: white; border-radius: 4px; font-size: 0.9rem; color: #666; font-style: italic; border-left: 3px solid var(--color-correct);">
+                                "${translation.sentence}"
+                            </div>
+                        ` : ''}
+                    </div>
                 `;
             } else {
                 // Fallback: Show English definition clearly
                 resultDiv.innerHTML = `
-                    <strong>${word}</strong> (English)
-                    <br><small style="color: #666;">Meaning: ${def}</small>
-                    <br><br><em style="font-size: 0.85rem;">Translation for this word is not yet available. Working on English meaning helps build vocabulary!</em>
+                    <div style="padding: 10px; background: #fff3e0; border-radius: 6px; border: 2px solid #ffb74d;">
+                        <div style="color: #f57c00; font-weight: 600; margin-bottom: 6px;">📚 Translation Coming Soon</div>
+                        <div style="font-size: 1.1rem; margin-bottom: 8px;">
+                            <strong>${word}</strong> (English)
+                        </div>
+                        <div style="font-size: 0.9rem; color: #555; margin-bottom: 8px;">
+                            <em>Meaning: ${def}</em>
+                        </div>
+                        <div style="font-size: 0.85rem; color: #666; line-height: 1.4;">
+                            Working with English meanings helps build vocabulary skills! We're adding more translations regularly.
+                        </div>
+                    </div>
                 `;
             }
         };
@@ -1137,64 +1166,199 @@ function openPhonemeGuide() {
    ========================================== */
 
 // Curated multilingual glossary
-const MULTILINGUAL_GLOSSARY = {
-    // High-frequency words with translations
-    "cat": {
-        es: { word: "gato", meaning: "un animal pequeño con bigotes" },
-        zh: { word: "猫", meaning: "小动物，有胡须" },
-        ar: { word: "قطة", meaning: "حيوان صغير" },
-        vi: { word: "mèo", meaning: "con vật nhỏ" },
-        tl: { word: "pusa", meaning: "maliit na hayop" },
-        fr: { word: "chat", meaning: "un petit animal" }
-    },
-    "dog": {
-        es: { word: "perro", meaning: "un animal que ladra" },
-        zh: { word: "狗", meaning: "会叫的动物" },
-        ar: { word: "كلب", meaning: "حيوان ينبح" },
-        vi: { word: "chó", meaning: "con vật sủa" },
-        tl: { word: "aso", meaning: "hayop na tumatahol" },
-        fr: { word: "chien", meaning: "un animal qui aboie" }
-    },
-    "sun": {
-        es: { word: "sol", meaning: "luz brillante en el cielo" },
-        zh: { word: "太阳", meaning: "天空中的明亮光" },
-        ar: { word: "شمس", meaning: "ضوء ساطع في السماء" },
-        vi: { word: "mặt trời", meaning: "ánh sáng trên trời" },
-        tl: { word: "araw", meaning: "maliwanag sa langit" },
-        fr: { word: "soleil", meaning: "lumière dans le ciel" }
-    },
-    "run": {
-        es: { word: "correr", meaning: "moverse rápido" },
-        zh: { word: "跑", meaning: "快速移动" },
-        ar: { word: "يركض", meaning: "يتحرك بسرعة" },
-        vi: { word: "chạy", meaning: "di chuyển nhanh" },
-        tl: { word: "takbo", meaning: "mabilis na galaw" },
-        fr: { word: "courir", meaning: "bouger vite" }
-    },
-    "big": {
-        es: { word: "grande", meaning: "de tamaño mayor" },
-        zh: { word: "大", meaning: "尺寸大" },
-        ar: { word: "كبير", meaning: "حجم كبير" },
-        vi: { word: "lớn", meaning: "kích thước lớn" },
-        tl: { word: "malaki", meaning: "malaking laki" },
-        fr: { word: "grand", meaning: "de grande taille" }
-    },
-    "hot": {
-        es: { word: "caliente", meaning: "temperatura alta" },
-        zh: { word: "热", meaning: "高温" },
-        ar: { word: "ساخن", meaning: "درجة حرارة عالية" },
-        vi: { word: "nóng", meaning: "nhiệt độ cao" },
-        tl: { word: "mainit", meaning: "mataas na temperatura" },
-        fr: { word: "chaud", meaning: "température élevée" }
-    }
-    // More words can be added by teachers
-};
+// Translation system loaded from translations.js
+// window.TRANSLATIONS provides rich multilingual data:
+// - word: native script translation
+// - def: definition in home language  
+// - sentence: example sentence translated
+// - phonetic: pronunciation guide
 
 function getWordTranslation(word, langCode) {
     const wordLower = word.toLowerCase();
-    if (MULTILINGUAL_GLOSSARY[wordLower] && MULTILINGUAL_GLOSSARY[wordLower][langCode]) {
-        return MULTILINGUAL_GLOSSARY[wordLower][langCode];
+    // Use window.TRANSLATIONS from translations.js (loaded via script tag)
+    if (window.TRANSLATIONS && window.TRANSLATIONS[wordLower] && window.TRANSLATIONS[wordLower][langCode]) {
+        return window.TRANSLATIONS[wordLower][langCode];
     }
     return null;
+}
+
+
+/* Self-Contained Phoneme Voice Management */
+let phonemeRecorder = null;
+let phonemeAudioChunks = [];
+let currentPhonemeForRecording = null;
+
+function initVoiceSourceControls() {
+    // Toggle voice source
+    const voiceRadios = document.getElementsByName('guide-voice-source');
+    voiceRadios.forEach(radio => {
+        radio.closest('.voice-option').addEventListener('click', function() {
+            const radioInput = this.querySelector('input[type="radio"]');
+            radioInput.checked = true;
+            
+            // Update styling
+            document.querySelectorAll('.voice-option').forEach(opt => {
+                opt.style.borderColor = '#d0d0d0';
+                opt.style.background = 'white';
+            });
+            this.style.borderColor = 'var(--color-correct)';
+            this.style.background = '#f0f8f5';
+            
+            if (radioInput.value === 'system') {
+                showToast('Using system voice');
+            } else {
+                showToast('Using your recorded voice');
+            }
+        });
+    });
+    
+    // Show/Hide Recording Interface
+    const showRecordingBtn = document.getElementById('show-recording-interface-btn');
+    const recordingInterface = document.getElementById('phoneme-recording-interface');
+    
+    if (showRecordingBtn) {
+        showRecordingBtn.onclick = () => {
+            if (recordingInterface.style.display === 'none') {
+                recordingInterface.style.display = 'block';
+                showRecordingBtn.textContent = '✓ Recording Interface';
+                showRecordingBtn.style.background = 'var(--color-correct)';
+            } else {
+                recordingInterface.style.display = 'none';
+                showRecordingBtn.textContent = '🎤 Record Sounds';
+                showRecordingBtn.style.background = '#2c3e50';
+            }
+        };
+    }
+    
+    // Record Button
+    const recordBtn = document.getElementById('phoneme-record-btn');
+    const stopBtn = document.getElementById('phoneme-stop-btn');
+    const saveBtn = document.getElementById('phoneme-save-btn');
+    const deleteBtn = document.getElementById('phoneme-delete-btn');
+    
+    if (recordBtn) {
+        recordBtn.onclick = async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                phonemeAudioChunks = [];
+                phonemeRecorder = new MediaRecorder(stream);
+                
+                phonemeRecorder.ondataavailable = (e) => {
+                    phonemeAudioChunks.push(e.data);
+                };
+                
+                phonemeRecorder.onstop = () => {
+                    stream.getTracks().forEach(track => track.stop());
+                    saveBtn.style.display = 'block';
+                    deleteBtn.style.display = 'block';
+                };
+                
+                phonemeRecorder.start();
+                recordBtn.style.display = 'none';
+                stopBtn.style.display = 'block';
+                stopBtn.classList.add('recording');
+                showToast('Recording... Say the sound clearly');
+                
+            } catch (err) {
+                alert('Microphone access denied. Please allow microphone access.');
+            }
+        };
+    }
+    
+    if (stopBtn) {
+        stopBtn.onclick = () => {
+            if (phonemeRecorder && phonemeRecorder.state === 'recording') {
+                phonemeRecorder.stop();
+                stopBtn.style.display = 'none';
+                recordBtn.style.display = 'block';
+                stopBtn.classList.remove('recording');
+                showToast('Recording stopped. Save or delete.');
+            }
+        };
+    }
+    
+    if (saveBtn) {
+        saveBtn.onclick = async () => {
+            if (phonemeAudioChunks.length === 0) {
+                alert('No recording to save');
+                return;
+            }
+            
+            const audioBlob = new Blob(phonemeAudioChunks, { type: 'audio/webm' });
+            const phoneme = document.getElementById('current-phoneme-recording').textContent;
+            
+            // Save to IndexedDB
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64 = reader.result.split(',')[1];
+                if (window.audioDB) {
+                    const transaction = audioDB.transaction(["audio"], "readwrite");
+                    const store = transaction.objectStore("audio");
+                    store.put({ id: `phoneme_${phoneme}`, data: base64 });
+                    showToast(`Saved recording for "${phoneme}"`);
+                    
+                    // Reset interface
+                    saveBtn.style.display = 'none';
+                    deleteBtn.style.display = 'none';
+                    phonemeAudioChunks = [];
+                }
+            };
+            reader.readAsDataURL(audioBlob);
+        };
+    }
+    
+    if (deleteBtn) {
+        deleteBtn.onclick = () => {
+            phonemeAudioChunks = [];
+            saveBtn.style.display = 'none';
+            deleteBtn.style.display = 'none';
+            showToast('Recording discarded');
+        };
+    }
+    
+    // Clear All Recordings
+    const clearAllBtn = document.getElementById('clear-all-phoneme-recordings-btn');
+    if (clearAllBtn) {
+        clearAllBtn.onclick = () => {
+            if (confirm('Delete all your phoneme recordings? This cannot be undone.')) {
+                if (window.audioDB) {
+                    const transaction = audioDB.transaction(["audio"], "readwrite");
+                    const store = transaction.objectStore("audio");
+                    
+                    // Delete all phoneme recordings
+                    const request = store.openCursor();
+                    request.onsuccess = (e) => {
+                        const cursor = e.target.result;
+                        if (cursor) {
+                            if (cursor.key.startsWith('phoneme_')) {
+                                store.delete(cursor.key);
+                            }
+                            cursor.continue();
+                        } else {
+                            showToast('All phoneme recordings cleared');
+                            // Switch to system voice
+                            const systemRadio = document.querySelector('input[name="guide-voice-source"][value="system"]');
+                            if (systemRadio) {
+                                systemRadio.checked = true;
+                                systemRadio.closest('.voice-option').click();
+                            }
+                        }
+                    };
+                }
+            }
+        };
+    }
+    
+    // When clicking a phoneme card, set it as current for recording
+    document.addEventListener('click', (e) => {
+        const card = e.target.closest('.phoneme-card');
+        if (card && card.dataset.sound) {
+            currentPhonemeForRecording = card.dataset.sound;
+            const displayEl = document.getElementById('current-phoneme-recording');
+            if (displayEl) {
+                displayEl.textContent = card.dataset.sound;
+            }
+        }
+    });
 }
 

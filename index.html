@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>Decode the Word — Phonics Wordle</title>
@@ -27,7 +28,7 @@
             <h1>🔤 Decode the Word</h1>
             <div class="header-actions">
                 <button class="text-btn" id="progress-btn" title="View Progress">📊</button>
-                <button class="text-btn" id="phoneme-btn" title="Sounds Guide">🗣️</button>
+                <button class="text-btn" id="phoneme-btn" title="Phonics & Sounds Reference"><span style="font-size: 1.3rem;">Aa</span> Sounds</button>
                 <button class="text-btn" id="teacher-btn">Teacher</button>
                 <button class="icon-btn" id="case-toggle" title="Toggle Case">abc</button>
             </div>
@@ -326,8 +327,64 @@
     <div id="phoneme-modal" class="modal hidden">
         <span class="close-phoneme top-right-x">×</span>
         <div class="modal-content">
-            <h2>🗣️ Sounds Guide</h2>
+            <h2>Aa Sounds Guide</h2>
             <p style="font-size: 0.9rem; color: #666; margin-bottom: 12px;">Click any sound to hear it</p>
+            
+            <!-- Self-Contained Voice Management -->
+            <div style="background: #f8f9fa; padding: 14px; border-radius: 8px; margin-bottom: 16px; border: 1px solid #e0e0e0;">
+                <div style="font-weight: 600; margin-bottom: 10px; color: #2c3e50;">Voice for Sounds:</div>
+                
+                <!-- Simple Toggle -->
+                <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                    <label style="flex: 1; padding: 10px; border: 2px solid #d0d0d0; border-radius: 6px; cursor: pointer; text-align: center; transition: all 0.2s;" class="voice-option" data-voice="system">
+                        <input type="radio" name="guide-voice-source" value="system" checked style="margin-right: 6px;"> 
+                        <strong>System Voice</strong>
+                        <div style="font-size: 0.8rem; color: #666; margin-top: 4px;">Use computer voice</div>
+                    </label>
+                    <label style="flex: 1; padding: 10px; border: 2px solid #d0d0d0; border-radius: 6px; cursor: pointer; text-align: center; transition: all 0.2s;" class="voice-option" data-voice="recorded">
+                        <input type="radio" name="guide-voice-source" value="recorded" style="margin-right: 6px;"> 
+                        <strong>My Voice</strong>
+                        <div style="font-size: 0.8rem; color: #666; margin-top: 4px;">Use my recordings</div>
+                    </label>
+                </div>
+                
+                <!-- Recording Interface (Hidden by Default) -->
+                <div id="phoneme-recording-interface" style="display: none; border-top: 1px solid #e0e0e0; padding-top: 12px; margin-top: 12px;">
+                    <div style="margin-bottom: 10px;">
+                        <strong style="font-size: 0.9rem;">Record for: <span id="current-phoneme-recording">a</span></strong>
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                        <button class="action-btn" id="phoneme-record-btn" style="flex: 1; font-size: 0.9rem; padding: 10px; background: #e74c3c;">
+                            🎤 Record
+                        </button>
+                        <button class="action-btn" id="phoneme-stop-btn" style="flex: 1; font-size: 0.9rem; padding: 10px; display: none;">
+                            ⏹️ Stop
+                        </button>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="action-btn" id="phoneme-save-btn" style="flex: 1; font-size: 0.85rem; padding: 8px; background: var(--color-correct); display: none;">
+                            ✓ Save Recording
+                        </button>
+                        <button class="action-btn" id="phoneme-delete-btn" style="flex: 1; font-size: 0.85rem; padding: 8px; background: #999; display: none;">
+                            🗑️ Delete
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 8px; margin-top: 12px;">
+                    <button class="action-btn" id="show-recording-interface-btn" style="flex: 1; font-size: 0.85rem; padding: 8px; background: #2c3e50;">
+                        🎤 Record Sounds
+                    </button>
+                    <button class="action-btn" id="clear-all-phoneme-recordings-btn" style="flex: 1; font-size: 0.85rem; padding: 8px; background: #666;">
+                        🗑️ Clear All
+                    </button>
+                </div>
+                
+                <div style="font-size: 0.8rem; color: #666; margin-top: 10px; line-height: 1.4;">
+                    📍 Recordings saved on this device only. Switch between your voice and system voice anytime.
+                </div>
+            </div>
             
             <div style="max-height: 400px; overflow-y: auto;">
                 <!-- Vowels First (Priority) -->
@@ -335,24 +392,29 @@
                     <h3 style="font-size: 1.2rem; margin: 16px 0 10px; color: #2c3e50;">Vowels (Most Important!)</h3>
                     <div class="phoneme-grid">
                         <button class="phoneme-card vowel-card" data-sound="a" data-example="cat">
-                            <div class="phoneme-letter" style="color: #e91e63;">a</div>
+                            <div class="phoneme-letter">a</div>
                             <div class="phoneme-example">as in cat</div>
+                            <div class="phoneme-cue">lips open wide</div>
                         </button>
                         <button class="phoneme-card vowel-card" data-sound="e" data-example="bed">
-                            <div class="phoneme-letter" style="color: #e91e63;">e</div>
+                            <div class="phoneme-letter">e</div>
                             <div class="phoneme-example">as in bed</div>
+                            <div class="phoneme-cue">mouth slightly open</div>
                         </button>
                         <button class="phoneme-card vowel-card" data-sound="i" data-example="pig">
-                            <div class="phoneme-letter" style="color: #e91e63;">i</div>
+                            <div class="phoneme-letter">i</div>
                             <div class="phoneme-example">as in pig</div>
+                            <div class="phoneme-cue">lips smiling</div>
                         </button>
                         <button class="phoneme-card vowel-card" data-sound="o" data-example="dog">
-                            <div class="phoneme-letter" style="color: #e91e63;">o</div>
+                            <div class="phoneme-letter">o</div>
                             <div class="phoneme-example">as in dog</div>
+                            <div class="phoneme-cue">lips rounded</div>
                         </button>
                         <button class="phoneme-card vowel-card" data-sound="u" data-example="cup">
-                            <div class="phoneme-letter" style="color: #e91e63;">u</div>
+                            <div class="phoneme-letter">u</div>
                             <div class="phoneme-example">as in cup</div>
+                            <div class="phoneme-cue">lips relaxed</div>
                         </button>
                     </div>
                 </div>
@@ -413,6 +475,7 @@
 
     <!-- Scripts -->
     <script src="words.js"></script>
+    <script src="translations.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
