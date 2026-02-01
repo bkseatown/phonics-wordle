@@ -82,43 +82,21 @@
             <button id="new-word-btn">New Word</button>
         </div>
 
-        <!-- Collapsible Focus Panel -->
-        <button id="focus-toggle-btn" class="focus-toggle-btn" title="Show practice hints">
-            ℹ️ Show Hints
-        </button>
+        <!-- Simple Focus Info (Inline) -->
+        <div style="text-align: center; padding: 12px 20px; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border-radius: 8px; margin: 12px auto; max-width: 600px;">
+            <div style="font-weight: 600; color: #2c3e50; margin-bottom: 4px;" id="simple-focus-title">Mixed Review</div>
+            <div style="font-size: 0.9rem; color: #555;" id="simple-focus-desc">Review words from all categories</div>
+            <div style="font-size: 0.85rem; color: #888; font-style: italic; margin-top: 4px;" id="simple-focus-examples">Try words like: shift, yield, scope</div>
+        </div>
         
-        <div class="focus-panel hidden" id="focus-panel">
-            <div class="focus-main">
-                <div class="focus-left">
-                    <div class="focus-title" id="focus-title">Loading...</div>
-                    <div class="focus-desc" id="focus-desc">Preparing your practice session...</div>
-                    <div id="focus-hint" class="focus-hint-text">Hint will appear here</div>
-                </div>
-                <div class="focus-right">
-                    <span id="focus-examples" class="focus-examples-text"></span>
-                </div>
-            </div>
-            
-            <!-- Adaptive Action Row - Context-aware quick actions -->
-            <div class="focus-actions-row" id="focus-actions-row">
-                <button class="focus-action-btn" id="action-hear-word" title="Hear the word">
-                    🔊 Hear word
-                </button>
-                <button class="focus-action-btn" id="action-hear-sentence" title="Hear the sentence" style="display: none;">
-                    💬 Hear sentence
-                </button>
-                <button class="focus-action-btn" id="action-hear-sound" title="Hear the sound + word" style="display: none;">
-                    🎵 Hear sound
-                </button>
-                <button class="focus-action-btn" id="action-mouth-position" title="Show mouth position" style="display: none;">
-                    👄 Mouth guide
-                </button>
-            </div>
-            
-            <!-- Voice Control Indicator -->
-            <div id="voice-indicator" style="display: none; margin-top: 8px; padding: 6px 12px; background: #e8f5e9; border-radius: 4px; font-size: 0.85rem; color: #2e7d32; text-align: center;">
-                <span id="voice-indicator-text">🎤 Using teacher's voice</span>
-            </div>
+        <!-- Simple Audio Controls -->
+        <div style="text-align: center; margin: 12px auto;">
+            <button class="audio-play-btn" id="simple-hear-word" title="Hear the word">
+                🔊 Hear Word
+            </button>
+            <button class="audio-play-btn" id="simple-hear-sentence" title="Hear the sentence">
+                💬 Hear Sentence
+            </button>
         </div>
     </header>
 

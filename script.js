@@ -233,8 +233,25 @@ function initControls() {
         inp.focus();
     };
 
-    // Old hear-word-hint and hear-sentence-hint buttons removed
-    // Now using adaptive action buttons wired in updateAdaptiveActions()
+    // Simple audio buttons
+    const hearWordBtn = document.getElementById("simple-hear-word");
+    const hearSentenceBtn = document.getElementById("simple-hear-sentence");
+    
+    if (hearWordBtn) {
+        hearWordBtn.onclick = () => {
+            if (currentWord) speak(currentWord, 'word');
+            hearWordBtn.blur();
+        };
+    }
+    
+    if (hearSentenceBtn) {
+        hearSentenceBtn.onclick = () => {
+            if (currentEntry && currentEntry.sentence) {
+                speak(currentEntry.sentence, 'sentence');
+            }
+            hearSentenceBtn.blur();
+        };
+    }
     
     document.getElementById("speak-btn").onclick = () => {
         speak(currentWord, "word");
@@ -605,28 +622,18 @@ function updateFocusPanel() {
     }
     
     const info = window.FOCUS_INFO[pat] || window.FOCUS_INFO.all || { 
-        title: "Practice", desc: "General Review", hint: "Do your best!", examples: "" 
+        title: "Practice", desc: "General Review", examples: "" 
     };
     
-    // Safety check: ensure DOM elements exist
-    const titleEl = document.getElementById("focus-title");
-    const descEl = document.getElementById("focus-desc");
-    const hintEl = document.getElementById("focus-hint");
+    // Update simple inline focus display
+    const titleEl = document.getElementById("simple-focus-title");
+    const descEl = document.getElementById("simple-focus-desc");
+    const examplesEl = document.getElementById("simple-focus-examples");
     
-    if (!titleEl || !descEl || !hintEl) {
-        console.error("Focus panel elements not found in DOM");
-        return;
-    }
-    
-    titleEl.textContent = info.title;
-    descEl.textContent = info.desc;
-    hintEl.textContent = info.hint;
-    
-    const exSpan = document.getElementById("focus-examples");
-    if (info.examples && info.examples.length > 0) {
-        exSpan.textContent = `Try words like: ${info.examples}`;
-    } else {
-        exSpan.textContent = "";
+    if (titleEl) titleEl.textContent = info.title;
+    if (descEl) descEl.textContent = info.desc;
+    if (examplesEl && info.examples) {
+        examplesEl.textContent = `Try words like: ${info.examples}`;
     }
 
     const quickRow = document.getElementById("quick-tiles-row");

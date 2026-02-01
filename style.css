@@ -306,6 +306,30 @@ option:checked {
     box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
 }
 
+/* Simple audio play buttons */
+.audio-play-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0 6px;
+    box-shadow: 0 3px 8px rgba(102, 126, 234, 0.4);
+    transition: all 0.2s;
+}
+
+.audio-play-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 12px rgba(102, 126, 234, 0.5);
+}
+
+.audio-play-btn:active {
+    transform: translateY(0);
+}
+
 .focus-action-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
