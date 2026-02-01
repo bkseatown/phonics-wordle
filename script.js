@@ -1755,12 +1755,6 @@ function initTutorial() {
             welcomeModal.classList.add('hidden');
         };
     }
-    
-    if (closeBtn) {
-        closeBtn.onclick = () => {
-            welcomeModal.classList.add('hidden');
-        };
-    }
 }
 
 /* Focus Panel Toggle */
