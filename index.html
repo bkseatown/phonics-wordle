@@ -97,10 +97,26 @@
                     <span id="focus-examples" class="focus-examples-text"></span>
                 </div>
             </div>
-            <div class="focus-actions">
-                <span class="focus-action-btn" id="hear-word-hint">🔊 Hear word</span>
-                <span class="focus-action-separator">•</span>
-                <span class="focus-action-btn" id="hear-sentence-hint">💬 Hear sentence</span>
+            
+            <!-- Adaptive Action Row - Context-aware quick actions -->
+            <div class="focus-actions-row" id="focus-actions-row">
+                <button class="focus-action-btn" id="action-hear-word" title="Hear the word">
+                    🔊 Hear word
+                </button>
+                <button class="focus-action-btn" id="action-hear-sentence" title="Hear the sentence" style="display: none;">
+                    💬 Hear sentence
+                </button>
+                <button class="focus-action-btn" id="action-hear-sound" title="Hear the sound + word" style="display: none;">
+                    🎵 Hear sound
+                </button>
+                <button class="focus-action-btn" id="action-mouth-position" title="Show mouth position" style="display: none;">
+                    👄 Mouth guide
+                </button>
+            </div>
+            
+            <!-- Voice Control Indicator -->
+            <div id="voice-indicator" style="display: none; margin-top: 8px; padding: 6px 12px; background: #e8f5e9; border-radius: 4px; font-size: 0.85rem; color: #2e7d32; text-align: center;">
+                <span id="voice-indicator-text">🎤 Using teacher's voice</span>
             </div>
         </div>
     </header>
@@ -208,6 +224,28 @@
         <div class="modal-content">
             <h2>🎓 Teacher Mode</h2>
             <p>Set a custom word for your class to practice. 3-10 letters, no spaces.</p>
+            
+            <!-- Teacher Voice Control Section -->
+            <div style="background: #f5f7fa; border: 2px solid #667eea; border-radius: 8px; padding: 15px; margin: 15px 0;">
+                <div style="font-weight: 600; color: #667eea; margin-bottom: 10px;">🎤 Voice Control</div>
+                
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 12px;">
+                    <input type="checkbox" id="teacher-voice-toggle" checked style="width: 20px; height: 20px;">
+                    <span style="font-weight: 500;">Use my recorded voice (when available)</span>
+                </label>
+                
+                <div style="font-size: 0.85rem; color: #666; margin-bottom: 10px;">
+                    When OFF, the app uses computer voice for all sounds.
+                </div>
+                
+                <div id="teacher-recording-status" style="font-size: 0.85rem; color: #888; padding: 8px; background: white; border-radius: 4px;">
+                    📊 Status: <span id="recording-count">No recordings yet</span>
+                </div>
+                
+                <button class="action-btn" id="clear-all-recordings" style="width: 100%; margin-top: 10px; background: #e74c3c; color: white; display: none;">
+                    🗑️ Delete All My Recordings
+                </button>
+            </div>
             
             <div class="masked-input-container">
                 <input type="password" id="custom-word-input" placeholder="Enter word..." maxlength="10" autocomplete="off">

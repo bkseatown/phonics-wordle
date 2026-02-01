@@ -71,7 +71,12 @@ document.addEventListener("DOMContentLoaded", () => {
     initVoiceLoader(); 
     initStudio();
     initNewFeatures();
-    initVoiceSourceControls(); // NEW: Voice source toggle
+    initVoiceSourceControls(); // Voice source toggle
+    
+    // Initialize adaptive actions
+    if (typeof initAdaptiveActions === 'function') {
+        initAdaptiveActions();
+    }
     
     startNewGame();
     checkFirstTimeVisitor();
@@ -554,6 +559,11 @@ function startNewGame(customWord = null) {
         tile.id = `tile-${i}`;
         board.appendChild(tile);
     }
+    
+    // Update adaptive actions for new word
+    if (typeof updateAdaptiveActions === 'function') {
+        updateAdaptiveActions();
+    }
 }
 
 function getWordFromDictionary() {
@@ -634,6 +644,147 @@ function updateFocusPanel() {
     } else {
         quickRow.classList.add("hidden");
     }
+}
+
+/* ==========================================
+   ADAPTIVE ACTION ROW - Context-aware quick actions
+   ========================================== */
+
+function updateAdaptiveActions() {
+    // Get current word info
+    const word = currentWord;
+    const entry = currentEntry;
+    
+    if (!word || !entry) return;
+    
+    // Action buttons
+    const hearWord = document.getElementById('action-hear-word');
+    const hearSentence = document.getElementById('action-hear-sentence');
+    const hearSound = document.getElementById('action-hear-sound');
+    const mouthPosition = document.getElementById('action-mouth-position');
+    
+    if (!hearWord) return; // Elements not loaded yet
+    
+    // Always show "Hear word"
+    hearWord.style.display = 'inline-block';
+    hearWord.onclick = () => speak(word, 'word');
+    
+    // Show "Hear sentence" only if sentence exists
+    if (entry.sentence && entry.sentence.length > 5) {
+        hearSentence.style.display = 'inline-block';
+        hearSentence.onclick = () => speak(entry.sentence, 'sentence');
+    } else {
+        hearSentence.style.display = 'none';
+    }
+    
+    // Show "Hear sound" if we can detect a phoneme pattern
+    const firstSound = detectPrimarySound(word);
+    if (firstSound) {
+        hearSound.style.display = 'inline-block';
+        hearSound.onclick = () => {
+            // Play sound then word
+            speakPhoneme(firstSound);
+            setTimeout(() => speak(word, 'word'), 600);
+        };
+    } else {
+        hearSound.style.display = 'none';
+    }
+    
+    // Show "Mouth guide" if we have a matching phoneme
+    if (firstSound && canShowMouthPosition(firstSound)) {
+        mouthPosition.style.display = 'inline-block';
+        mouthPosition.onclick = () => openPhonemeGuideToSound(firstSound);
+    } else {
+        mouthPosition.style.display = 'none';
+    }
+    
+    // Update voice indicator
+    updateVoiceIndicator();
+}
+
+function detectPrimarySound(word) {
+    if (!word) return null;
+    
+    // Detect first vowel sound (simplified - can be enhanced)
+    const vowels = ['a', 'e', 'i', 'o', 'u'];
+    for (let char of word.toLowerCase()) {
+        if (vowels.includes(char)) {
+            return char;
+        }
+    }
+    return word[0]; // Fallback to first letter
+}
+
+function speakPhoneme(sound) {
+    // Speak isolated phoneme sound
+    if (window.speechSynthesis) {
+        const utterance = new SpeechSynthesisUtterance(sound);
+        utterance.rate = 0.7; // Slower for clarity
+        speechSynthesis.speak(utterance);
+    }
+}
+
+function canShowMouthPosition(sound) {
+    // Check if we have mouth position data for this sound
+    // For now, return true for vowels
+    return ['a', 'e', 'i', 'o', 'u'].includes(sound.toLowerCase());
+}
+
+function openPhonemeGuideToSound(sound) {
+    // Open phoneme modal
+    const phonemeModal = document.getElementById('phoneme-modal');
+    const modalOverlay = document.getElementById('modal-overlay');
+    
+    if (phonemeModal && modalOverlay) {
+        modalOverlay.classList.remove('hidden');
+        phonemeModal.classList.remove('hidden');
+        
+        // Scroll to matching card and highlight
+        setTimeout(() => {
+            const targetCard = document.querySelector(`.phoneme-card[data-sound="${sound}"]`);
+            if (targetCard) {
+                targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                targetCard.classList.add('highlight-flash');
+                setTimeout(() => targetCard.classList.remove('highlight-flash'), 2000);
+            }
+        }, 100);
+    }
+}
+
+function updateVoiceIndicator() {
+    const indicator = document.getElementById('voice-indicator');
+    const indicatorText = document.getElementById('voice-indicator-text');
+    
+    if (!indicator || !indicatorText) return;
+    
+    // Check if teacher recordings are enabled
+    const useTeacherVoice = localStorage.getItem('useTeacherRecordings') !== 'false';
+    
+    if (useTeacherVoice && hasAnyRecordings()) {
+        indicator.style.display = 'block';
+        indicatorText.textContent = '🎤 Using teacher\'s voice';
+    } else {
+        indicator.style.display = 'none';
+    }
+}
+
+function hasAnyRecordings() {
+    // Check if any recordings exist in IndexedDB
+    // Simplified check - can be enhanced
+    return localStorage.getItem('hasRecordings') === 'true';
+}
+
+function initAdaptiveActions() {
+    // Wire up action buttons
+    const hearWord = document.getElementById('action-hear-word');
+    const hearSentence = document.getElementById('action-hear-sentence');
+    const hearSound = document.getElementById('action-hear-sound');
+    const mouthPosition = document.getElementById('action-mouth-position');
+    
+    // Actions are wired up in updateAdaptiveActions()
+    // This is just initial setup
+    
+    console.log('✓ Adaptive actions initialized');
 }
 
 function initKeyboard() {
@@ -818,7 +969,136 @@ function openTeacherMode() {
     const inp = document.getElementById("custom-word-input");
     inp.value = "";
     document.getElementById("teacher-error").textContent = "";
+    
+    // Initialize voice control settings
+    initTeacherVoiceControl();
+    
     inp.focus();
+}
+
+/* ==========================================
+   TEACHER VOICE CONTROL SYSTEM
+   ========================================== */
+
+function initTeacherVoiceControl() {
+    const toggle = document.getElementById('teacher-voice-toggle');
+    const clearBtn = document.getElementById('clear-all-recordings');
+    const statusText = document.getElementById('recording-count');
+    
+    if (!toggle) return; // Elements not ready
+    
+    // Load saved preference (default: true/ON)
+    const useTeacherVoice = localStorage.getItem('useTeacherRecordings') !== 'false';
+    toggle.checked = useTeacherVoice;
+    
+    // Update status display
+    updateRecordingStatus();
+    
+    // Toggle handler
+    toggle.onchange = () => {
+        const enabled = toggle.checked;
+        localStorage.setItem('useTeacherRecordings', enabled.toString());
+        updateVoiceIndicator();
+        
+        if (enabled) {
+            showToast('✅ Teacher voice enabled');
+        } else {
+            showToast('🔊 Using system voice');
+        }
+    };
+    
+    // Clear all recordings handler
+    if (clearBtn) {
+        clearBtn.onclick = () => {
+            if (confirm('Delete all your voice recordings? This cannot be undone.')) {
+                clearAllTeacherRecordings();
+            }
+        };
+    }
+}
+
+function updateRecordingStatus() {
+    const statusText = document.getElementById('recording-count');
+    const clearBtn = document.getElementById('clear-all-recordings');
+    
+    if (!statusText || !clearBtn) return;
+    
+    // Check how many recordings exist
+    checkRecordingCount().then(count => {
+        if (count > 0) {
+            statusText.textContent = `${count} word${count === 1 ? '' : 's'} recorded`;
+            clearBtn.style.display = 'block';
+            localStorage.setItem('hasRecordings', 'true');
+        } else {
+            statusText.textContent = 'No recordings yet';
+            clearBtn.style.display = 'none';
+            localStorage.setItem('hasRecordings', 'false');
+        }
+    });
+}
+
+function checkRecordingCount() {
+    return new Promise((resolve) => {
+        if (!window.audioDB) {
+            resolve(0);
+            return;
+        }
+        
+        try {
+            const transaction = audioDB.transaction(["audio"], "readonly");
+            const store = transaction.objectStore("audio");
+            const request = store.count();
+            
+            request.onsuccess = () => resolve(request.result || 0);
+            request.onerror = () => resolve(0);
+        } catch (e) {
+            resolve(0);
+        }
+    });
+}
+
+function clearAllTeacherRecordings() {
+    if (!window.audioDB) {
+        showToast('❌ No recordings to delete');
+        return;
+    }
+    
+    try {
+        const transaction = audioDB.transaction(["audio"], "readwrite");
+        const store = transaction.objectStore("audio");
+        const request = store.clear();
+        
+        request.onsuccess = () => {
+            showToast('✅ All recordings deleted');
+            localStorage.setItem('hasRecordings', 'false');
+            updateRecordingStatus();
+            updateVoiceIndicator();
+        };
+        
+        request.onerror = () => {
+            showToast('❌ Error deleting recordings');
+        };
+    } catch (e) {
+        showToast('❌ Error deleting recordings');
+    }
+}
+
+function updateVoiceIndicator() {
+    const indicator = document.getElementById('voice-indicator');
+    const indicatorText = document.getElementById('voice-indicator-text');
+    
+    if (!indicator || !indicatorText) return;
+    
+    // Check if teacher recordings are enabled and exist
+    const useTeacherVoice = localStorage.getItem('useTeacherRecordings') !== 'false';
+    const hasRecordings = localStorage.getItem('hasRecordings') === 'true';
+    
+    if (useTeacherVoice && hasRecordings) {
+        indicator.style.display = 'block';
+        indicatorText.textContent = '🎤 Using teacher\'s voice';
+    } else {
+        indicator.style.display = 'none';
+    }
 }
 
 function handleTeacherSubmit() {
@@ -827,9 +1107,18 @@ function handleTeacherSubmit() {
         document.getElementById("teacher-error").textContent = "3-10 letters, no spaces.";
         return;
     }
-    closeModal();
-    showBanner("Word Set! Class is Ready.");
-    startNewGame(val);
+    
+    // Show clear confirmation
+    document.getElementById("teacher-error").textContent = "";
+    document.getElementById("teacher-error").style.color = "var(--color-correct)";
+    document.getElementById("teacher-error").textContent = `✅ Word accepted: "${val.toUpperCase()}" - Game ready!`;
+    
+    // Briefly pause for confirmation, then start
+    setTimeout(() => {
+        closeModal();
+        showBanner(`✅ Teacher word set: ${val.toUpperCase()}`);
+        startNewGame(val);
+    }, 800);
 }
 
 function closeModal() {

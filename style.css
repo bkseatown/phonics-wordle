@@ -280,20 +280,43 @@ option:checked {
     font-size: 0.9rem;
 }
 
+/* New adaptive action row */
+.focus-actions-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid #e0e0e0;
+    flex-wrap: wrap;
+}
+
 .focus-action-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
     cursor: pointer;
-    color: #555;
-    transition: color 0.2s;
-    font-weight: 500;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
 }
 
 .focus-action-btn:hover {
-    color: var(--color-correct);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
+}
+
+.focus-action-btn:active {
+    transform: translateY(0);
 }
 
 .focus-action-separator {
     color: #ccc;
 }
+
 
 /* UNIFIED GAME CANVAS - Board + Keyboard centered together */
 #game-canvas {
@@ -807,6 +830,23 @@ main {
     border-color: var(--color-correct);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.phoneme-card.highlight-flash {
+    animation: highlightFlash 2s ease-out;
+    border-color: var(--color-correct);
+    box-shadow: 0 0 20px rgba(46, 204, 113, 0.5);
+}
+
+@keyframes highlightFlash {
+    0%, 100% { 
+        background: white;
+        box-shadow: 0 0 0 rgba(46, 204, 113, 0);
+    }
+    50% { 
+        background: #e8f5e9;
+        box-shadow: 0 0 20px rgba(46, 204, 113, 0.6);
+    }
 }
 
 .phoneme-card.vowel-card:hover {
