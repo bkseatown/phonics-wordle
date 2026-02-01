@@ -90,15 +90,44 @@ function initVoiceLoader() {
         const saved = localStorage.getItem("preferred_voice_uri");
         
         voiceSelect.innerHTML = '<option value="">Auto-Select Best (Default)</option>';
+        
         const englishVoices = cachedVoices.filter(v => v.lang.startsWith("en"));
         
-        englishVoices.forEach(v => {
+        // CURATED LIST - Only show high-quality voices by default
+        const curatedVoiceNames = [
+            /Google US English/i,
+            /Google UK English/i,
+            /Enhanced|Premium/i,
+            /Samantha/i,  // macOS
+            /Ava/i,       // macOS
+            /Alex/i,      // macOS
+            /Microsoft.*English.*US/i,
+            /Microsoft.*English.*UK/i
+        ];
+        
+        const curatedVoices = englishVoices.filter(v => 
+            curatedVoiceNames.some(pattern => pattern.test(v.name))
+        );
+        
+        // If we found curated voices, use them. Otherwise show all.
+        const voicesToShow = curatedVoices.length > 0 ? curatedVoices : englishVoices.slice(0, 10);
+        
+        voicesToShow.forEach(v => {
             const opt = document.createElement("option");
             opt.value = v.voiceURI;
-            opt.textContent = `${v.name} (${v.lang})`;
+            opt.textContent = `${v.name}`;
             if (v.voiceURI === saved) opt.selected = true;
             voiceSelect.appendChild(opt);
         });
+        
+        // Add "Show all voices" option if we're using curated list
+        if (curatedVoices.length > 0 && curatedVoices.length < englishVoices.length) {
+            const showAllOpt = document.createElement("option");
+            showAllOpt.value = "_show_all_";
+            showAllOpt.textContent = "── Show all voices ──";
+            showAllOpt.disabled = true;
+            voiceSelect.appendChild(showAllOpt);
+        }
     };
 
     load();

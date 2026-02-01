@@ -125,6 +125,31 @@ select:focus {
     outline-offset: 1px;
 }
 
+/* Improved grade band visibility in dropdowns */
+optgroup {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #2c3e50;
+    background: #f5f5f5;
+    padding: 8px 4px 4px 4px;
+    margin-top: 6px;
+}
+
+optgroup:first-child {
+    margin-top: 0;
+}
+
+option {
+    padding: 6px 8px;
+    font-weight: 400;
+    color: #444;
+}
+
+option:checked {
+    background: var(--color-correct);
+    color: white;
+}
+
 #new-word-btn { 
     background: #2c3e50; 
     color: white; 
@@ -141,62 +166,82 @@ select:focus {
     background: #1a252f;
 }
 
-/* Focus Panel - Calm, supportive */
+/* Focus Panel - ONE clean card with clear hierarchy */
 .focus-panel { 
     background: white; 
-    padding: 10px 12px; 
+    padding: 14px 16px; 
     border-radius: 8px; 
     border: 1px solid #d0d0d0; 
-    font-size: 0.85rem; 
-    line-height: 1.4;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
-.focus-header { 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: baseline;
-    margin-bottom: 4px; 
+.focus-main {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
 }
 
-.focus-header strong {
-    font-size: 0.95rem;
+.focus-left {
+    flex: 1;
+}
+
+.focus-title {
+    font-size: 1.05rem;
+    font-weight: 600;
     color: #2c3e50;
-}
-
-#focus-examples {
-    font-size: 0.8rem;
-    color: #888;
-}
-
-#focus-desc {
-    color: #555;
     margin-bottom: 4px;
 }
 
-#focus-hint {
-    font-size: 0.8rem;
-    color: #666;
+.focus-desc {
+    font-size: 0.9rem;
+    color: #555;
+    line-height: 1.4;
+    margin-bottom: 4px;
+}
+
+.focus-hint-text {
+    font-size: 0.85rem;
+    color: #777;
     font-style: italic;
 }
 
-.hint-text { 
-    color: #666; 
-    font-weight: 500; 
-    font-size: 0.8rem; 
-    margin-top: 6px;
+.focus-right {
+    flex-shrink: 0;
     display: flex;
-    gap: 12px;
+    align-items: flex-start;
+}
+
+.focus-examples-text {
+    font-size: 0.85rem;
+    color: #888;
+    font-style: italic;
+    text-align: right;
+}
+
+.focus-actions {
+    display: flex;
+    align-items: center;
     justify-content: center;
+    gap: 8px;
+    padding-top: 10px;
+    border-top: 1px solid #f0f0f0;
+    font-size: 0.9rem;
 }
 
-.hint-text span {
+.focus-action-btn {
     cursor: pointer;
+    color: #555;
     transition: color 0.2s;
+    font-weight: 500;
 }
 
-.hint-text span:hover {
+.focus-action-btn:hover {
     color: var(--color-correct);
+}
+
+.focus-action-separator {
+    color: #ccc;
 }
 
 /* UNIFIED GAME CANVAS - Board + Keyboard centered together */
@@ -652,10 +697,20 @@ main {
     text-align: center;
 }
 
+.phoneme-card.vowel-card {
+    background: #fff0f6;
+    border-color: #f48fb1;
+}
+
 .phoneme-card:hover {
     border-color: var(--color-correct);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.phoneme-card.vowel-card:hover {
+    border-color: #e91e63;
+    background: #ffe4f1;
 }
 
 .phoneme-letter {

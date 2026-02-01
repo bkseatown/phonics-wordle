@@ -27,7 +27,7 @@
             <h1>🔤 Decode the Word</h1>
             <div class="header-actions">
                 <button class="text-btn" id="progress-btn" title="View Progress">📊</button>
-                <button class="text-btn" id="phoneme-btn" title="Phoneme Guide">🎵</button>
+                <button class="text-btn" id="phoneme-btn" title="Sounds Guide">🗣️</button>
                 <button class="text-btn" id="teacher-btn">Teacher</button>
                 <button class="icon-btn" id="case-toggle" title="Toggle Case">abc</button>
             </div>
@@ -81,15 +81,20 @@
         </div>
 
         <div class="focus-panel">
-            <div class="focus-header">
-                <strong id="focus-title">Loading...</strong>
-                <span id="focus-examples"></span>
+            <div class="focus-main">
+                <div class="focus-left">
+                    <div class="focus-title" id="focus-title">Loading...</div>
+                    <div class="focus-desc" id="focus-desc">Preparing your practice session...</div>
+                    <div id="focus-hint" class="focus-hint-text">Hint will appear here</div>
+                </div>
+                <div class="focus-right">
+                    <span id="focus-examples" class="focus-examples-text"></span>
+                </div>
             </div>
-            <div id="focus-desc">Preparing your practice session...</div>
-            <div id="focus-hint" style="font-size: 0.85rem; color: #666; margin-top: 4px;">Hint will appear here</div>
-            <div class="hint-text">
-                🔊 <span id="hear-word-hint" style="cursor: pointer; text-decoration: underline;">Hear the word</span> • 
-                💬 <span id="hear-sentence-hint" style="cursor: pointer; text-decoration: underline;">Hear a sentence</span>
+            <div class="focus-actions">
+                <span class="focus-action-btn" id="hear-word-hint">🔊 Hear word</span>
+                <span class="focus-action-separator">•</span>
+                <span class="focus-action-btn" id="hear-sentence-hint">💬 Hear sentence</span>
             </div>
         </div>
     </header>
@@ -317,48 +322,44 @@
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="words.js"></script>
-    <script src="script.js"></script>
-</body>
-</html>
-
     <!-- Phoneme/Grapheme Guide Modal -->
     <div id="phoneme-modal" class="modal hidden">
         <span class="close-phoneme top-right-x">×</span>
         <div class="modal-content">
-            <h2>🎵 Phoneme & Grapheme Guide</h2>
-            <p style="font-size: 0.9rem; color: #666; margin-bottom: 12px;">Sounds and letters that make them</p>
+            <h2>🗣️ Sounds Guide</h2>
+            <p style="font-size: 0.9rem; color: #666; margin-bottom: 12px;">Click any sound to hear it</p>
             
             <div style="max-height: 400px; overflow-y: auto;">
+                <!-- Vowels First (Priority) -->
                 <div class="phoneme-section">
-                    <h3 style="font-size: 1.1rem; margin: 12px 0 8px;">Short Vowels</h3>
+                    <h3 style="font-size: 1.2rem; margin: 16px 0 10px; color: #2c3e50;">Vowels (Most Important!)</h3>
                     <div class="phoneme-grid">
-                        <button class="phoneme-card" data-sound="a" data-example="cat">
-                            <div class="phoneme-letter">a</div>
+                        <button class="phoneme-card vowel-card" data-sound="a" data-example="cat">
+                            <div class="phoneme-letter" style="color: #e91e63;">a</div>
                             <div class="phoneme-example">as in cat</div>
                         </button>
-                        <button class="phoneme-card" data-sound="e" data-example="bed">
-                            <div class="phoneme-letter">e</div>
+                        <button class="phoneme-card vowel-card" data-sound="e" data-example="bed">
+                            <div class="phoneme-letter" style="color: #e91e63;">e</div>
                             <div class="phoneme-example">as in bed</div>
                         </button>
-                        <button class="phoneme-card" data-sound="i" data-example="pig">
-                            <div class="phoneme-letter">i</div>
+                        <button class="phoneme-card vowel-card" data-sound="i" data-example="pig">
+                            <div class="phoneme-letter" style="color: #e91e63;">i</div>
                             <div class="phoneme-example">as in pig</div>
                         </button>
-                        <button class="phoneme-card" data-sound="o" data-example="dog">
-                            <div class="phoneme-letter">o</div>
+                        <button class="phoneme-card vowel-card" data-sound="o" data-example="dog">
+                            <div class="phoneme-letter" style="color: #e91e63;">o</div>
                             <div class="phoneme-example">as in dog</div>
                         </button>
-                        <button class="phoneme-card" data-sound="u" data-example="cup">
-                            <div class="phoneme-letter">u</div>
+                        <button class="phoneme-card vowel-card" data-sound="u" data-example="cup">
+                            <div class="phoneme-letter" style="color: #e91e63;">u</div>
                             <div class="phoneme-example">as in cup</div>
                         </button>
                     </div>
                 </div>
                 
+                <!-- Digraphs -->
                 <div class="phoneme-section">
-                    <h3 style="font-size: 1.1rem; margin: 12px 0 8px;">Digraphs</h3>
+                    <h3 style="font-size: 1.1rem; margin: 16px 0 10px; color: #555;">Digraphs (Two Letters, One Sound)</h3>
                     <div class="phoneme-grid">
                         <button class="phoneme-card" data-sound="sh" data-example="ship">
                             <div class="phoneme-letter">sh</div>
@@ -376,6 +377,34 @@
                             <div class="phoneme-letter">wh</div>
                             <div class="phoneme-example">as in whip</div>
                         </button>
+                    </div>
+                </div>
+                
+                <!-- Full Alphabet (Secondary) -->
+                <div class="phoneme-section">
+                    <h3 style="font-size: 1.1rem; margin: 16px 0 10px; color: #555;">Consonants</h3>
+                    <div class="phoneme-grid">
+                        <button class="phoneme-card" data-example="bat"><div class="phoneme-letter">b</div><div class="phoneme-example">bat</div></button>
+                        <button class="phoneme-card" data-example="cat"><div class="phoneme-letter">c</div><div class="phoneme-example">cat /k/</div></button>
+                        <button class="phoneme-card" data-example="dog"><div class="phoneme-letter">d</div><div class="phoneme-example">dog</div></button>
+                        <button class="phoneme-card" data-example="fox"><div class="phoneme-letter">f</div><div class="phoneme-example">fox</div></button>
+                        <button class="phoneme-card" data-example="go"><div class="phoneme-letter">g</div><div class="phoneme-example">go /g/</div></button>
+                        <button class="phoneme-card" data-example="hat"><div class="phoneme-letter">h</div><div class="phoneme-example">hat</div></button>
+                        <button class="phoneme-card" data-example="jump"><div class="phoneme-letter">j</div><div class="phoneme-example">jump</div></button>
+                        <button class="phoneme-card" data-example="kite"><div class="phoneme-letter">k</div><div class="phoneme-example">kite</div></button>
+                        <button class="phoneme-card" data-example="lamp"><div class="phoneme-letter">l</div><div class="phoneme-example">lamp</div></button>
+                        <button class="phoneme-card" data-example="map"><div class="phoneme-letter">m</div><div class="phoneme-example">map</div></button>
+                        <button class="phoneme-card" data-example="net"><div class="phoneme-letter">n</div><div class="phoneme-example">net</div></button>
+                        <button class="phoneme-card" data-example="pen"><div class="phoneme-letter">p</div><div class="phoneme-example">pen</div></button>
+                        <button class="phoneme-card" data-example="queen"><div class="phoneme-letter">q</div><div class="phoneme-example">queen</div></button>
+                        <button class="phoneme-card" data-example="run"><div class="phoneme-letter">r</div><div class="phoneme-example">run</div></button>
+                        <button class="phoneme-card" data-example="sun"><div class="phoneme-letter">s</div><div class="phoneme-example">sun /s/</div></button>
+                        <button class="phoneme-card" data-example="top"><div class="phoneme-letter">t</div><div class="phoneme-example">top</div></button>
+                        <button class="phoneme-card" data-example="van"><div class="phoneme-letter">v</div><div class="phoneme-example">van</div></button>
+                        <button class="phoneme-card" data-example="wet"><div class="phoneme-letter">w</div><div class="phoneme-example">wet</div></button>
+                        <button class="phoneme-card" data-example="box"><div class="phoneme-letter">x</div><div class="phoneme-example">box</div></button>
+                        <button class="phoneme-card" data-example="yes"><div class="phoneme-letter">y</div><div class="phoneme-example">yes</div></button>
+                        <button class="phoneme-card" data-example="zip"><div class="phoneme-letter">z</div><div class="phoneme-example">zip /z/</div></button>
                     </div>
                 </div>
             </div>
