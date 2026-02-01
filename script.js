@@ -268,8 +268,30 @@ function initControls() {
 
         if (gameOver) return;
 
-        if (e.key === "Enter") submitGuess();
-        else if (e.key === "Backspace") deleteLetter();
+        // Add visual feedback to on-screen keyboard
+        const key = e.key.toLowerCase();
+        const keyElement = document.querySelector(`.key[onclick*="${key}"]`);
+        if (keyElement && /^[a-z]$/i.test(e.key)) {
+            keyElement.classList.add('key-pressed');
+            setTimeout(() => keyElement.classList.remove('key-pressed'), 150);
+        }
+
+        if (e.key === "Enter") {
+            const enterKey = document.querySelector('.key.wide[onclick*="submitGuess"]');
+            if (enterKey) {
+                enterKey.classList.add('key-pressed');
+                setTimeout(() => enterKey.classList.remove('key-pressed'), 150);
+            }
+            submitGuess();
+        }
+        else if (e.key === "Backspace") {
+            const backKey = document.querySelector('.key.wide[onclick*="deleteLetter"]');
+            if (backKey) {
+                backKey.classList.add('key-pressed');
+                setTimeout(() => backKey.classList.remove('key-pressed'), 150);
+            }
+            deleteLetter();
+        }
         else if (/^[a-z]$/i.test(e.key)) handleInput(e.key.toLowerCase());
     });
 
@@ -708,8 +730,7 @@ function submitGuess() {
         gameOver = true;
         confetti(); 
         setTimeout(() => {
-            showBonusContent();  // Show joke/fact/quote
-            setTimeout(() => showEndModal(true), 6500);  // Show modal after bonus
+            showEndModal(true);  // Show word reveal first
         }, 1500);
     } else if (guesses.length >= MAX_GUESSES) {
         gameOver = true;
@@ -812,6 +833,8 @@ function handleTeacherSubmit() {
 }
 
 function closeModal() {
+    const wasGameModalOpen = !gameModal.classList.contains("hidden");
+    
     modalOverlay.classList.add("hidden");
     welcomeModal.classList.add("hidden");
     teacherModal.classList.add("hidden");
@@ -828,6 +851,11 @@ function closeModal() {
     
     if (document.activeElement) document.activeElement.blur();
     document.body.focus();
+    
+    // Auto-start new game after closing win/loss modal
+    if (wasGameModalOpen && gameOver) {
+        setTimeout(() => newGame(), 300);
+    }
 }
 
 function showBanner(msg) {

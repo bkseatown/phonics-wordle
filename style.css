@@ -479,6 +479,15 @@ main {
     top: 2px;
 }
 
+/* Key press feedback animation */
+.key-pressed {
+    transform: translateY(4px) !important;
+    box-shadow: 
+        0 0 0 0 #a8a8a8,
+        0 1px 3px rgba(0,0,0,0.2) !important;
+    transition: all 0.05s !important;
+}
+
 /* Absent/Gray keys - Much more visible with better contrast */
 .key.absent {
     background: linear-gradient(180deg, #4a4a4c 0%, #3a3a3c 100%) !important;
