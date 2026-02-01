@@ -1494,6 +1494,9 @@ function initNewFeatures() {
         phonemeBtn.onclick = openPhonemeGuide;
     }
     
+    // Initialize phoneme cards with mouth animations
+    initPhonemeCards();
+    
     // Close buttons for new modals
     document.querySelectorAll('.close-decodable, .close-progress, .close-phoneme, .close-help').forEach(btn => {
         btn.addEventListener('click', closeModal);
@@ -1671,6 +1674,96 @@ function exportProgressData() {
 }
 
 // Open phoneme guide
+/* ==========================================
+   PHONEME CARD INITIALIZATION WITH MOUTH ANIMATIONS
+   ========================================== */
+
+function initPhonemeCards() {
+    const cards = document.querySelectorAll('.phoneme-card');
+    
+    cards.forEach(card => {
+        card.addEventListener('click', function() {
+            const sound = this.dataset.sound;
+            const example = this.dataset.example;
+            
+            // Get phoneme data
+            const phonemeData = window.getPhonemeData ? window.getPhonemeData(sound) : null;
+            
+            // Show animated mouth
+            showPhonememouth(sound, phonemeData);
+            
+            // Speak the sound
+            if (example) {
+                speak(sound, 'phoneme');
+            }
+        });
+    });
+    
+    console.log('✓ Initialized', cards.length, 'phoneme cards with mouth animations');
+}
+
+function showPhonemeMouth(sound, phonemeData) {
+    // Create or get mouth display container
+    let mouthDisplay = document.getElementById('phoneme-mouth-display');
+    
+    if (!mouthDisplay) {
+        mouthDisplay = document.createElement('div');
+        mouthDisplay.id = 'phoneme-mouth-display';
+        mouthDisplay.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10000;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            text-align: center;
+        `;
+        document.body.appendChild(mouthDisplay);
+    }
+    
+    // Build content
+    const animation = phonemeData ? phonemeData.animation : `mouth-${sound}`;
+    const cue = phonemeData ? phonemeData.cue : 'Watch the mouth';
+    const description = phonemeData ? phonemeData.description : '';
+    
+    mouthDisplay.innerHTML = `
+        <div style="font-size: 1.5rem; font-weight: 600; margin-bottom: 10px; color: #2c3e50;">
+            ${sound.toUpperCase()} Sound
+        </div>
+        
+        <div class="mouth-container">
+            <div class="mouth ${animation}"></div>
+        </div>
+        
+        ${phonemeData ? `
+            <div class="phoneme-articulation">
+                <div class="phoneme-cue">${cue}</div>
+                <div class="phoneme-description">${description}</div>
+                
+                <div style="margin-top: 12px; font-size: 0.8rem; color: #888;">
+                    <div>Tongue: ${phonemeData.tongue}</div>
+                    <div>Lips: ${phonemeData.lips}</div>
+                </div>
+            </div>
+        ` : ''}
+        
+        <button onclick="document.getElementById('phoneme-mouth-display').style.display='none'" 
+                style="margin-top: 20px; padding: 10px 24px; background: var(--color-correct); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
+            Got it!
+        </button>
+    `;
+    
+    mouthDisplay.style.display = 'block';
+    
+    // Auto-hide after 8 seconds
+    setTimeout(() => {
+        if (mouthDisplay) mouthDisplay.style.display = 'none';
+    }, 8000);
+}
+
 function openPhonemeGuide() {
     modalOverlay.classList.remove('hidden');
     const phonemeModal = document.getElementById('phoneme-modal');

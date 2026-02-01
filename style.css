@@ -987,3 +987,293 @@ main {
         padding: 8px 12px;
     }
 }
+
+
+/* ==========================================================================
+   MOUTH ANIMATION SYSTEM - CSS-Based Phoneme Visualizations
+   ========================================================================== */
+
+.mouth-container {
+    width: 200px;
+    height: 200px;
+    margin: 20px auto;
+    position: relative;
+    background: #ffe8d6;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.mouth {
+    position: absolute;
+    left: 50%;
+    top: 55%;
+    transform: translate(-50%, -50%);
+    transition: all 0.3s ease;
+}
+
+/* MOUTH SHAPES */
+
+/* Wide Open (short a) */
+.mouth-short-a {
+    width: 80px;
+    height: 60px;
+    background: #c9302c;
+    border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+    animation: mouthWideOpen 1s ease-in-out;
+}
+
+/* Slight Smile (short e) */
+.mouth-short-e {
+    width: 70px;
+    height: 30px;
+    background: #c9302c;
+    border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%;
+    animation: mouthSmile 1s ease-in-out;
+}
+
+/* Relaxed (short i) */
+.mouth-short-i {
+    width: 60px;
+    height: 35px;
+    background: #c9302c;
+    border-radius: 50%;
+    animation: mouthRelaxed 1s ease-in-out;
+}
+
+/* Rounded Open (short o) */
+.mouth-short-o {
+    width: 50px;
+    height: 50px;
+    background: #c9302c;
+    border-radius: 50%;
+    animation: mouthRounded 1s ease-in-out;
+}
+
+/* Neutral Open (short u) */
+.mouth-short-u {
+    width: 55px;
+    height: 40px;
+    background: #c9302c;
+    border-radius: 40%;
+    animation: mouthNeutral 1s ease-in-out;
+}
+
+/* Lips Closed (b, p, m) */
+.mouth-b, .mouth-p, .mouth-m {
+    width: 70px;
+    height: 8px;
+    background: #8b4513;
+    border-radius: 4px;
+    animation: mouthClosed 1s ease-in-out;
+}
+
+/* Tongue Up (d, t, n, l) */
+.mouth-d, .mouth-t, .mouth-n, .mouth-l {
+    width: 60px;
+    height: 40px;
+    background: #c9302c;
+    border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+    animation: mouthTongueUp 1s ease-in-out;
+}
+
+.mouth-d::after, .mouth-t::after, .mouth-n::after, .mouth-l::after {
+    content: '';
+    position: absolute;
+    width: 30px;
+    height: 20px;
+    background: #ff69b4;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 50% 50% 0 0;
+}
+
+/* Throat Sound (g, k) */
+.mouth-g, .mouth-k {
+    width: 50px;
+    height: 45px;
+    background: #c9302c;
+    border-radius: 40%;
+    animation: mouthThroat 1s ease-in-out;
+}
+
+/* Teeth Together (s) */
+.mouth-s {
+    width: 65px;
+    height: 20px;
+    background: #c9302c;
+    border-radius: 20%;
+    position: relative;
+    animation: mouthTeeth 1s ease-in-out;
+}
+
+.mouth-s::before {
+    content: '';
+    position: absolute;
+    width: 60px;
+    height: 3px;
+    background: white;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Lip-Teeth (f) */
+.mouth-f {
+    width: 70px;
+    height: 25px;
+    background: #c9302c;
+    border-radius: 50% 50% 40% 40%;
+    position: relative;
+    animation: mouthLipTeeth 1s ease-in-out;
+}
+
+.mouth-f::before {
+    content: '';
+    position: absolute;
+    width: 50px;
+    height: 4px;
+    background: white;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* Tongue Back (r) */
+.mouth-r {
+    width: 55px;
+    height: 45px;
+    background: #c9302c;
+    border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+    animation: mouthTongueBack 1s ease-in-out;
+}
+
+/* Rounded Forward (sh, ch) */
+.mouth-sh, .mouth-ch {
+    width: 45px;
+    height: 45px;
+    background: #c9302c;
+    border-radius: 50%;
+    animation: mouthRoundedForward 1s ease-in-out;
+}
+
+/* Tongue Out (th) */
+.mouth-th {
+    width: 60px;
+    height: 35px;
+    background: #c9302c;
+    border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+    position: relative;
+    animation: mouthTongueOut 1s ease-in-out;
+}
+
+.mouth-th::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 12px;
+    background: #ff69b4;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 50%;
+}
+
+/* ANIMATIONS */
+
+@keyframes mouthWideOpen {
+    0%, 100% { height: 60px; }
+    50% { height: 70px; }
+}
+
+@keyframes mouthSmile {
+    0%, 100% { width: 70px; }
+    50% { width: 75px; }
+}
+
+@keyframes mouthRelaxed {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+@keyframes mouthRounded {
+    0%, 100% { border-radius: 50%; }
+    50% { border-radius: 60%; }
+}
+
+@keyframes mouthNeutral {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.9; }
+}
+
+@keyframes mouthClosed {
+    0%, 100% { height: 8px; }
+    30% { height: 4px; }
+    60% { height: 12px; }
+}
+
+@keyframes mouthTongueUp {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+}
+
+@keyframes mouthThroat {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(0.95); }
+}
+
+@keyframes mouthTeeth {
+    0%, 100% { height: 20px; }
+    50% { height: 18px; }
+}
+
+@keyframes mouthLipTeeth {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(2px); }
+}
+
+@keyframes mouthTongueBack {
+    0%, 100% { transform: scaleX(1); }
+    50% { transform: scaleX(0.95); }
+}
+
+@keyframes mouthRoundedForward {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+@keyframes mouthTongueOut {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(3px); }
+}
+
+/* Phoneme card enhancements for mouth display */
+.phoneme-card-with-mouth {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+}
+
+.phoneme-articulation {
+    background: #f0f4ff;
+    padding: 12px;
+    border-radius: 8px;
+    margin-top: 12px;
+    font-size: 0.85rem;
+    color: #555;
+    text-align: center;
+    line-height: 1.5;
+}
+
+.phoneme-cue {
+    font-weight: 600;
+    color: #667eea;
+    margin-bottom: 4px;
+}
+
+.phoneme-description {
+    font-style: italic;
+    color: #888;
+}
+
