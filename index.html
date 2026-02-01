@@ -81,7 +81,12 @@
             <button id="new-word-btn">New Word</button>
         </div>
 
-        <div class="focus-panel">
+        <!-- Collapsible Focus Panel -->
+        <button id="focus-toggle-btn" class="focus-toggle-btn" title="Show practice hints">
+            ℹ️ Show Hints
+        </button>
+        
+        <div class="focus-panel hidden" id="focus-panel">
             <div class="focus-main">
                 <div class="focus-left">
                     <div class="focus-title" id="focus-title">Loading...</div>
@@ -118,6 +123,70 @@
     <div id="modal-overlay" class="hidden"></div>
 
     <!-- Welcome Modal -->
+    <div id="welcome-modal" class="modal hidden">
+        <span class="close-welcome">×</span>
+        <div class="modal-content">
+            <h2>Welcome to Decode the Word! 🎯</h2>
+            <p style="font-size: 1.05rem; margin-bottom: 20px;">A research-based phonics game for building reading skills</p>
+            
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin-top: 0;">Quick Start Guide</h3>
+                
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <div style="display: flex; gap: 12px; align-items: start;">
+                        <div style="font-size: 2rem; min-width: 40px;">🎮</div>
+                        <div>
+                            <strong>Play Like Wordle</strong>
+                            <p style="margin: 4px 0 0 0; font-size: 0.95rem; color: #666;">Type letters to guess the word. Green = correct, yellow = wrong spot, gray = not in word.</p>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px; align-items: start;">
+                        <div style="font-size: 2rem; min-width: 40px;">ℹ️</div>
+                        <div>
+                            <strong>Show Hints (Optional)</strong>
+                            <p style="margin: 4px 0 0 0; font-size: 0.95rem; color: #666;">Click "Show Hints" button above the game to see word patterns and hear pronunciation.</p>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px; align-items: start;">
+                        <div style="font-size: 2rem; min-width: 40px;">🎵</div>
+                        <div>
+                            <strong>Sound Guide</strong>
+                            <p style="margin: 4px 0 0 0; font-size: 0.95rem; color: #666;">Click "Aa Sounds" to hear letter sounds and see mouth positions.</p>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px; align-items: start;">
+                        <div style="font-size: 2rem; min-width: 40px;">📊</div>
+                        <div>
+                            <strong>Track Progress</strong>
+                            <p style="margin: 4px 0 0 0; font-size: 0.95rem; color: #666;">Click the chart icon to see your wins, streaks, and patterns practiced.</p>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px; align-items: start;">
+                        <div style="font-size: 2rem; min-width: 40px;">👨‍🏫</div>
+                        <div>
+                            <strong>Teacher Tools</strong>
+                            <p style="margin: 4px 0 0 0; font-size: 0.95rem; color: #666;">Access advanced features: change word patterns, record your voice, and more.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="action-btn" id="start-playing-btn" style="width: 100%; font-size: 1.1rem; padding: 14px;">
+                🎯 Start Playing!
+            </button>
+            
+            <label style="display: flex; align-items: center; justify-content: center; margin-top: 12px; font-size: 0.9rem; color: #666; cursor: pointer;">
+                <input type="checkbox" id="dont-show-tutorial" style="margin-right: 8px;">
+                Don't show this again
+            </label>
+        </div>
+    </div>
+
+    <!-- Original Welcome Modal (Keep for Reference) -->
     <div id="welcome-modal" class="modal hidden">
         <span class="close-btn top-right-x">×</span>
         <div class="modal-content welcome-content">

@@ -1362,3 +1362,58 @@ function initVoiceSourceControls() {
     });
 }
 
+/* First-Time Tutorial */
+function initTutorial() {
+    const tutorialShown = localStorage.getItem('tutorialShown');
+    const welcomeModal = document.getElementById('welcome-modal');
+    const startBtn = document.getElementById('start-playing-btn');
+    const dontShowCheckbox = document.getElementById('dont-show-tutorial');
+    const closeBtn = document.querySelector('.close-welcome');
+    
+    if (!tutorialShown && welcomeModal) {
+        welcomeModal.classList.remove('hidden');
+    }
+    
+    if (startBtn) {
+        startBtn.onclick = () => {
+            if (dontShowCheckbox && dontShowCheckbox.checked) {
+                localStorage.setItem('tutorialShown', 'true');
+            }
+            welcomeModal.classList.add('hidden');
+        };
+    }
+    
+    if (closeBtn) {
+        closeBtn.onclick = () => {
+            welcomeModal.classList.add('hidden');
+        };
+    }
+}
+
+/* Focus Panel Toggle */
+function initFocusToggle() {
+    const toggleBtn = document.getElementById('focus-toggle-btn');
+    const focusPanel = document.getElementById('focus-panel');
+    
+    if (toggleBtn && focusPanel) {
+        toggleBtn.onclick = () => {
+            const isHidden = focusPanel.classList.contains('hidden');
+            
+            if (isHidden) {
+                focusPanel.classList.remove('hidden');
+                toggleBtn.classList.add('expanded');
+                toggleBtn.textContent = '▲ Hide Hints';
+            } else {
+                focusPanel.classList.add('hidden');
+                toggleBtn.classList.remove('expanded');
+                toggleBtn.textContent = 'ℹ️ Show Hints';
+            }
+        };
+    }
+}
+
+// Initialize on page load
+window.addEventListener('DOMContentLoaded', () => {
+    initTutorial();
+    initFocusToggle();
+});

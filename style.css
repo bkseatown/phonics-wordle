@@ -172,13 +172,59 @@ option:checked {
 }
 
 /* Focus Panel - ONE clean card with clear hierarchy */
+/* Focus Toggle Button */
+.focus-toggle-btn {
+    background: var(--color-correct);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 12px auto 0;
+    display: block;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.focus-toggle-btn:hover {
+    background: #27ae60;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.focus-toggle-btn.expanded {
+    background: #666;
+}
+
+.focus-toggle-btn.expanded:hover {
+    background: #555;
+}
+
+/* Focus Panel - Collapsible */
 .focus-panel { 
     background: white; 
     padding: 14px 16px; 
     border-radius: 8px; 
     border: 1px solid #d0d0d0; 
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    margin-top: 12px;
+    transition: all 0.3s ease;
+    overflow: hidden;
+    max-height: 500px;
+    opacity: 1;
 }
+
+.focus-panel.hidden {
+    max-height: 0;
+    padding: 0 16px;
+    margin-top: 0;
+    opacity: 0;
+    pointer-events: none;
+    border: none;
+}
+
 
 .focus-main {
     display: flex;
