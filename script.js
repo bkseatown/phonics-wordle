@@ -1,4 +1,6 @@
 /* =========================================
+// Compatibility: map WORDS_DATA to WORD_ENTRIES
+if (typeof WORDS_DATA !== "undefined") window.WORD_ENTRIES = WORDS_DATA;
    DECODE THE WORD - GOLD MASTER (IOS SAFE + FIXED STUDIO FLOW)
    ========================================= */
 
@@ -56,6 +58,11 @@ function getAudioFromDB(key) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Compatibility: map WORDS_DATA to WORD_ENTRIES
+    if (typeof WORDS_DATA !== 'undefined') {
+        window.WORD_ENTRIES = WORDS_DATA;
+    }
+    
     // Initialize DOM elements
     board = document.getElementById("game-board");
     keyboard = document.getElementById("keyboard");
@@ -985,10 +992,15 @@ function showEndModal(win) {
     document.getElementById("modal-def").textContent = currentEntry.def;
     document.getElementById("modal-sentence").textContent = `"${currentEntry.sentence}"`;
     
-    // Reset translation section
-    document.getElementById("translation-section").style.display = 'none';
-    document.getElementById('translate-to').value = '';
-    document.getElementById('translation-result').textContent = '';
+    // Reset translation section (with safety check)
+    const translationSection = document.getElementById("translation-section");
+    if (translationSection) {
+        translationSection.style.display = 'none';
+        const translateTo = document.getElementById('translate-to');
+        const translationResult = document.getElementById('translation-result');
+        if (translateTo) translateTo.value = '';
+        if (translationResult) translationResult.textContent = '';
+    }
     
     // Store that we should show bonus when modal closes (if won)
     if (win) {
@@ -1919,11 +1931,11 @@ function initFocusToggle() {
             if (isHidden) {
                 focusPanel.classList.remove('hidden');
                 toggleBtn.classList.add('expanded');
-                toggleBtn.textContent = '▲ Hide Hints';
+                toggleBtn.textContent = '▼ Hide';
             } else {
                 focusPanel.classList.add('hidden');
                 toggleBtn.classList.remove('expanded');
-                toggleBtn.textContent = 'ℹ️ Show Hints';
+                toggleBtn.textContent = '💡 Hints';
             }
         };
     }

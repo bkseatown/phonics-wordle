@@ -1590,3 +1590,67 @@ main {
   }
 }
 
+
+/* ========================================
+   PROFESSIONAL OVERHAUL - MODERN & CLEAN
+   ======================================== */
+
+/* Inter font for entire app - clear I vs l */
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Keyboard - clear letters */
+#keyboard button {
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+/* Game tiles - clear letters */
+.tile {
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  font-size: 2rem;
+}
+
+/* Button hover effects */
+button:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Recording Studio button active states */
+#record-word-btn:not(:disabled):hover,
+#record-sentence-btn:not(:disabled):hover {
+  background: #b91c1c !important;
+}
+
+#play-word-preview:not(:disabled),
+#play-sentence-preview:not(:disabled) {
+  background: #3b82f6 !important;
+  color: white !important;
+  cursor: pointer !important;
+}
+
+#play-word-preview:not(:disabled):hover,
+#play-sentence-preview:not(:disabled):hover {
+  background: #2563eb !important;
+}
+
+#start-studio-btn:hover {
+  background: #1d4ed8 !important;
+}
+
+#next-item-btn:hover {
+  background: #1d4ed8 !important;
+}
+
+#exit-studio-btn:hover {
+  background: #d1d5db !important;
+}
+
