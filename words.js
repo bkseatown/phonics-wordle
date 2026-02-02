@@ -20640,3 +20640,84 @@ const WORDS_DATA =
     }
   }
 };
+
+/* ==========================================================================
+   BOOTSTRAP: expose WORD_ENTRIES in the format script.js expects
+   - Keeps your rich WORDS_DATA structure intact
+   - Provides: window.WORD_ENTRIES[word] = {def, sentence, syllables, tags, meta}
+   ========================================================================== */
+(function () {
+  'use strict';
+
+  function uniq(arr) {
+    return Array.from(new Set((arr || []).filter(Boolean)));
+  }
+
+  function deriveTags(word, data) {
+    const tags = [];
+
+    const phon = (data && data.phonics) ? data.phonics : {};
+    const patterns = Array.isArray(phon.patterns) ? phon.patterns : [];
+    const scope = Array.isArray(phon.scope_sequence) ? phon.scope_sequence : [];
+
+    // Direct hints from existing pattern labels
+    if (patterns.some(p => String(p).includes('digraph'))) tags.push('digraph');
+    if (patterns.some(p => String(p).includes('trigraph'))) tags.push('trigraph');
+    if (patterns.some(p => String(p).includes('cvcc'))) tags.push('cvcc');
+    if (patterns.some(p => String(p).includes('ccvc'))) tags.push('ccvc');
+    if (patterns.some(p => String(p).includes('vowel_team'))) tags.push('vowel_team');
+    if (patterns.some(p => String(p).includes('r_controlled'))) tags.push('r_controlled');
+    if (patterns.some(p => String(p).includes('diphthong'))) tags.push('diphthong');
+    if (patterns.some(p => String(p).includes('floss'))) tags.push('floss');
+    if (patterns.some(p => String(p).includes('welded'))) tags.push('welded');
+    if (patterns.some(p => String(p).includes('schwa'))) tags.push('schwa');
+
+    // Silent-e / CVCe (your data sometimes uses 'silent_e')
+    if (patterns.some(p => String(p).includes('silent_e')) || patterns.some(p => String(p).includes('cvce'))) tags.push('cvce');
+
+    // CVC (your data sometimes uses cvc_* / cvc_pattern)
+    if (patterns.some(p => String(p).includes('cvc')) || String(phon.primary_level || '').includes('cvc')) tags.push('cvc');
+
+    // Morphology
+    if (patterns.some(p => String(p).includes('prefix')) || scope.some(s => String(s).includes('prefix'))) tags.push('prefix');
+    if (patterns.some(p => String(p).includes('suffix')) || patterns.some(p => String(p).includes('inflection')) || scope.some(s => String(s).includes('suffix'))) tags.push('suffix');
+
+    // Word type flags
+    if (phon.is_compound) tags.push('compound');
+    if (phon.is_multisyllabic || (typeof phon.syllables === 'number' && phon.syllables > 1)) tags.push('multisyllable');
+
+    // Also carry over your original labels for debugging/filtering if needed
+    patterns.forEach(p => tags.push(p));
+    scope.forEach(s => tags.push(s));
+    if (phon.primary_level) tags.push(phon.primary_level);
+
+    return uniq(tags);
+  }
+
+  function deriveSyllables(word, data) {
+    const phon = (data && data.phonics) ? data.phonics : {};
+    if (phon.syllableText) return phon.syllableText;
+    if (Array.isArray(phon.syllables) && phon.syllables.length) return phon.syllables.join('-');
+    if (typeof phon.syllables === 'number' && phon.syllables > 1) return word; // fallback
+    return word;
+  }
+
+  const src = (typeof WORDS_DATA === 'object' && WORDS_DATA) ? WORDS_DATA : {};
+  const out = {};
+
+  Object.keys(src).forEach(word => {
+    const data = src[word] || {};
+    const en = data.en || {};
+    out[word] = {
+      def: en.def || (data.definition || '—'),
+      sentence: en.sentence || (data.sentence || ''),
+      syllables: deriveSyllables(word, data),
+      tags: deriveTags(word, data),
+      // Keep the rich structure available for future features (translations, phonics, etc.)
+      meta: data
+    };
+  });
+
+  window.WORD_ENTRIES = out;
+  console.log('✓ Word database loaded with ' + Object.keys(window.WORD_ENTRIES).length + ' words');
+})();
