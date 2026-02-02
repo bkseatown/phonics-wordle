@@ -1277,3 +1277,22 @@ main {
     color: #888;
 }
 
+
+
+/* --- Wordle-style intro/help modal --- */
+.wordle-help { max-width: 520px; }
+.wordle-help h3 { margin-top: 14px; }
+.wordle-help .muted { opacity: 0.8; font-size: 0.9rem; }
+.wordle-help .example-row { display:flex; gap:6px; margin:10px 0 6px; justify-content:flex-start; }
+.wordle-help .tile.ex {
+  width: 38px; height: 38px;
+  display:flex; align-items:center; justify-content:center;
+  border: 2px solid #d1d5db;
+  border-radius: 6px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.wordle-help .tile.ex.green { background: var(--tile-correct, #6aaa64); color:#fff; border-color: transparent; }
+.wordle-help .tile.ex.yellow { background: var(--tile-present, #c9b458); color:#fff; border-color: transparent; }
+.wordle-help .tile.ex.gray { background: var(--tile-absent, #787c7e); color:#fff; border-color: transparent; }
+.wordle-help button.primary { margin-top: 10px; }

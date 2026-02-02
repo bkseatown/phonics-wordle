@@ -613,45 +613,60 @@ function getWordFromDictionary() {
 }
 
 function updateFocusPanel() {
-    const pat = document.getElementById("pattern-select").value;
-    
+    const sel = document.getElementById("pattern-select");
+    const pat = sel ? sel.value : "all";
+
     // Safety check: ensure FOCUS_INFO is loaded
     if (!window.FOCUS_INFO) {
         console.error("FOCUS_INFO not loaded yet");
         return;
     }
-    
-    const info = window.FOCUS_INFO[pat] || window.FOCUS_INFO.all || { 
-        title: "Practice", desc: "General Review", examples: "" 
+
+    const info = window.FOCUS_INFO[pat] || window.FOCUS_INFO.all || {
+        title: "Practice",
+        desc: "General Review",
+        examples: ""
     };
-    
-    // Update simple inline focus display
-    const titleEl = document.getElementById("simple-focus-title");
-    const descEl = document.getElementById("simple-focus-desc");
-    const examplesEl = document.getElementById("simple-focus-examples");
-    
-    if (titleEl) titleEl.textContent = info.title;
-    if (descEl) descEl.textContent = info.desc;
-    if (examplesEl && info.examples) {
-        examplesEl.textContent = `Try words like: ${info.examples}`;
+
+    // Support both older + newer DOM ids
+    const titleEl = document.getElementById("focus-title") || document.getElementById("simple-focus-title");
+    const descEl = document.getElementById("focus-desc") || document.getElementById("simple-focus-desc");
+    const examplesEl = document.getElementById("focus-examples") || document.getElementById("simple-focus-examples");
+
+    if (titleEl) titleEl.textContent = info.title || "";
+    if (descEl) descEl.textContent = info.desc || "";
+
+    if (examplesEl) {
+        if (info.examples) {
+            examplesEl.textContent = `Try words like: ${info.examples}`;
+            examplesEl.classList.remove("hidden");
+        } else {
+            examplesEl.textContent = "";
+            examplesEl.classList.add("hidden");
+        }
     }
 
+    // Quick tiles row is optional; never crash if missing
     const quickRow = document.getElementById("quick-tiles-row");
-    if (info.quick) {
-        quickRow.innerHTML = "";
-        info.quick.forEach(q => {
-            const b = document.createElement("button");
-            b.className = "q-tile";
-            b.textContent = q;
-            b.onclick = () => { 
-                for(let c of q) handleInput(c); 
-                b.blur();
-            };
-            quickRow.appendChild(b);
-        });
-        quickRow.classList.remove("hidden");
-    } else {
-        quickRow.classList.add("hidden");
+    if (quickRow) {
+        if (info.quick && Array.isArray(info.quick) && info.quick.length) {
+            quickRow.innerHTML = "";
+            info.quick.forEach(q => {
+                const b = document.createElement("button");
+                b.className = "q-tile";
+                b.type = "button";
+                b.textContent = q;
+                b.onclick = () => {
+                    for (let c of q) handleInput(c);
+                    b.blur();
+                };
+                quickRow.appendChild(b);
+            });
+            quickRow.classList.remove("hidden");
+        } else {
+            quickRow.classList.add("hidden");
+            quickRow.innerHTML = "";
+        }
     }
 }
 
