@@ -203,23 +203,19 @@ option:checked {
 }
 
 /* Focus Panel - Collapsible */
-.focus-panel { 
-    position: fixed;
-    top: 180px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 90%;
-    max-width: 600px;
-    background: white; 
-    padding: 14px 16px; 
-    border-radius: 12px; 
-    border: 2px solid #667eea; 
-    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-    transition: all 0.3s ease;
-    opacity: 1;
-    z-index: 100;
-    pointer-events: all;
+.focus-panel {
+    position: relative;
+    width: 100%;
+    max-width: 720px;
+    margin: 10px auto 14px;
+    background: white;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+    text-align: center;
 }
+
 
 .focus-panel.hidden {
     opacity: 0;
@@ -1296,3 +1292,20 @@ main {
 .wordle-help .tile.ex.yellow { background: var(--tile-present, #c9b458); color:#fff; border-color: transparent; }
 .wordle-help .tile.ex.gray { background: var(--tile-absent, #787c7e); color:#fff; border-color: transparent; }
 .wordle-help button.primary { margin-top: 10px; }
+
+
+.dont-show{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:0.95rem;
+    margin: 10px 0 12px;
+    color: #444;
+    user-select:none;
+}
+.dont-show input{ width: 18px; height: 18px; }
+
+
+.controls button, .controls select, .controls input {
+    font-size: 16px;
+}

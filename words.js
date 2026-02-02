@@ -20640,3 +20640,12 @@ const WORDS_DATA =
     }
   }
 };
+
+
+// --- GLOBAL WORD DB (required by script.js) ---
+try {
+  if (!window.WORD_ENTRIES) window.WORD_ENTRIES = WORDS_DATA;
+  console.log(`Word database loaded with ${Object.keys(window.WORD_ENTRIES).length} words`);
+} catch(e) {
+  // fail quietly
+}

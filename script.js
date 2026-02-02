@@ -1214,7 +1214,12 @@ function showToast(msg) {
 function checkFirstTimeVisitor() {
     if (!localStorage.getItem("decode_v5_visited")) {
         modalOverlay.classList.remove("hidden");
+        try {
+        const hide = localStorage.getItem("dtw_hide_welcome") === "1";
+        if (!hide) welcomeModal.classList.remove("hidden");
+    } catch(e) {
         welcomeModal.classList.remove("hidden");
+    }
         localStorage.setItem("decode_v5_visited", "true");
     }
 }
