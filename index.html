@@ -9,9 +9,9 @@
   <link rel="stylesheet" href="style.css" />
 
   <!-- Load scripts -->
-  <script src="words.js?v=1770044815" defer></script>
-  <script src="phoneme-data.js?v=1770044815" defer></script>
-  <script src="script.js?v=1770044815" defer></script>
+  <script src="words.js?v=1770045855" defer></script>
+  <script src="phoneme-data.js?v=1770045855" defer></script>
+  <script src="script.js?v=1770045855" defer></script>
 </head>
 
 <body>
@@ -22,20 +22,33 @@
       <button id="case-toggle" type="button">abc</button>
 
       <label>Focus:
-        <!-- app-core expects this to already have options -->
         <select id="pattern-select">
-          <option value="all" selected>Mixed Review</option>
-          <option value="cvc">CVC (Short Vowels)</option>
-          <option value="cvcc">CVCC (Final Blends)</option>
-          <option value="ccvc">CCVC (Initial Blends)</option>
-          <option value="digraph">Digraphs</option>
-          <option value="blend">Blends</option>
-          <option value="floss">FLOSS (ff, ll, ss, zz)</option>
-          <option value="diphthongs">Diphthongs (oi, oy, ou, ow)</option>
-          <option value="prefix">Prefixes</option>
-          <option value="suffix">Suffixes</option>
-          <option value="doubling">Doubling Rule (1-1-1)</option>
-          <option value="schwa">Schwa (Lazy Vowel)</option>
+          <option value="all" selected>All Words</option>
+          
+          <!-- Foundation -->
+          <option value="cvc">CVC - Short Vowels (cat, dog, sun)</option>
+          
+          <!-- Consonant Patterns -->
+          <option value="digraph">Digraphs (sh, ch, th, wh, ck)</option>
+          <option value="ccvc">Initial Blends (st, bl, tr, fl)</option>
+          <option value="cvcc">Final Blends (mp, nd, st, nk)</option>
+          <option value="trigraph">Trigraphs (tch, dge, igh)</option>
+          
+          <!-- Vowel Patterns -->
+          <option value="cvce">Magic E / CVCe (cake, hope, time)</option>
+          <option value="vowel_team">Vowel Teams (rain, boat, see)</option>
+          <option value="r_controlled">R-Controlled (car, bird, fern)</option>
+          <option value="diphthong">Diphthongs (oi, oy, ou, ow)</option>
+          
+          <!-- Advanced Patterns -->
+          <option value="floss">FLOSS Rule (stuff, hill, pass)</option>
+          <option value="welded">Welded Sounds (king, bank, song)</option>
+          <option value="schwa">Schwa (about, circus)</option>
+          
+          <!-- Morphology -->
+          <option value="prefix">Prefixes (un-, re-, pre-)</option>
+          <option value="suffix">Suffixes (-ing, -ed, -er, -est)</option>
+          <option value="compound">Compound Words</option>
           <option value="multisyllable">Multisyllabic Words</option>
         </select>
       </label>
@@ -69,24 +82,19 @@
   </header>
 
   <main>
-    <!-- Focus Panel -->
-    <section id="focus-panel" class="focus-panel">
-      <div class="focus-header">
-        <div id="focus-title" class="focus-title">Practice</div>
-        <div id="focus-desc" class="focus-desc"></div>
-      </div>
-      <div id="focus-hint" class="focus-hint"></div>
-      <div id="focus-examples" class="focus-examples"></div>
-      <div id="quick-tiles-row" class="quick-tiles-row hidden"></div>
+    <!-- Minimal Focus Info -->
+    <section id="focus-panel" class="focus-panel" style="padding: 8px; margin-bottom: 12px; text-align: center;">
+      <div id="focus-title" class="focus-title" style="font-size: 1.1rem; font-weight: 600; margin-bottom: 4px;"></div>
+      <div id="focus-desc" class="focus-desc" style="font-size: 0.85rem; color: #666;"></div>
     </section>
 
     <!-- Game -->
     <div id="game-board"></div>
     <div id="keyboard"></div>
 
-    <div class="hint-actions">
-      <button id="hear-word-hint" type="button">🔊 Hear Word</button>
-      <button id="hear-sentence-hint" type="button">📝 Sentence</button>
+    <div class="hint-actions" style="display: flex; gap: 8px; justify-content: center; margin: 12px 0;">
+      <button id="hear-word-hint" type="button" style="font-size: 0.85rem; padding: 6px 12px; background: transparent; border: 1px solid #ccc; color: #666;">🔊</button>
+      <button id="hear-sentence-hint" type="button" style="font-size: 0.85rem; padding: 6px 12px; background: transparent; border: 1px solid #ccc; color: #666;">💬</button>
     </div>
 
     <div id="banner-container" class="banner hidden"></div>
