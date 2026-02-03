@@ -1,10 +1,8 @@
 /* =========================================
-   DECODE THE WORD - EDUCATIONAL PHONICS GAME
-   Professional Version for Classroom Use
-   ========================================= */
-
 // Compatibility: map WORDS_DATA to WORD_ENTRIES
 if (typeof WORDS_DATA !== "undefined") window.WORD_ENTRIES = WORDS_DATA;
+   DECODE THE WORD - GOLD MASTER (IOS SAFE + FIXED STUDIO FLOW)
+   ========================================= */
 
 const MAX_GUESSES = 6;
 let CURRENT_WORD_LENGTH = 5;
@@ -166,14 +164,7 @@ async function speak(text, type = "word") {
     if (type === "word") {
         dbKey = `${text.toLowerCase()}_word`;
     } else {
-        let currentSentence = null;
-        if (currentEntry && currentEntry.en && currentEntry.en.sentence) {
-            currentSentence = currentEntry.en.sentence;
-        } else if (currentEntry && currentEntry.sentence) {
-            currentSentence = currentEntry.sentence;
-        }
-        
-        if (currentEntry && text === currentSentence) {
+        if (currentEntry && text === currentEntry.sentence) {
             dbKey = `${currentWord.toLowerCase()}_sentence`;
         } else {
             dbKey = "unknown"; 
@@ -271,8 +262,6 @@ function initControls() {
             
             if (sentence) {
                 speak(sentence, 'sentence');
-            } else {
-                console.log('No sentence available for current word');
             }
             hearSentenceBtn.blur();
         };
@@ -596,11 +585,7 @@ function startNewGame(customWord = null) {
         currentWord = customWord.toLowerCase();
         CURRENT_WORD_LENGTH = currentWord.length;
         currentEntry = window.WORD_ENTRIES[currentWord] || { 
-            en: { 
-                def: "Teacher set word.", 
-                sentence: "Can you decode this?" 
-            },
-            syllables: currentWord 
+            def: "Teacher set word.", sentence: "Can you decode this?", syllables: currentWord 
         };
     } else {
         const data = getWordFromDictionary();
@@ -1024,28 +1009,46 @@ function showEndModal(win) {
     document.getElementById("modal-word").textContent = currentWord.toUpperCase();
     document.getElementById("modal-syllables").textContent = currentEntry.syllables ? currentEntry.syllables.replace(/-/g, " • ") : currentWord;
     
-    // Handle both data structures for definition and sentence
-    let def = "Word definition";
-    let sentence = "Example sentence";
-    
+    // Handle both data structures (your multilingual format vs simple format)
+    let def, sentence;
     if (currentEntry.en) {
-        def = currentEntry.en.def || def;
-        sentence = currentEntry.en.sentence || sentence;
+        def = currentEntry.en.def;
+        sentence = currentEntry.en.sentence;
     } else {
-        def = currentEntry.def || def;
-        sentence = currentEntry.sentence || sentence;
+        def = currentEntry.def;
+        sentence = currentEntry.sentence;
     }
     
     document.getElementById("modal-def").textContent = def;
     document.getElementById("modal-sentence").textContent = `"${sentence}"`;
     
-    // Reset translation section (with safety check)
-    const translationSection = document.getElementById("translation-section");
-    if (translationSection) {
-        translationSection.style.display = 'none';
-        const translateTo = document.getElementById('translate-to');
-        const translationResult = document.getElementById('translation-result');
-        if (translateTo) translateTo.value = '';
+    // Set up translation dropdown functionality
+    const languageSelect = document.getElementById("language-select");
+    const translationDisplay = document.getElementById("translation-display");
+    const translatedDef = document.getElementById("translated-def");
+    const translatedSentence = document.getElementById("translated-sentence");
+    
+    if (languageSelect) {
+        languageSelect.value = "en";
+        translationDisplay.classList.add("hidden");
+        
+        languageSelect.onchange = () => {
+            const selectedLang = languageSelect.value;
+            if (selectedLang === "en") {
+                translationDisplay.classList.add("hidden");
+            } else {
+                const translation = window.TRANSLATIONS.getTranslation(currentWord, selectedLang);
+                if (translation) {
+                    translatedDef.textContent = translation.definition;
+                    translatedSentence.textContent = `"${translation.sentence}"`;
+                } else {
+                    translatedDef.textContent = "Translation not available";
+                    translatedSentence.textContent = "";
+                }
+                translationDisplay.classList.remove("hidden");
+            }
+        };
+    }
         if (translationResult) translationResult.textContent = '';
     }
     
@@ -1357,67 +1360,63 @@ const BONUS_CONTENT = {
 };
 
 function showBonusContent() {
-    // Check if popups are enabled
-    if (!window.POPUP_SETTINGS || !window.POPUP_SETTINGS.enabled) {
-        return;
-    }
+    // Randomly choose joke, fact, or quote
+    const types = ['jokes', 'facts', 'quotes'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    const content = BONUS_CONTENT[type][Math.floor(Math.random() * BONUS_CONTENT[type].length)];
     
-    // Get random engagement content
-    const content = window.ENGAGEMENT_HELPERS ? 
-        window.ENGAGEMENT_HELPERS.getRandomContent() : 
-        { type: 'facts', content: 'Keep up the great reading!', emoji: '📚', title: 'You\'re Doing Great!' };
+    const emoji = type === 'jokes' ? '😄' : type === 'facts' ? '🌟' : '💭';
+    const title = type === 'jokes' ? 'Joke Time!' : type === 'facts' ? 'Fun Fact!' : 'Quote of the Day';
     
     const popup = document.createElement('div');
     popup.style.cssText = `
         position: fixed;
         top: 50%;
         left: 50%;
-        transform: translate(-50%, -50%) scale(1);
-        z-index: 10000;
+        transform: translate(-50%, -50%);
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        padding: 30px;
-        border-radius: 20px;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        padding: 24px 32px;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(102, 126, 234, 0.5);
+        z-index: 3000;
+        max-width: 500px;
         text-align: center;
-        max-width: 400px;
-        font-family: var(--font-main);
-        animation: popupSlideIn 0.3s ease-out;
+        font-size: 1.1rem;
+        line-height: 1.6;
+        animation: bonusSlideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     `;
     
     popup.innerHTML = `
-        <div style="font-size: 2.5rem; margin-bottom: 10px;">${content.emoji}</div>
-        <h3 style="font-size: 1.3rem; margin-bottom: 15px; font-weight: 600;">${content.title}</h3>
-        <p style="font-size: 1rem; line-height: 1.4; margin-bottom: 20px;">${content.content}</p>
-        <button onclick="this.parentElement.remove()" style="
-            background: rgba(255,255,255,0.2);
-            border: 2px solid rgba(255,255,255,0.3);
-            color: white;
-            padding: 8px 20px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s;
-        " onmouseover="this.style.background='rgba(255,255,255,0.3)'" 
-           onmouseout="this.style.background='rgba(255,255,255,0.2)'">
-            Got it! ✨
-        </button>
+        <div style="font-size: 3rem; margin-bottom: 12px;">${emoji}</div>
+        <div style="font-weight: 700; font-size: 1.3rem; margin-bottom: 12px;">${title}</div>
+        <div style="font-size: 1.05rem; font-weight: 400;">${content}</div>
     `;
     
     document.body.appendChild(popup);
     
-    // Auto-remove after duration
-    if (window.POPUP_SETTINGS.duration) {
-        setTimeout(() => {
-            if (popup && popup.parentElement) {
-                popup.style.opacity = '0';
-                popup.style.transform = 'translate(-50%, -50%) scale(0.9)';
-                popup.style.transition = 'all 0.3s ease-out';
-                setTimeout(() => popup.remove(), 300);
-            }
-        }, window.POPUP_SETTINGS.duration);
-    }
+    setTimeout(() => {
+        popup.style.opacity = '0';
+        popup.style.transform = 'translate(-50%, -50%) scale(0.9)';
+        popup.style.transition = 'all 0.3s ease-out';
+        setTimeout(() => popup.remove(), 300);
+    }, 6000);
 }
+
+// Add bonus animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes bonusSlideIn {
+        from {
+            opacity: 0;
+            transform: translate(-50%, -60%) scale(0.8);
+        }
+        to {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+    }
+`;
 document.head.appendChild(style);
 
 /* ==========================================
@@ -1555,12 +1554,6 @@ function initNewFeatures() {
         decodableBtn.onclick = openDecodableTexts;
     }
     
-    // Translation/Family button  
-    const translationBtn = document.getElementById('translation-btn');
-    if (translationBtn) {
-        translationBtn.onclick = openTranslationModal;
-    }
-    
     // Help button
     const helpBtn = document.getElementById('help-btn');
     if (helpBtn) {
@@ -1696,66 +1689,6 @@ function readDecodableText(title) {
     const text = window.DECODABLE_TEXTS.find(t => t.title === title);
     if (text) {
         speak(text.content, 'sentence');
-    }
-}
-
-// Open translation modal
-function openTranslationModal() {
-    if (!currentWord) {
-        showToast('Start a game first!');
-        return;
-    }
-    
-    modalOverlay.classList.remove('hidden');
-    const translationModal = document.getElementById('translation-modal');
-    if (!translationModal) return;
-    translationModal.classList.remove('hidden');
-    
-    // Show current word
-    document.getElementById('current-word-display').textContent = currentWord.toUpperCase();
-    
-    // Set up language selector
-    const languageSelect = document.getElementById('language-select');
-    if (languageSelect) {
-        languageSelect.onchange = () => showTranslation(currentWord, languageSelect.value);
-        // Show English by default
-        showTranslation(currentWord, 'en');
-    }
-}
-
-function showTranslation(word, langCode) {
-    const translation = window.TRANSLATIONS.getTranslation(word, langCode);
-    const display = document.getElementById('translation-display');
-    
-    if (translation) {
-        display.innerHTML = `
-            <div class="translation-definition">${translation.definition}</div>
-            <div class="translation-sentence">"${translation.sentence}"</div>
-        `;
-    } else {
-        display.innerHTML = `
-            <div class="translation-definition">Translation not available in ${window.TRANSLATIONS.getLanguageName(langCode)}</div>
-        `;
-    }
-    
-    // Set up speak button
-    const speakBtn = document.getElementById('speak-translation-btn');
-    if (speakBtn && translation) {
-        speakBtn.onclick = () => speak(translation.sentence || word, 'sentence');
-    }
-}
-
-// Open progress modal (placeholder)
-function openProgressModal() {
-    modalOverlay.classList.remove('hidden');
-    const progressModal = document.getElementById('progress-modal');
-    if (progressModal) {
-        progressModal.classList.remove('hidden');
-        
-        // Update stats (placeholder - would connect to actual tracking)
-        document.getElementById('words-practiced').textContent = '12';
-        document.getElementById('games-played').textContent = '8';
-        document.getElementById('success-rate').textContent = '75%';
     }
 }
 
@@ -2092,6 +2025,11 @@ window.addEventListener('DOMContentLoaded', () => {
     initTutorial();
     initFocusToggle();
     
-    // The phoneme button is already set up in initNewFeatures()
-    // No need for duplicate event listener here
+    // Populate phoneme grid when modal opens
+    const phonemeBtn = document.getElementById('phoneme-btn');
+    if (phonemeBtn) {
+        phonemeBtn.addEventListener('click', () => {
+            setTimeout(() => populatePhonemeGrid(), 100);
+        });
+    }
 });

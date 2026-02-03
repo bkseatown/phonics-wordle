@@ -3,31 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Decode the Word - Educational Phonics Game</title>
-  <meta name="description" content="A Wordle-style educational phonics game for classroom use. Practice decoding skills with Science of Reading principles." />
-  <meta name="keywords" content="phonics, education, classroom, wordle, decoding, literacy, science of reading" />
-  <meta name="author" content="Educational Technology" />
-  <meta name="version" content="1.0.0" />
-  <meta name="build-date" content="2026-02-03" />
+  <title>Decode the Word</title>
 
-  <!-- Favicon -->
-  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2218%22%20fill%3D%22%232563eb%22/%3E%3Ctext%20x%3D%2250%22%20y%3D%2265%22%20font-size%3D%2248%22%20text-anchor%3D%22middle%22%20fill%3D%22white%22%20font-family%3D%22system-ui%2C%20sans-serif%22%20font-weight%3D%22600%22%3EDtW%3C/text%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2218%22%20fill%3D%22%231f2937%22/%3E%3Ctext%20x%3D%2250%22%20y%3D%2262%22%20font-size%3D%2252%22%20text-anchor%3D%22middle%22%20fill%3D%22white%22%20font-family%3D%22Arial%2C%20sans-serif%22%3EDtW%3C/text%3E%3C/svg%3E">
   
-  <!-- Fonts optimized for educational use -->
+  <!-- Inter font for clear I vs l distinction -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fredoka:wght@400;500;600&family=Lexend:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Core application scripts -->
-  <script src="words.js" defer></script>
-  <script src="phoneme-data.js" defer></script>
-  <script src="focus-info.js" defer></script>
-  <script src="translations.js" defer></script>
-  <script src="decodable-texts.js" defer></script>
-  <script src="engagement-content.js" defer></script>
-  <script src="app.js" defer></script>
+  <!-- Load scripts -->
+  <script src="words.js?v=1770074283" defer></script>
+  <script src="phoneme-data.js?v=1770074283" defer></script>
+  <script src="focus-info.js?v=1770074283" defer></script>
+  <script src="translations.js?v=1770074283" defer></script>
+  <script src="app.js?v=1770075400" defer></script>
 </head>
 
 <body>
@@ -91,8 +83,6 @@
       <button id="help-btn" type="button" style="padding: 8px 14px;">❓ Help</button>
       <button id="focus-toggle-btn" class="mini-btn" type="button" style="padding: 8px 14px;">💡 Hints</button>
       <button id="phoneme-btn" type="button" style="padding: 8px 14px;">🔤 Sounds</button>
-      <button id="decodable-btn" type="button" style="padding: 8px 14px;">📖 Texts</button>
-      <button id="translation-btn" type="button" style="padding: 8px 14px;">🌍 Family</button>
       
       <!-- Teacher tools entry point -->
       <button id="teacher-btn" type="button">🎓 Teacher</button>
@@ -138,6 +128,24 @@
       <div class="definition-box">
         <p id="modal-def"></p>
         <p id="modal-sentence"></p>
+        
+        <!-- Translation dropdown as requested -->
+        <div class="translation-selector">
+          <label for="language-select">See in other languages:</label>
+          <select id="language-select">
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="zh">中文</option>
+            <option value="vi">Tiếng Việt</option>
+            <option value="tl">Filipino</option>
+            <option value="pt">Português</option>
+            <option value="hi">हिन्दी</option>
+          </select>
+        </div>
+        <div id="translation-display" class="translation-display hidden">
+          <p id="translated-def" class="translated-text"></p>
+          <p id="translated-sentence" class="translated-text"></p>
+        </div>
       </div>
 
       <div class="modal-actions">
@@ -325,111 +333,11 @@
   </div>
 
   <!-- Progress Modal -->
-  <div id="progress-modal" class="modal hidden">
-    <div class="modal-content">
-      <button class="close-btn" type="button">×</button>
-      <h2>Reading Progress</h2>
-      <div id="progress-content">
-        <p>Track your reading journey and celebrate your growth!</p>
-        <div class="progress-stats">
-          <div class="stat-box">
-            <div class="stat-number" id="words-practiced">0</div>
-            <div class="stat-label">Words Practiced</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-number" id="games-played">0</div>
-            <div class="stat-label">Games Played</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-number" id="success-rate">0%</div>
-            <div class="stat-label">Success Rate</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Decodable Texts Modal -->
-  <div id="decodable-modal" class="modal hidden">
-    <div class="modal-content" style="max-width: 600px;">
-      <button class="close-btn" type="button">×</button>
-      <h2>📖 Decodable Texts</h2>
-      <p class="muted">Practice reading with texts that match your phonics focus!</p>
-      
-      <div class="text-filter-tabs">
-        <button class="filter-tab active" data-focus="all">All Texts</button>
-        <button class="filter-tab" data-focus="cvc">CVC</button>
-        <button class="filter-tab" data-focus="digraph">Digraphs</button>
-        <button class="filter-tab" data-focus="cvce">Magic E</button>
-        <button class="filter-tab" data-focus="vowel_team">Vowel Teams</button>
-      </div>
-      
-      <div id="decodable-text-list" class="decodable-text-list">
-        <!-- Texts populated by JavaScript -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Text Reader Modal -->
-  <div id="text-reader-modal" class="modal hidden">
-    <div class="modal-content" style="max-width: 700px;">
-      <button class="close-btn" type="button">×</button>
-      <div id="text-reader-content">
-        <h2 id="reader-title"></h2>
-        <div id="reader-level" class="text-level-badge"></div>
-        <div id="reader-text" class="reading-text"></div>
-        <div class="reader-controls">
-          <button id="read-aloud-btn" class="action-btn">🔊 Read Aloud</button>
-          <button id="highlight-words-btn" class="action-btn">✨ Highlight Words</button>
-          <button id="back-to-list-btn" class="action-btn">← Back to List</button>
-        </div>
-        <div id="comprehension-questions" class="hidden">
-          <h3>Comprehension Check</h3>
-          <div id="questions-list"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Translation Modal -->
-  <div id="translation-modal" class="modal hidden">
-    <div class="modal-content">
-      <button class="close-btn" type="button">×</button>
-      <h2>🌍 Family Languages</h2>
-      <p class="muted">See this word in your family's language!</p>
-      
-      <div id="current-word-display" class="translation-word"></div>
-      
-      <div class="language-selector">
-        <label for="language-select">Choose Language:</label>
-        <select id="language-select">
-          <option value="en">English</option>
-          <option value="es">Español</option>
-          <option value="zh">中文</option>
-          <option value="vi">Tiếng Việt</option>
-          <option value="tl">Filipino</option>
-          <option value="pt">Português</option>
-          <option value="hi">हिन्दी</option>
-        </select>
-      </div>
-      
-      <div id="translation-display" class="translation-content">
-        <div class="translation-definition"></div>
-        <div class="translation-sentence"></div>
-      </div>
-      
-      <div class="translation-controls">
-        <button id="speak-translation-btn" class="action-btn">🔊 Listen</button>
-        <button id="family-share-btn" class="action-btn">👨‍👩‍👧‍👦 Share with Family</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Phoneme Guide Modal -->
   <div id="phoneme-modal" class="modal hidden">
     <div class="modal-content phoneme-card-modal">
       <button class="close-btn" type="button">×</button>
-      <h2>🔤 Sounds Guide</h2>
+      <h2>Sounds Guide</h2>
       <p class="muted">Tap a sound card to hear it and see mouth cues.</p>
       <div id="phoneme-grid" class="phoneme-grid"></div>
     </div>
