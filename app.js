@@ -2352,7 +2352,9 @@ function showEndModal(win) {
         appSettings.funHud.coins = (appSettings.funHud.coins || 0) + 1;
         saveSettings();
         renderFunHud();
+        playFunChime('win');
     }
+    applyFunHudOutcome(win);
     
     // Set up translation dropdown functionality
     const languageSelect = document.getElementById("language-select");
@@ -2678,11 +2680,13 @@ function closeModal() {
     const phonemeModal = document.getElementById("phoneme-modal");
     const helpModal = document.getElementById("help-modal");
     const bonusModal = document.getElementById("bonus-modal");
+    const infoModal = document.getElementById("info-modal");
     if (decodableModal) decodableModal.classList.add("hidden");
     if (progressModal) progressModal.classList.add("hidden");
     if (phonemeModal) phonemeModal.classList.add("hidden");
     if (helpModal) helpModal.classList.add("hidden");
     if (bonusModal) bonusModal.classList.add("hidden");
+    if (infoModal) infoModal.classList.add("hidden");
     
     if (document.activeElement) document.activeElement.blur();
     document.body.focus();
@@ -3195,6 +3199,7 @@ function populatePhonemeGrid(preselectSound = null) {
         buildSoundSection('rcontrolled-board', getRControlledSounds(), { vowel: true });
         buildSoundSection('welded-board', getWeldedSounds(), { vowel: true });
         initArticulationAudioControls();
+        injectSoundGuideInfoButtons();
         soundGuideBuilt = true;
     }
 
@@ -3265,6 +3270,123 @@ function buildSoundSectionGrouped(containerId, groups, options = {}) {
 
         wrapper.appendChild(row);
         container.appendChild(wrapper);
+    });
+}
+
+const SOUND_GUIDE_INFO = {
+    short_vowels: {
+        title: 'Short Vowels',
+        body: 'Short vowels are quick, relaxed vowel sounds. They usually appear in short words.',
+        examples: ['cat', 'bed', 'sit', 'hot', 'cup']
+    },
+    vowel_teams: {
+        title: 'Vowel Teams',
+        body: 'Two letters team up to make one vowel sound.',
+        examples: ['rain', 'seed', 'boat', 'moon']
+    },
+    diphthongs: {
+        title: 'Diphthongs',
+        body: 'Two vowel sounds glide together in one syllable.',
+        examples: ['cow', 'coin', 'toy', 'out']
+    },
+    digraphs: {
+        title: 'Digraphs',
+        body: 'Two letters make one new sound.',
+        examples: ['ship', 'chip', 'thin', 'phone']
+    },
+    blends: {
+        title: 'Blends',
+        body: 'Two or three consonants blend together. You can still hear each sound.',
+        examples: ['bl', 'tr', 'sw', 'st']
+    },
+    r_controlled: {
+        title: 'R-Controlled Vowels',
+        body: 'The “r” changes the vowel sound.',
+        examples: ['car', 'her', 'bird', 'fork', 'turn']
+    },
+    welded: {
+        title: 'Welded Sounds',
+        body: 'Common vowel + consonant chunks that stick together.',
+        examples: ['ang', 'ing', 'ong', 'unk']
+    },
+    alphabet: {
+        title: 'Alphabet Sounds',
+        body: 'These tiles match common letter sounds.',
+        examples: ['b', 'm', 't', 's']
+    }
+};
+
+function mapHeadingToInfoKey(text = '') {
+    const label = text.toLowerCase();
+    if (label.includes('short vowel')) return 'short_vowels';
+    if (label.includes('vowel team')) return 'vowel_teams';
+    if (label.includes('diphthong')) return 'diphthongs';
+    if (label.includes('digraph')) return 'digraphs';
+    if (label.includes('blend')) return 'blends';
+    if (label.includes('r-controlled') || label.includes('r controlled')) return 'r_controlled';
+    if (label.includes('welded')) return 'welded';
+    if (label.includes('alphabet')) return 'alphabet';
+    return null;
+}
+
+function ensureInfoModal() {
+    let modal = document.getElementById('info-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'info-modal';
+        modal.className = 'modal hidden';
+        modal.dataset.overlayClose = 'true';
+        modal.innerHTML = `
+            <div class="modal-content info-modal-content">
+                <button class="close-btn" aria-label="Close">✕</button>
+                <h2 id="info-modal-title">More Info</h2>
+                <p id="info-modal-body"></p>
+                <div id="info-modal-examples" class="info-modal-examples"></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        const closeBtn = modal.querySelector('.close-btn');
+        closeBtn.onclick = () => closeModal();
+    }
+    return modal;
+}
+
+function openInfoModal(key) {
+    const info = SOUND_GUIDE_INFO[key];
+    if (!info) return;
+    const modal = ensureInfoModal();
+    const title = modal.querySelector('#info-modal-title');
+    const body = modal.querySelector('#info-modal-body');
+    const examples = modal.querySelector('#info-modal-examples');
+    if (title) title.textContent = info.title;
+    if (body) body.textContent = info.body;
+    if (examples) {
+        examples.innerHTML = '';
+        info.examples.forEach(example => {
+            const badge = document.createElement('span');
+            badge.className = 'info-example';
+            badge.textContent = example;
+            examples.appendChild(badge);
+        });
+    }
+    if (modalOverlay) modalOverlay.classList.remove('hidden');
+    modal.classList.remove('hidden');
+}
+
+function injectSoundGuideInfoButtons() {
+    const headings = document.querySelectorAll('.sound-guide-section h3, .sound-subsection-title');
+    headings.forEach(heading => {
+        if (heading.querySelector('.info-icon')) return;
+        const key = mapHeadingToInfoKey(heading.textContent || '');
+        if (!key) return;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'info-icon';
+        btn.setAttribute('aria-label', 'More info');
+        btn.dataset.infoKey = key;
+        btn.textContent = 'ℹ︎';
+        btn.onclick = () => openInfoModal(key);
+        heading.appendChild(btn);
     });
 }
 
@@ -3667,6 +3789,36 @@ function getSoundNameLabel(phoneme) {
     return label;
 }
 
+function formatMouthCue(phoneme) {
+    if (!phoneme) return '';
+    const parts = [];
+    if (phoneme.lips) parts.push(`Lips: ${phoneme.lips}`);
+    if (phoneme.tongue) parts.push(`Tongue: ${phoneme.tongue}`);
+    if (parts.length) return parts.join(' • ');
+    return phoneme.cue || '';
+}
+
+function formatMouthDescription(phoneme) {
+    if (!phoneme) return '';
+    if (phoneme.example) return `Example: ${phoneme.example}`;
+    return phoneme.description || '';
+}
+
+function getArticulationShape(phoneme) {
+    const shape = (phoneme?.mouthShape || '').toLowerCase();
+    if (shape.includes('wide')) return 'wide';
+    if (shape.includes('smile')) return 'smile';
+    if (shape.includes('rounded')) return 'round';
+    if (shape.includes('neutral')) return 'neutral';
+    const mouthClass = getMouthClass(phoneme);
+    if (mouthClass.includes('th')) return 'tongue';
+    if (mouthClass.includes('f')) return 'teeth';
+    if (mouthClass.includes('s')) return 'teeth';
+    if (['mouth-b', 'mouth-p', 'mouth-m'].includes(mouthClass)) return 'closed';
+    if (mouthClass.includes('sh') || mouthClass.includes('ch')) return 'round';
+    return 'neutral';
+}
+
 function ensureArticulationCard(phoneme) {
     let display = document.getElementById('selected-sound-display');
     if (!display) {
@@ -3681,7 +3833,13 @@ function ensureArticulationCard(phoneme) {
         card.innerHTML = `
             <div class="articulation-title">Articulation Card</div>
             <div class="articulation-visual">
-                <div class="articulation-mouth"><div class="mouth"></div></div>
+                <div class="articulation-illustration">
+                    <div class="articulation-mouth">
+                        <div class="articulation-teeth"></div>
+                        <div class="articulation-tongue"></div>
+                        <div class="articulation-lips"></div>
+                    </div>
+                </div>
             </div>
             <div class="articulation-caption"></div>
         `;
@@ -3692,13 +3850,14 @@ function ensureArticulationCard(phoneme) {
             display.appendChild(card);
         }
     }
-    const mouth = card.querySelector('.articulation-mouth .mouth');
-    if (mouth) {
-        mouth.className = `mouth ${getMouthClass(phoneme)}`;
+    const illustration = card.querySelector('.articulation-illustration');
+    if (illustration) {
+        const shape = getArticulationShape(phoneme);
+        illustration.className = `articulation-illustration shape-${shape}`;
     }
     const caption = card.querySelector('.articulation-caption');
     if (caption) {
-        caption.textContent = phoneme.cue || phoneme.description || '';
+        caption.textContent = formatMouthCue(phoneme);
     }
 }
 
@@ -3730,10 +3889,10 @@ function selectSound(sound, phoneme, labelOverride = null, tile = null) {
     }
 
     const mouthCue = document.getElementById('mouth-cue');
-    if (mouthCue) mouthCue.textContent = phoneme.cue || '';
+    if (mouthCue) mouthCue.textContent = formatMouthCue(phoneme);
 
     const mouthDescription = document.getElementById('mouth-description');
-    if (mouthDescription) mouthDescription.textContent = phoneme.description || '';
+    if (mouthDescription) mouthDescription.textContent = formatMouthDescription(phoneme);
 
     const mouthVisual = document.getElementById('mouth-visual');
     if (mouthVisual) {
@@ -3907,9 +4066,66 @@ function normalizePhonemeForTTS(sound) {
     return cleaned.replace(/\s+/g, ' ').trim();
 }
 
+const SOUND_TTS_MAP = {
+    a: 'ah',
+    e: 'eh',
+    i: 'ih',
+    o: 'aw',
+    u: 'uh',
+    ay: 'ay',
+    ee: 'ee',
+    igh: 'eye',
+    oa: 'oh',
+    oo: 'oo',
+    ow: 'ow',
+    ou: 'ow',
+    oi: 'oy',
+    oy: 'oy',
+    aw: 'aw',
+    ah: 'ah',
+    ar: 'ar',
+    er: 'er',
+    ir: 'er',
+    or: 'or',
+    ur: 'er',
+    sh: 'sh',
+    ch: 'ch',
+    th: 'th',
+    'th-voiced': 'th',
+    zh: 'zh',
+    ng: 'ng',
+    ph: 'f',
+    wh: 'wh',
+    b: 'buh',
+    p: 'puh',
+    d: 'duh',
+    t: 'tuh',
+    g: 'guh',
+    k: 'kuh',
+    f: 'fff',
+    v: 'vuh',
+    s: 'sss',
+    z: 'zzz',
+    h: 'huh',
+    j: 'juh',
+    l: 'lll',
+    r: 'rrr',
+    w: 'wuh',
+    y: 'yuh',
+    m: 'mmm',
+    n: 'nnn'
+};
+
+function getSoundTtsFromKey(soundKey = '') {
+    const key = soundKey.toString().toLowerCase();
+    return SOUND_TTS_MAP[key] || '';
+}
+
 function getPhonemeTts(phoneme, soundKey = '') {
     if (!phoneme) return '';
     if (phoneme.tts) return phoneme.tts;
+    const override = getSoundTtsFromKey(soundKey);
+    if (override) return override;
     const rawSound = phoneme.sound ? phoneme.sound.toString().replace(/[\/\[\]]/g, '').trim() : '';
     const normalized = normalizePhonemeForTTS(rawSound);
     if (normalized) return normalized;

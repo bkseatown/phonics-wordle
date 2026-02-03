@@ -23,6 +23,26 @@ const TEMPLATES = [
         id: 'space-snack-attack',
         title: 'Space Snack Attack',
         template: 'Captain {silly_name} blasted off toward {planet} with a crate of {snack}. The ship’s computer was {adjective} and kept saying "{silly_sound}".\n\nAn alien with a {body_part} shaped like a {animal} {verb_past} onboard and traded {type_of_food} for a high five. Mission success!'
+    },
+    {
+        id: 'choose-your-path',
+        title: 'Choose Your Own Adventure',
+        template: 'At the edge of {place}, you meet {sidekick} who offers two paths: the {path_choice} trail or the {path_choice} tunnel. You grab your {magical_item} and head out.\n\nInside, a {obstacle} blocks the way, but you use {talent} to solve it. At the end, you find the {treasure} and promise to share it with your {sidekick}.'
+    },
+    {
+        id: 'mystery-museum',
+        title: 'Mystery Museum',
+        template: 'The {adjective} museum guard warns you about the {mystery} exhibit. Suddenly, the lights flicker and a {animal} in a {color} hat {verb_past} past!\n\nYou and {silly_name} follow it to the {place}, where the {villain} reveals a plan to steal the {treasure}. Good thing you brought {magical_item}!'
+    },
+    {
+        id: 'jungle-rescue',
+        title: 'Jungle Rescue',
+        template: 'In the {weather} jungle, your {vehicle} gets stuck in {obstacle}. A {adjective} {animal} guides you to the {place} camp.\n\nYou shout "{silly_sound}!" and use {type_of_food} to lure the {animal} away. Rescue mission complete!'
+    },
+    {
+        id: 'sky-castle',
+        title: 'Sky Castle Quest',
+        template: 'Your {vehicle} floats to a {adjective} castle in the clouds. The gate opens when you say "{silly_sound}" and show your {magical_item}.\n\nInside, the {villain} challenges you to a {talent} contest. You win, earn {treasure}, and celebrate with {type_of_food}.'
     }
 ];
 
@@ -41,6 +61,13 @@ const PLACEHOLDER_LABELS = {
     silly_sound: 'Silly sound',
     silly_topping: 'Silly topping',
     snack: 'Snack',
+    sidekick: 'Sidekick',
+    treasure: 'Treasure',
+    obstacle: 'Obstacle',
+    magical_item: 'Magic item',
+    mystery: 'Mystery object',
+    villain: 'Villain',
+    path_choice: 'Path choice',
     superpower: 'Superpower',
     talent: 'Talent',
     type_of_food: 'Type of food',
@@ -66,6 +93,13 @@ const PLACEHOLDER_EXAMPLES = {
     silly_sound: 'Example: boing',
     silly_topping: 'Example: glitter sauce',
     snack: 'Example: popcorn',
+    sidekick: 'Example: brave puppy',
+    treasure: 'Example: golden compass',
+    obstacle: 'Example: giant boulder',
+    magical_item: 'Example: crystal key',
+    mystery: 'Example: glowing statue',
+    villain: 'Example: sneaky wizard',
+    path_choice: 'Example: rainbow',
     superpower: 'Example: invisibility',
     talent: 'Example: tap dance',
     type_of_food: 'Example: spaghetti',
@@ -91,6 +125,13 @@ const WORD_BANKS = {
     silly_sound: ['boing', 'kaboom', 'meep', 'sploot'],
     silly_topping: ['glitter sauce', 'marshmallow fog', 'rainbow sprinkles'],
     snack: ['popcorn', 'pretzels', 'apple slices', 'graham crackers'],
+    sidekick: ['brave puppy', 'robot pal', 'mischievous fairy', 'tiny dragon'],
+    treasure: ['golden compass', 'sparkle crown', 'mystery map', 'glowing gem'],
+    obstacle: ['giant boulder', 'sticky vines', 'mystery maze', 'foggy river'],
+    magical_item: ['crystal key', 'magic wand', 'whispering cloak', 'rainbow rope'],
+    mystery: ['glowing statue', 'whispering door', 'vanishing painting', 'mystery box'],
+    villain: ['sneaky wizard', 'grumpy troll', 'shadow cat', 'robot pirate'],
+    path_choice: ['rainbow', 'moonlit', 'mossy', 'sparkly'],
     superpower: ['invisibility', 'super speed', 'ice breath', 'giant jumps'],
     talent: ['tap dance', 'juggle', 'sing opera', 'do backflips'],
     type_of_food: ['spaghetti', 'tacos', 'pancakes', 'dumplings'],
