@@ -151,6 +151,17 @@ const templateInput = document.getElementById('madlibs-template-input');
 const fieldsContainer = document.getElementById('madlibs-fields');
 const output = document.getElementById('madlibs-output');
 
+function initClozeNav() {
+    const header = document.querySelector('.madlibs-header');
+    if (!header || document.getElementById('madlibs-cloze-link')) return;
+    const link = document.createElement('a');
+    link.id = 'madlibs-cloze-link';
+    link.href = 'cloze.html';
+    link.className = 'link-btn';
+    link.textContent = 'Cloze';
+    header.appendChild(link);
+}
+
 function initTemplates() {
     templateSelect.innerHTML = '';
     TEMPLATES.forEach(template => {
@@ -411,3 +422,4 @@ function wireEvents() {
 initTemplates();
 applyTemplate(currentTemplate);
 wireEvents();
+initClozeNav();

@@ -775,6 +775,7 @@ main {
 
 .howto-content {
     text-align: left;
+    line-height: 1.5;
 }
 
 .howto-subtitle {
@@ -786,8 +787,8 @@ main {
     background: rgba(99, 102, 241, 0.08);
     border: 1px solid rgba(99, 102, 241, 0.2);
     border-radius: 12px;
-    padding: 12px;
-    margin-bottom: 10px;
+    padding: 14px;
+    margin-bottom: 12px;
 }
 
 .howto-section h3 {
@@ -797,7 +798,7 @@ main {
 .howto-section ul {
     margin-left: 18px;
     display: grid;
-    gap: 6px;
+    gap: 8px;
 }
 
 .howto-section li {
@@ -2288,6 +2289,13 @@ main {
   border-color: #5a67d8;
 }
 
+/* Ensure Hear Word matches Sentence styling */
+#action-hear-word {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  color: white;
+}
+
 /* Specific styling for sentence button */
 #simple-hear-sentence {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -2440,7 +2448,7 @@ button:active:not(:disabled) {
 
 .phoneme-modal {
     max-width: 1000px;
-    padding: 24px;
+    padding: 18px;
 }
 
 .sound-guide-subtitle {
@@ -2452,17 +2460,17 @@ button:active:not(:disabled) {
 
 .sound-guide-layout {
     display: grid;
-    grid-template-columns: minmax(280px, 360px) 1fr;
-    gap: 20px;
+    grid-template-columns: minmax(260px, 330px) 1fr;
+    gap: 16px;
     align-items: start;
 }
 
 .sound-guide-card {
     position: sticky;
     top: 0;
-    background: rgba(255, 255, 255, 0.9);
+    background: linear-gradient(145deg, rgba(248, 250, 252, 0.96), rgba(238, 242, 255, 0.96));
     border-radius: 18px;
-    padding: 14px;
+    padding: 12px;
     border: 1px solid rgba(148, 163, 184, 0.35);
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
 }
@@ -2470,9 +2478,9 @@ button:active:not(:disabled) {
 .sound-guide-board {
     max-height: none;
     overflow: visible;
-    padding: 14px;
+    padding: 12px;
     border-radius: 18px;
-    background: rgba(255, 255, 255, 0.85);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.95));
     border: 1px solid rgba(226, 232, 240, 0.9);
     box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
     scrollbar-width: none;
@@ -2484,7 +2492,7 @@ button:active:not(:disabled) {
 }
 
 .sound-guide-section {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
 .sound-guide-section h3 {
@@ -2497,13 +2505,13 @@ button:active:not(:disabled) {
 }
 
 .sound-subsection {
-    margin-bottom: 12px;
-    padding-bottom: 10px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
     border-bottom: 1px dashed rgba(148, 163, 184, 0.4);
 }
 
 .sound-subsection-title {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -2598,9 +2606,9 @@ button:active:not(:disabled) {
     border: 1px solid #d1d5db;
     background: #fffdfb;
     border-radius: 8px;
-    padding: 8px 6px;
+    padding: 6px 6px;
     font-weight: 700;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     text-align: center;
     cursor: pointer;
     transition: all 0.15s ease;
@@ -2654,7 +2662,7 @@ button:active:not(:disabled) {
 }
 
 .sound-letter {
-    font-size: 3rem;
+    font-size: 2.6rem;
     font-weight: 700;
 }
 
@@ -2683,7 +2691,7 @@ button:active:not(:disabled) {
 .sound-cue {
     background: rgba(255,255,255,0.18);
     border-radius: 10px;
-    padding: 12px;
+    padding: 10px;
     text-align: left;
 }
 
@@ -2702,6 +2710,7 @@ button:active:not(:disabled) {
 }
 
 .articulation-card {
+    display: none !important;
     margin-top: 12px;
     background: #ffffff;
     border-radius: 14px;
@@ -2710,6 +2719,11 @@ button:active:not(:disabled) {
     text-align: center;
     color: #1f2937;
     box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.mini-mouth,
+#mouth-visual {
+    display: none !important;
 }
 
 .articulation-title {
@@ -3638,6 +3652,7 @@ main {
 body.madlibs-page {
     overflow: auto;
     height: auto;
+    padding-bottom: 28px;
 }
 
 /* ---------- Cloze ---------- */
@@ -3909,26 +3924,26 @@ body.cloze-page {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 16px;
+    padding: 10px 14px;
 }
 
 .madlibs-main {
     width: 100%;
-    max-width: 1100px;
+    max-width: 1020px;
     display: grid;
     grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.2fr);
-    gap: 18px;
-    padding: 0 16px 18px;
+    gap: 14px;
+    padding: 0 14px 28px;
 }
 
 .madlibs-panel {
     background: white;
     border-radius: 14px;
-    padding: 14px;
+    padding: 12px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.08);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     border: 1px solid rgba(226, 232, 240, 0.9);
     position: relative;
     overflow: hidden;
@@ -3966,6 +3981,12 @@ body.cloze-page {
     color: #1f2937;
 }
 
+.madlibs-panel h2::after {
+    content: ' ✨';
+    font-size: 0.95rem;
+    opacity: 0.75;
+}
+
 .madlibs-panel .muted {
     font-size: 0.9rem;
     color: #6b7280;
@@ -3990,7 +4011,7 @@ body.cloze-page {
 
 .madlibs-panel textarea {
     width: 100%;
-    min-height: 120px;
+    min-height: 100px;
     padding: 10px 12px;
     border-radius: 10px;
     border: 1px solid #d1d5db;
@@ -4011,7 +4032,7 @@ body.cloze-page {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 8px;
-    max-height: clamp(220px, 38vh, 340px);
+    max-height: clamp(180px, 32vh, 280px);
     overflow: auto;
     padding-right: 4px;
 }
@@ -4091,8 +4112,8 @@ body.cloze-page {
 }
 
 .madlibs-output {
-    min-height: 130px;
-    background: #f8fafc;
+    min-height: 110px;
+    background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
     border-radius: 12px;
     padding: 14px;
     border: 1px solid #e5e7eb;
@@ -4369,7 +4390,7 @@ body.madlibs-page .fun-hud {
     }
 
     body {
-        background: radial-gradient(circle at top, #1f2937 0%, #0f172a 60%);
+        background: radial-gradient(circle at top, #233047 0%, #0f172a 60%);
         color: #e5e7eb;
     }
 
@@ -4421,28 +4442,28 @@ body.madlibs-page .fun-hud {
     }
 
     .tile {
-        background: #1f2937;
-        border-color: #475569;
+        background: #222c3f;
+        border-color: #4b5563;
         color: #f8fafc;
         box-shadow: 0 6px 12px rgba(0, 0, 0, 0.45);
     }
 
     .tile.correct {
-        background: #16a34a;
-        border-color: #22c55e;
-        color: #f8fafc;
-        box-shadow: 0 6px 14px rgba(34, 197, 94, 0.4);
+        background: #22c55e;
+        border-color: #4ade80;
+        color: #0b1220;
+        box-shadow: 0 6px 14px rgba(74, 222, 128, 0.45);
     }
 
     .tile.present {
-        background: #f59e0b;
-        border-color: #fbbf24;
-        color: #1f2937;
-        box-shadow: 0 6px 14px rgba(251, 191, 36, 0.4);
+        background: #fbbf24;
+        border-color: #facc15;
+        color: #0b1220;
+        box-shadow: 0 6px 14px rgba(250, 204, 21, 0.45);
     }
 
     .tile.absent {
-        background: #334155;
+        background: #2f3b4e;
         border-color: #475569;
         color: #e2e8f0;
         box-shadow: 0 6px 12px rgba(15, 23, 42, 0.5);
@@ -4453,10 +4474,11 @@ body.madlibs-page .fun-hud {
     }
 
     .key {
-        background: linear-gradient(180deg, #2a3b52 0%, #1b2535 100%);
-        color: #f8fafc;
-        border: 1px solid #334155;
+        background: linear-gradient(180deg, #2b3a52 0%, #1c2636 100%);
+        color: #e2e8f0;
+        border: 1px solid #3b475c;
         box-shadow: 0 4px 0 0 #0b1220, 0 6px 12px rgba(0,0,0,0.55);
+        text-shadow: 0 1px 2px rgba(0,0,0,0.4);
     }
 
     .key.correct {
@@ -4478,8 +4500,8 @@ body.madlibs-page .fun-hud {
     }
 
     .key.vowel {
-        background: linear-gradient(180deg, #4c6fa6 0%, #344a6a 100%);
-        border: 1px solid #93c5fd;
+        background: linear-gradient(180deg, #5b76c7 0%, #3f4f86 100%);
+        border: 1px solid #a5b4fc;
         color: #f8fafc;
         box-shadow: 0 4px 0 0 #0b1220, 0 6px 14px rgba(0,0,0,0.5);
     }
@@ -4541,34 +4563,46 @@ body.madlibs-page .fun-hud {
         color: #0f172a;
     }
 
+    #phoneme-modal {
+        background: linear-gradient(155deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.92));
+        border: 1px solid rgba(148, 163, 184, 0.35);
+    }
+
     .sound-guide-card,
     .sound-guide-board {
-        background: rgba(15, 23, 42, 0.9);
-        border-color: rgba(51, 65, 85, 0.8);
+        background: rgba(30, 41, 59, 0.65);
+        border-color: rgba(148, 163, 184, 0.35);
         box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+        backdrop-filter: blur(8px);
     }
 
     .sound-guide-section h3,
     .sound-subsection-title,
     .sound-guide-subtitle {
-        color: #e2e8f0;
+        color: #f1f5f9;
+        text-shadow: 0 1px 2px rgba(15, 23, 42, 0.6);
+    }
+
+    #phoneme-modal h2 {
+        color: #f8fafc;
+        text-shadow: 0 1px 2px rgba(15, 23, 42, 0.6);
     }
 
     .sound-tile {
-        background: #0f172a;
-        border-color: #334155;
+        background: #1f2a3d;
+        border-color: #475569;
         color: #e2e8f0;
     }
 
     .sound-tile.vowel {
-        background: #1e1b4b;
-        border-color: #6366f1;
-        color: #c7d2fe;
+        background: #313a55;
+        border-color: #a5b4fc;
+        color: #eef2ff;
     }
 
     .sound-tile.selected {
-        background: #4338ca;
-        border-color: #818cf8;
+        background: #5b5fe0;
+        border-color: #c7d2fe;
         color: #ffffff;
     }
 
