@@ -211,13 +211,13 @@
         <label>Custom Word:</label>
         <div class="teacher-row">
           <input id="custom-word-input" type="password" placeholder="Enter word" autocomplete="off" />
-          <button id="toggle-mask" type="button">👁</button>
+          <button id="toggle-mask" type="button">Show</button>
         </div>
         <div id="teacher-error" class="teacher-error"></div>
 
         <div class="teacher-actions">
           <button id="set-word-btn" type="button">Set Word</button>
-          <button id="open-studio-btn" type="button">🎙️ Recording Studio</button>
+          <button id="open-studio-btn" type="button">Recording Studio</button>
         </div>
       </div>
 
@@ -356,14 +356,15 @@
   <div id="phoneme-modal" class="modal hidden">
     <div class="modal-content phoneme-card-modal" style="max-width: 900px; padding: 24px;">
       <button class="close-btn" type="button">×</button>
-      <h2 style="text-align: center; margin-bottom: 8px;">🔤 Articulation Guide</h2>
+      <h2 style="text-align: center; margin-bottom: 8px;">Articulation Guide</h2>
       <p style="text-align: center; color: #666; margin-bottom: 24px;">Master pronunciation with visual mouth cues and sound practice</p>
       
       <!-- Navigation Tabs -->
       <div class="phoneme-tabs" style="display: flex; justify-content: center; margin-bottom: 24px; background: #f8fafc; border-radius: 8px; padding: 4px;">
-        <button class="phoneme-tab active" data-tab="vowels" style="flex: 1; padding: 8px 16px; border: none; background: white; border-radius: 6px; font-weight: 500; cursor: pointer;">📢 Vowels</button>
-        <button class="phoneme-tab" data-tab="consonants" style="flex: 1; padding: 8px 16px; border: none; background: transparent; border-radius: 6px; font-weight: 500; cursor: pointer; color: #6b7280;">🗣️ Consonants</button>
-        <button class="phoneme-tab" data-tab="letters" style="flex: 1; padding: 8px 16px; border: none; background: transparent; border-radius: 6px; font-weight: 500; cursor: pointer; color: #6b7280;">🔤 Letters</button>
+        <button class="phoneme-tab active" data-tab="soundwall" style="flex: 1; padding: 8px 16px; border: none; background: white; border-radius: 6px; font-weight: 500; cursor: pointer;">Sound Wall</button>
+        <button class="phoneme-tab" data-tab="vowels" style="flex: 1; padding: 8px 16px; border: none; background: transparent; border-radius: 6px; font-weight: 500; cursor: pointer; color: #6b7280;">Vowels</button>
+        <button class="phoneme-tab" data-tab="consonants" style="flex: 1; padding: 8px 16px; border: none; background: transparent; border-radius: 6px; font-weight: 500; cursor: pointer; color: #6b7280;">Consonants</button>
+        <button class="phoneme-tab" data-tab="letters" style="flex: 1; padding: 8px 16px; border: none; background: transparent; border-radius: 6px; font-weight: 500; cursor: pointer; color: #6b7280;">Letters</button>
       </div>
       
       <!-- Selected Sound Display -->
@@ -379,13 +380,13 @@
               <div style="font-weight: 600;" id="mouth-cue"></div>
             </div>
             <div style="display: flex; gap: 8px;">
-              <button id="hear-letter-name" style="flex: 1; padding: 8px; background: rgba(255,255,255,0.2); border: none; border-radius: 6px; color: white; font-weight: 500; cursor: pointer;">📝 Letter</button>
-              <button id="hear-example-word" style="flex: 1; padding: 8px; background: rgba(255,255,255,0.2); border: none; border-radius: 6px; color: white; font-weight: 500; cursor: pointer;">🔊 Word</button>
-              <button id="hear-phoneme-sound" style="flex: 1; padding: 8px; background: rgba(255,255,255,0.2); border: none; border-radius: 6px; color: white; font-weight: 500; cursor: pointer;">🎵 Sound</button>
+              <button id="hear-letter-name" style="flex: 1; padding: 8px; background: rgba(255,255,255,0.2); border: none; border-radius: 6px; color: white; font-weight: 500; cursor: pointer;">Spelling</button>
+              <button id="hear-example-word" style="flex: 1; padding: 8px; background: rgba(255,255,255,0.2); border: none; border-radius: 6px; color: white; font-weight: 500; cursor: pointer;">Example</button>
+              <button id="hear-phoneme-sound" style="flex: 1; padding: 8px; background: rgba(255,255,255,0.2); border: none; border-radius: 6px; color: white; font-weight: 500; cursor: pointer;">Sound</button>
             </div>
           </div>
           <div style="flex: 1; text-align: right;">
-            <div style="width: 80px; height: 80px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto;" id="mouth-visual">👄</div>
+            <div id="mouth-visual"></div>
             <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 8px;" id="mouth-description"></div>
           </div>
         </div>
@@ -393,14 +394,84 @@
       
       <!-- Sound Grid -->
       <div id="phoneme-content">
+        <!-- Sound Wall Tab -->
+        <div id="soundwall-content" class="tab-content">
+          <div class="soundwall-section">
+            <h3>Vowel Valley (Short Vowels)</h3>
+            <div id="vowel-valley" class="vowel-valley"></div>
+          </div>
+          <div class="soundwall-section">
+            <h3>Long Vowels / Vowel Teams</h3>
+            <div id="soundwall-long-vowels" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+          </div>
+          <div class="soundwall-section">
+            <h3>R-Controlled</h3>
+            <div id="soundwall-rcontrolled" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+          </div>
+          <div class="soundwall-section">
+            <h3>Diphthongs</h3>
+            <div id="soundwall-diphthongs" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+          </div>
+          <div class="soundwall-section">
+            <h3>Glued / Welded</h3>
+            <div id="soundwall-welded" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+          </div>
+          <div class="soundwall-section">
+            <h3>Schwa</h3>
+            <div id="soundwall-schwa" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+          </div>
+          <div class="soundwall-section">
+            <h3>Consonant Grid</h3>
+            <div id="consonant-grid" class="consonant-grid"></div>
+          </div>
+          <div class="soundwall-section">
+            <h3>Blends</h3>
+            <div id="soundwall-blends" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 10px;"></div>
+          </div>
+        </div>
+
         <!-- Vowels Tab -->
-        <div id="vowels-content" class="tab-content">
-          <div id="vowels-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+        <div id="vowels-content" class="tab-content hidden">
+          <div class="phoneme-section">
+            <h3>Short Vowels</h3>
+            <div id="vowels-short-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+          </div>
+          <div class="phoneme-section">
+            <h3>Long Vowels / Vowel Teams</h3>
+            <div id="vowels-long-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+          </div>
+          <div class="phoneme-section">
+            <h3>R-Controlled</h3>
+            <div id="vowels-rcontrolled-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+          </div>
+          <div class="phoneme-section">
+            <h3>Diphthongs</h3>
+            <div id="vowels-diphthongs-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+          </div>
+          <div class="phoneme-section">
+            <h3>Glued / Welded</h3>
+            <div id="vowels-welded-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+          </div>
+          <div class="phoneme-section">
+            <h3>Schwa</h3>
+            <div id="vowels-schwa-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+          </div>
         </div>
         
         <!-- Consonants Tab -->
         <div id="consonants-content" class="tab-content hidden">
-          <div id="consonants-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+          <div class="phoneme-section">
+            <h3>Single Consonants</h3>
+            <div id="consonants-single-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+          </div>
+          <div class="phoneme-section">
+            <h3>Digraphs</h3>
+            <div id="consonants-digraphs-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+          </div>
+          <div class="phoneme-section">
+            <h3>Blends</h3>
+            <div id="consonants-blends-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+          </div>
         </div>
         
         <!-- Letters Tab -->

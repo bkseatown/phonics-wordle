@@ -627,6 +627,110 @@ main {
     color: #555; 
 }
 
+/* ---------- Teacher modal layout ---------- */
+#teacher-modal .modal-content {
+    text-align: left;
+    position: relative;
+}
+
+#teacher-modal h2 {
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+#teacher-modal .close-teacher {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    background: transparent;
+    border: none;
+    font-size: 1.6rem;
+    cursor: pointer;
+    color: #6b7280;
+}
+
+#teacher-modal .teacher-block {
+    margin-bottom: 18px;
+}
+
+#teacher-modal label {
+    display: block;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+    font-size: 0.9rem;
+}
+
+#teacher-modal .teacher-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+}
+
+#teacher-modal #custom-word-input {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 1.05rem;
+    border: 2px solid #d1d5db;
+    border-radius: 10px;
+    text-align: left;
+    letter-spacing: 0.5px;
+    font-family: var(--font-body);
+}
+
+#teacher-modal #toggle-mask {
+    padding: 10px 12px;
+    min-width: 64px;
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+    background: #f3f4f6;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#teacher-modal .teacher-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+#teacher-modal .teacher-actions button {
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-family: var(--font-body);
+    cursor: pointer;
+    border: none;
+}
+
+#teacher-modal #set-word-btn {
+    background: #2563eb;
+    color: white;
+}
+
+#teacher-modal #open-studio-btn {
+    background: #f3f4f6;
+    color: #111827;
+    border: 1px solid #d1d5db;
+}
+
+#teacher-modal #system-voice-select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #d1d5db;
+    font-size: 0.95rem;
+}
+
+#teacher-modal .teacher-error {
+    color: #b91c1c;
+    font-size: 0.9rem;
+    margin-top: 6px;
+    min-height: 1.2em;
+}
+
 .stat-box { 
     background: #f8f9fa; 
     padding: 16px; 
@@ -1798,6 +1902,199 @@ button:active:not(:disabled) {
 .phoneme-card {
     position: relative;
     overflow: hidden;
+}
+
+.phoneme-section {
+    margin-top: 18px;
+}
+
+.phoneme-section h3 {
+    text-align: left;
+    font-size: 1rem;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.soundwall-section {
+    margin: 18px 0;
+    text-align: left;
+}
+
+.soundwall-section h3 {
+    font-size: 1rem;
+    color: #374151;
+    margin-bottom: 10px;
+}
+
+.vowel-valley {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    padding: 6px 0 16px;
+    flex-wrap: wrap;
+}
+
+.vowel-valley .phoneme-card {
+    width: 120px;
+}
+
+.valley-item {
+    transform: translateY(var(--valley-offset, 0px));
+}
+
+.consonant-grid {
+    display: grid;
+    grid-template-columns: 140px repeat(7, minmax(90px, 1fr));
+    gap: 6px;
+    background: #f8fafc;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+}
+
+.consonant-grid .grid-header {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #374151;
+    text-align: center;
+    padding: 8px 6px;
+    background: #f1f5f9;
+    border-radius: 8px;
+}
+
+.consonant-grid .row-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #1f2937;
+    background: #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.consonant-grid .grid-cell {
+    min-height: 96px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+}
+
+.consonant-grid .grid-cell .phoneme-card {
+    width: 100%;
+    min-height: 86px;
+    padding: 8px;
+}
+
+.consonant-grid .grid-cell .phoneme-letter {
+    font-size: 1.4rem;
+}
+
+.consonant-grid .grid-cell .mini-mouth {
+    width: 40px;
+    height: 40px;
+}
+
+.consonant-grid .grid-cell .mini-mouth .mouth {
+    transform: translate(-50%, -50%) scale(0.6);
+}
+
+@media (max-width: 720px) {
+    .consonant-grid {
+        grid-template-columns: 110px repeat(7, minmax(80px, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .consonant-grid {
+        grid-template-columns: 90px repeat(7, minmax(70px, 1fr));
+    }
+    .consonant-grid .grid-header {
+        font-size: 0.65rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .selected-sound::before,
+    .phoneme-card::before,
+    .letter-card::before,
+    #mouth-visual {
+        animation: none !important;
+    }
+    .mouth {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+.phoneme-letter {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: #111827;
+}
+
+.phoneme-example {
+    font-size: 0.9rem;
+    color: #555;
+    font-weight: 600;
+}
+
+.phoneme-ipa {
+    font-size: 0.8rem;
+    color: #8b8b8b;
+    margin-top: 4px;
+}
+
+.mini-mouth {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 6px;
+    background: #ffe8d6;
+    border-radius: 50%;
+    position: relative;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+}
+
+.mini-mouth .mouth {
+    position: absolute;
+    left: 50%;
+    top: 55%;
+    transform: translate(-50%, -50%) scale(0.7);
+}
+
+#mouth-visual {
+    width: 90px;
+    height: 90px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    position: relative;
+}
+
+#mouth-visual .mouth {
+    position: absolute;
+    left: 50%;
+    top: 55%;
+    transform: translate(-50%, -50%) scale(0.85);
+}
+
+.mouth-neutral {
+    width: 60px;
+    height: 10px;
+    background: #8b4513;
+    border-radius: 6px;
 }
 
 .phoneme-card::before {

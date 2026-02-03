@@ -1009,18 +1009,16 @@ function detectPrimarySound(word) {
 }
 
 function speakPhoneme(sound) {
-    // Speak isolated phoneme sound
-    if (window.speechSynthesis) {
-        const utterance = new SpeechSynthesisUtterance(sound);
-        utterance.rate = 0.7; // Slower for clarity
-        speechSynthesis.speak(utterance);
-    }
+    if (!sound) return;
+    const phonemeData = window.PHONEME_DATA ? window.PHONEME_DATA[sound.toLowerCase()] : null;
+    const text = phonemeData ? getPhonemeTts(phonemeData) : sound;
+    speakText(text);
 }
 
 function canShowMouthPosition(sound) {
     // Check if we have mouth position data for this sound
-    // For now, return true for vowels
-    return ['a', 'e', 'i', 'o', 'u'].includes(sound.toLowerCase());
+    if (!sound || !window.PHONEME_DATA) return false;
+    return !!window.PHONEME_DATA[sound.toLowerCase()];
 }
 
 function openPhonemeGuideToSound(sound) {
@@ -2032,6 +2030,7 @@ function populatePhonemeGrid() {
     populateVowelsGrid();
     populateConsonantsGrid(); 
     populateLettersGrid();
+    populateSoundWall();
     
     // Setup audio controls
     initArticulationAudioControls();
@@ -2133,6 +2132,110 @@ function populateConsonantsGrid() {
         const phoneme = window.PHONEME_DATA[sound];
         const card = createPhonemeCard(sound, phoneme);
         grid.appendChild(card);
+    });
+}
+
+function populateSoundWall() {
+    populateVowelValley();
+
+    if (window.PHONEME_GROUPS && window.PHONEME_GROUPS.vowels) {
+        populatePhonemeGroup('soundwall-long-vowels', window.PHONEME_GROUPS.vowels.long);
+        populatePhonemeGroup('soundwall-rcontrolled', window.PHONEME_GROUPS.vowels.rControlled);
+        populatePhonemeGroup('soundwall-diphthongs', window.PHONEME_GROUPS.vowels.diphthongs);
+        populatePhonemeGroup('soundwall-welded', window.PHONEME_GROUPS.vowels.welded);
+        populatePhonemeGroup('soundwall-schwa', window.PHONEME_GROUPS.vowels.schwa);
+    }
+
+    populateConsonantGrid();
+
+    if (window.PHONEME_GROUPS && window.PHONEME_GROUPS.consonants) {
+        populatePhonemeGroup('soundwall-blends', window.PHONEME_GROUPS.consonants.blends);
+    }
+}
+
+function populateVowelValley() {
+    const container = document.getElementById('vowel-valley');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    const valley = window.UFLI_VOWEL_VALLEY || [];
+    valley.forEach(item => {
+        const phoneme = window.PHONEME_DATA[item.sound];
+        if (!phoneme) return;
+        const card = createPhonemeCard(item.sound, phoneme);
+        card.classList.add('valley-item');
+        card.style.setProperty('--valley-offset', `${item.offset || 0}px`);
+        container.appendChild(card);
+    });
+}
+
+function populateConsonantGrid() {
+    const grid = document.getElementById('consonant-grid');
+    if (!grid) return;
+
+    const places = [
+        { id: 'lips', label: 'Lips Together' },
+        { id: 'teeth', label: 'Teeth on Lip' },
+        { id: 'between', label: 'Tongue Between Teeth' },
+        { id: 'behind', label: 'Tongue Behind Top Teeth' },
+        { id: 'lifted', label: 'Tongue Lifted' },
+        { id: 'pulled', label: 'Tongue Pulled Back' },
+        { id: 'throat', label: 'Back of Throat' }
+    ];
+
+    const manners = [
+        { id: 'stop', label: 'Stop' },
+        { id: 'nasal', label: 'Nasal' },
+        { id: 'fricative', label: 'Fricative' },
+        { id: 'affricate', label: 'Affricate' },
+        { id: 'glide', label: 'Glide' },
+        { id: 'liquid', label: 'Liquid' }
+    ];
+
+    if (!grid.dataset.built) {
+        grid.innerHTML = '';
+
+        const emptyHeader = document.createElement('div');
+        emptyHeader.className = 'grid-header';
+        grid.appendChild(emptyHeader);
+
+        places.forEach(place => {
+            const header = document.createElement('div');
+            header.className = 'grid-header';
+            header.textContent = place.label;
+            grid.appendChild(header);
+        });
+
+        manners.forEach(manner => {
+            const rowLabel = document.createElement('div');
+            rowLabel.className = 'row-label';
+            rowLabel.textContent = manner.label;
+            grid.appendChild(rowLabel);
+
+            places.forEach(place => {
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell';
+                cell.id = `cell-${manner.id}-${place.id}`;
+                grid.appendChild(cell);
+            });
+        });
+
+        grid.dataset.built = 'true';
+    }
+
+    grid.querySelectorAll('.grid-cell').forEach(cell => {
+        cell.innerHTML = '';
+    });
+
+    const placementMap = window.UFLI_CONSONANT_GRID || {};
+    Object.keys(placementMap).forEach(sound => {
+        const placement = placementMap[sound];
+        const cell = document.getElementById(`cell-${placement.manner}-${placement.place}`);
+        const phoneme = window.PHONEME_DATA[sound];
+        if (!cell || !phoneme) return;
+        const card = createPhonemeCard(sound, phoneme);
+        cell.appendChild(card);
     });
 }
 
@@ -2347,6 +2450,7 @@ function playLetterSequence(letter, word, phoneme) {
 }
 
 function speakText(text) {
+    if (!text) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.8;
