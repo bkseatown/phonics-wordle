@@ -32,6 +32,7 @@ const DEFAULT_SETTINGS = {
     showMouthCues: true,
     speechRate: 0.85,
     voiceDialect: 'en-US',
+    autoHear: true,
     translation: {
         pinned: false,
         lang: 'en'
@@ -234,6 +235,11 @@ function applySettings() {
     const bonusSelect = document.getElementById('bonus-frequency');
     if (bonusSelect) {
         bonusSelect.value = appSettings.bonus?.frequency || 'sometimes';
+    }
+
+    const autoHearToggle = document.getElementById('toggle-auto-hear');
+    if (autoHearToggle) {
+        autoHearToggle.checked = appSettings.autoHear !== false;
     }
 
     applySoundWallSectionVisibility();
@@ -813,6 +819,7 @@ function initWarmupButtons() {
 
 function initTeacherTools() {
     ensureVoiceQualityHint();
+    ensureAutoHearToggle();
     const calmToggle = document.getElementById('toggle-calm-mode');
     if (calmToggle) {
         calmToggle.onchange = () => {
@@ -892,6 +899,15 @@ function initTeacherTools() {
             saveSettings();
         };
     }
+
+    const autoHearToggle = document.getElementById('toggle-auto-hear');
+    if (autoHearToggle) {
+        autoHearToggle.checked = appSettings.autoHear !== false;
+        autoHearToggle.onchange = () => {
+            appSettings.autoHear = autoHearToggle.checked;
+            saveSettings();
+        };
+    }
 }
 
 function ensureVoiceQualityHint() {
@@ -906,6 +922,20 @@ function ensureVoiceQualityHint() {
         hint.innerHTML = `Enhanced voices <span class="tiny-tooltip" title="${tip}" aria-label="${tip}">ⓘ</span>`;
         voiceSelect.insertAdjacentElement('afterend', hint);
     }
+}
+
+function ensureAutoHearToggle() {
+    const grid = document.querySelector('#teacher-modal .teacher-tools-grid');
+    if (!grid) return;
+    if (document.getElementById('toggle-auto-hear')) return;
+
+    const row = document.createElement('label');
+    row.className = 'toggle-row';
+    row.innerHTML = `
+        <input type="checkbox" id="toggle-auto-hear" />
+        Auto-play word, definition, and sentence
+    `;
+    grid.appendChild(row);
 }
 
 function initSoundWallFilters() {
@@ -1846,6 +1876,33 @@ function updateModalSyllables(word, rawSyllables) {
     syllableEl.classList.remove("hidden");
 }
 
+function estimateSpeechDuration(text, rate = 1) {
+    if (!text) return 0;
+    const normalized = Math.max(0.6, rate || 1);
+    const base = Math.max(900, text.length * 55);
+    return Math.min(9000, base / normalized);
+}
+
+function autoPlayReveal(definitionText, sentenceText) {
+    if (appSettings.autoHear === false) return;
+    const wordText = currentWord || '';
+    const speechRateWord = getSpeechRate('word');
+    const speechRateSentence = getSpeechRate('sentence');
+
+    let delay = 150;
+    if (wordText) {
+        setTimeout(() => speak(wordText, 'word'), delay);
+        delay += estimateSpeechDuration(wordText, speechRateWord);
+    }
+    if (definitionText) {
+        setTimeout(() => speakText(definitionText, 'sentence'), delay);
+        delay += estimateSpeechDuration(definitionText, speechRateSentence);
+    }
+    if (sentenceText) {
+        setTimeout(() => speak(sentenceText, 'sentence'), delay);
+    }
+}
+
 function prepareTranslationSection() {
     const section = document.querySelector(".translation-selector");
     if (!section || section.dataset.compactified === "true") return section;
@@ -1873,6 +1930,75 @@ function prepareTranslationSection() {
     });
 
     return section;
+}
+
+function setupModalAudioControls(definitionText, sentenceText) {
+    if (!gameModal) return;
+    const modalContent = gameModal.querySelector('.modal-content') || gameModal;
+    if (!modalContent) return;
+
+    let audioControls = document.getElementById('modal-audio-controls');
+    if (!audioControls) {
+        audioControls = document.createElement('div');
+        audioControls.id = 'modal-audio-controls';
+        audioControls.className = 'modal-audio-controls';
+    }
+
+    let actionRow = document.getElementById('modal-action-row');
+    if (!actionRow) {
+        actionRow = document.createElement('div');
+        actionRow.id = 'modal-action-row';
+        actionRow.className = 'modal-action-row';
+    }
+
+    const speakBtn = document.getElementById('speak-btn');
+    if (speakBtn) {
+        speakBtn.textContent = 'Hear Word';
+        speakBtn.classList.add('modal-audio-btn');
+        if (!audioControls.contains(speakBtn)) audioControls.appendChild(speakBtn);
+    }
+
+    let defBtn = document.getElementById('modal-hear-def');
+    if (!defBtn) {
+        defBtn = document.createElement('button');
+        defBtn.id = 'modal-hear-def';
+        defBtn.type = 'button';
+        defBtn.className = 'modal-audio-btn';
+    }
+    defBtn.textContent = 'Hear Definition';
+    defBtn.disabled = !definitionText;
+    defBtn.onclick = () => {
+        if (definitionText) speakText(definitionText, 'sentence');
+    };
+    if (!audioControls.contains(defBtn)) audioControls.appendChild(defBtn);
+
+    let sentenceBtn = document.getElementById('modal-hear-sentence');
+    if (!sentenceBtn) {
+        sentenceBtn = document.createElement('button');
+        sentenceBtn.id = 'modal-hear-sentence';
+        sentenceBtn.type = 'button';
+        sentenceBtn.className = 'modal-audio-btn';
+    }
+    sentenceBtn.textContent = 'Hear Sentence';
+    sentenceBtn.disabled = !sentenceText;
+    sentenceBtn.onclick = () => {
+        if (sentenceText) speak(sentenceText, 'sentence');
+    };
+    if (!audioControls.contains(sentenceBtn)) audioControls.appendChild(sentenceBtn);
+
+    const playAgainBtn = document.getElementById('play-again-btn');
+    if (playAgainBtn) {
+        playAgainBtn.classList.add('modal-primary-btn');
+        if (!actionRow.contains(playAgainBtn)) actionRow.appendChild(playAgainBtn);
+    }
+
+    const translationSelector = modalContent.querySelector('.translation-selector');
+    if (audioControls.parentElement !== modalContent) {
+        modalContent.insertBefore(audioControls, translationSelector || null);
+    }
+    if (actionRow.parentElement !== modalContent) {
+        modalContent.insertBefore(actionRow, translationSelector || null);
+    }
 }
 
 function showEndModal(win) {
@@ -1906,6 +2032,8 @@ function showEndModal(win) {
     
     document.getElementById("modal-def").textContent = def;
     document.getElementById("modal-sentence").textContent = `"${sentence}"`;
+
+    setupModalAudioControls(def, sentence);
     
     // Set up translation dropdown functionality
     const languageSelect = document.getElementById("language-select");
@@ -2024,6 +2152,8 @@ function showEndModal(win) {
     if (win) {
         sessionStorage.setItem('showBonusOnClose', 'true');
     }
+
+    autoPlayReveal(def, sentence);
 }
 
 function openTeacherMode() {
@@ -3297,13 +3427,21 @@ function playLetterSequence(letter, word, phoneme) {
     }, 1800);
 }
 
-function speakText(text, rateType = 'word') {
+async function speakText(text, rateType = 'word') {
     if (!text) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
+    const voices = await getVoicesAsync();
+    const preferred = pickBestEnglishVoice(voices);
+    if (preferred) {
+        utterance.voice = preferred;
+        utterance.lang = preferred.lang;
+    } else {
+        utterance.lang = getPreferredEnglishDialect();
+    }
     utterance.rate = getSpeechRate(rateType);
     utterance.pitch = 1.0;
-    window.speechSynthesis.speak(utterance);
+    speakUtterance(utterance);
 }
 
 function speakSpelling(grapheme) {
