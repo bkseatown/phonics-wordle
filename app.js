@@ -14,6 +14,7 @@ let gameOver = false;
 let isFirstLoad = true;
 let isUpperCase = false;
 let cachedVoices = [];
+let lengthAutoSet = false;
 
 // DOM Elements - will be initialized after DOM loads
 let board, keyboard, modalOverlay, welcomeModal, teacherModal, studioModal, gameModal;
@@ -27,6 +28,13 @@ const DEFAULT_SETTINGS = {
     showExamples: true,
     showMouthCues: true,
     speechRate: 0.85,
+    translation: {
+        pinned: false,
+        lang: 'en'
+    },
+    bonus: {
+        frequency: 'sometimes'
+    },
     soundWallSections: {
         'vowel-valley': true,
         'long-vowels': true,
@@ -45,6 +53,10 @@ let appSettings = { ...DEFAULT_SETTINGS };
 const DB_NAME = "PhonicsAudioDB";
 const STORE_NAME = "audio_files";
 let db;
+let dbReadyResolve;
+const dbReady = new Promise((resolve) => {
+    dbReadyResolve = resolve;
+});
 
 function initDB() {
     const request = indexedDB.open(DB_NAME, 1);
@@ -56,9 +68,11 @@ function initDB() {
     };
     request.onsuccess = (event) => {
         db = event.target.result;
+        if (dbReadyResolve) dbReadyResolve(db);
     };
     request.onerror = (event) => {
         console.error("DB Error", event);
+        if (dbReadyResolve) dbReadyResolve(null);
     };
 }
 
@@ -80,6 +94,62 @@ function getAudioFromDB(key) {
     });
 }
 
+async function ensureDBReady() {
+    if (db) return db;
+    return dbReady;
+}
+
+async function deleteAudioFromDB(key) {
+    const database = await ensureDBReady();
+    if (!database) return false;
+    return new Promise((resolve) => {
+        const tx = database.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.delete(key);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => resolve(false);
+    });
+}
+
+async function listAudioKeys() {
+    const database = await ensureDBReady();
+    if (!database) return [];
+    return new Promise((resolve) => {
+        const keys = [];
+        const tx = database.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.openCursor();
+        req.onsuccess = () => {
+            const cursor = req.result;
+            if (cursor) {
+                keys.push(cursor.key);
+                cursor.continue();
+            } else {
+                resolve(keys);
+            }
+        };
+        req.onerror = () => resolve(keys);
+    });
+}
+
+async function deleteAudioByFilter(predicate) {
+    const keys = await listAudioKeys();
+    const targets = keys.filter(predicate);
+    await Promise.all(targets.map(key => deleteAudioFromDB(key)));
+    return targets.length;
+}
+
+async function countRecordingsByType() {
+    const keys = await listAudioKeys();
+    const counts = { total: keys.length, word: 0, sentence: 0, phoneme: 0 };
+    keys.forEach(key => {
+        if (key.endsWith('_word')) counts.word += 1;
+        else if (key.endsWith('_sentence')) counts.sentence += 1;
+        else if (key.startsWith('phoneme_')) counts.phoneme += 1;
+    });
+    return counts;
+}
+
 function loadSettings() {
     const saved = localStorage.getItem(SETTINGS_KEY);
     if (!saved) return;
@@ -89,6 +159,14 @@ function loadSettings() {
         appSettings = {
             ...DEFAULT_SETTINGS,
             ...parsed,
+            translation: {
+                ...DEFAULT_SETTINGS.translation,
+                ...(parsed.translation || {})
+            },
+            bonus: {
+                ...DEFAULT_SETTINGS.bonus,
+                ...(parsed.bonus || {})
+            },
             soundWallSections: {
                 ...DEFAULT_SETTINGS.soundWallSections,
                 ...(parsed.soundWallSections || {})
@@ -135,6 +213,20 @@ function applySettings() {
         if (display) display.textContent = `${appSettings.speechRate.toFixed(2)}x`;
     }
 
+    const translationSelect = document.getElementById('translation-default-select');
+    if (translationSelect) {
+        translationSelect.value = appSettings.translation?.lang || 'en';
+    }
+    const translationLock = document.getElementById('translation-lock-toggle');
+    if (translationLock) {
+        translationLock.checked = !!appSettings.translation?.pinned;
+    }
+
+    const bonusSelect = document.getElementById('bonus-frequency');
+    if (bonusSelect) {
+        bonusSelect.value = appSettings.bonus?.frequency || 'sometimes';
+    }
+
     applySoundWallSectionVisibility();
 }
 
@@ -158,11 +250,6 @@ function applySoundWallSectionVisibility() {
 document.addEventListener("DOMContentLoaded", () => {
     loadSettings();
 
-    // Compatibility: map WORDS_DATA to WORD_ENTRIES
-    if (typeof WORDS_DATA !== 'undefined') {
-        window.WORD_ENTRIES = WORDS_DATA;
-    }
-    
     // Initialize DOM elements
     board = document.getElementById("game-board");
     keyboard = document.getElementById("keyboard");
@@ -174,10 +261,15 @@ document.addEventListener("DOMContentLoaded", () => {
     
     initDB();
     initControls();
+    updatePatternLengthCompatibility();
+    initWarmupButtons();
     initKeyboard();
     initVoiceLoader(); 
     initStudio();
     initNewFeatures();
+    initTutorial();
+    initFocusToggle();
+    initModalDismissals();
     initVoiceSourceControls(); // Voice source toggle
     initTeacherTools();
     initSoundWallFilters();
@@ -238,14 +330,6 @@ function initVoiceLoader() {
             voiceSelect.appendChild(opt);
         });
         
-        // Add "Show all voices" option if we're using curated list
-        if (curatedVoices.length > 0 && curatedVoices.length < englishVoices.length) {
-            const showAllOpt = document.createElement("option");
-            showAllOpt.value = "_show_all_";
-            showAllOpt.textContent = "── Show all voices ──";
-            showAllOpt.disabled = true;
-            voiceSelect.appendChild(showAllOpt);
-        }
     };
 
     load();
@@ -286,7 +370,8 @@ async function speak(text, type = "word") {
         dbKey = "unknown";
     }
 
-    const blob = await getAudioFromDB(dbKey);
+    const useTeacherVoice = localStorage.getItem('useTeacherRecordings') !== 'false';
+    const blob = useTeacherVoice ? await getAudioFromDB(dbKey) : null;
     
     if (blob) {
         const url = URL.createObjectURL(blob);
@@ -364,27 +449,56 @@ function playTextInLanguage(text, languageCode) {
     window.speechSynthesis.speak(msg);
 }
 
+function getTranslationData(word, langCode) {
+    if (!word || !langCode || langCode === 'en') return null;
+    const lower = word.toLowerCase();
+    const source = (typeof WORDS_DATA !== 'undefined') ? WORDS_DATA : null;
+    const entry = source && source[lower] ? source[lower][langCode] : null;
+    if (entry) {
+        return {
+            definition: entry.def || '',
+            sentence: entry.sentence || ''
+        };
+    }
+    if (window.TRANSLATIONS && typeof window.TRANSLATIONS.getTranslation === 'function') {
+        return window.TRANSLATIONS.getTranslation(lower, langCode);
+    }
+    return null;
+}
+
 /* --- CONTROLS & EVENTS --- */
 function initControls() {
     document.getElementById("new-word-btn").onclick = () => {
         document.getElementById("new-word-btn").blur(); 
         startNewGame();
     };
-    document.getElementById("case-toggle").onclick = (e) => {
-        e.target.blur();
-        toggleCase();
-    };
+    const caseToggle = document.getElementById("case-toggle");
+    if (caseToggle) {
+        caseToggle.onclick = (e) => {
+            e.target.blur();
+            toggleCase();
+        };
+    }
     
-    document.getElementById("pattern-select").onchange = () => {
-        document.getElementById("pattern-select").blur();
-        autoAdjustLength();
-        startNewGame();
-    };
+    const patternSelect = document.getElementById("pattern-select");
+    if (patternSelect) {
+        patternSelect.onchange = () => {
+            patternSelect.blur();
+            autoAdjustLength();
+            updatePatternLengthCompatibility();
+            startNewGame();
+        };
+    }
     
-    document.getElementById("length-select").onchange = (e) => {
-        e.target.blur();
-        startNewGame();
-    };
+    const lengthSelect = document.getElementById("length-select");
+    if (lengthSelect) {
+        lengthSelect.onchange = (e) => {
+            e.target.blur();
+            lengthAutoSet = false;
+            updatePatternLengthCompatibility();
+            startNewGame();
+        };
+    }
 
     document.getElementById("teacher-btn").onclick = openTeacherMode;
     document.getElementById("set-word-btn").onclick = handleTeacherSubmit;
@@ -495,20 +609,14 @@ function initControls() {
         btn.addEventListener("click", closeModal);
     });
 
-    modalOverlay.onclick = (e) => {
-        if (e.target === modalOverlay) closeModal();
-    };
-
     window.addEventListener("keydown", (e) => {
         if (isModalOpen()) {
             if (!studioModal.classList.contains("hidden")) return; 
 
-            if (e.key === "Escape" || e.key === "Enter") {
-                if (!teacherModal.classList.contains("hidden") && e.key === "Enter") {
-                    handleTeacherSubmit();
-                } else {
-                    closeModal(); 
-                }
+            if (e.key === "Escape") {
+                closeModal();
+            } else if (e.key === "Enter" && !teacherModal.classList.contains("hidden")) {
+                handleTeacherSubmit();
             }
             return; 
         }
@@ -554,6 +662,21 @@ function initControls() {
         e.stopImmediatePropagation(); 
         if (e.key === "Enter") handleTeacherSubmit();
         if (e.key === "Escape") closeModal();
+    });
+}
+
+function initWarmupButtons() {
+    const phonemeBtn = document.getElementById('phoneme-btn');
+    if (phonemeBtn) {
+        phonemeBtn.onclick = () => openPhonemeGuide();
+    }
+
+    const warmupTiles = document.querySelectorAll('.warmup-tile');
+    warmupTiles.forEach(tile => {
+        tile.onclick = () => {
+            const sound = tile.dataset.sound;
+            openPhonemeGuide(sound);
+        };
     });
 }
 
@@ -613,6 +736,30 @@ function initTeacherTools() {
             saveSettings();
         };
     }
+
+    const translationSelect = document.getElementById('translation-default-select');
+    if (translationSelect) {
+        translationSelect.onchange = () => {
+            appSettings.translation.lang = translationSelect.value;
+            saveSettings();
+        };
+    }
+
+    const translationLock = document.getElementById('translation-lock-toggle');
+    if (translationLock) {
+        translationLock.onchange = () => {
+            appSettings.translation.pinned = translationLock.checked;
+            saveSettings();
+        };
+    }
+
+    const bonusSelect = document.getElementById('bonus-frequency');
+    if (bonusSelect) {
+        bonusSelect.onchange = () => {
+            appSettings.bonus.frequency = bonusSelect.value;
+            saveSettings();
+        };
+    }
 }
 
 function initSoundWallFilters() {
@@ -635,26 +782,55 @@ function isModalOpen() {
 }
 
 /* --- AUTO-ADJUST WORD LENGTH BASED ON PATTERN --- */
+const PATTERN_LENGTH_RULES = {
+    cvc: { preferred: '3', valid: [3] },
+    cvce: { preferred: '4', valid: [4, 5] },
+    ccvc: { preferred: '4', valid: [4, 5] },
+    cvcc: { preferred: '4', valid: [4, 5] }
+};
+
 function autoAdjustLength() {
-    const pattern = document.getElementById("pattern-select").value;
+    const patternSelect = document.getElementById("pattern-select");
     const lengthSelect = document.getElementById("length-select");
-    
-    // Auto-adjust length based on pattern
-    const lengthMap = {
-        'cvc': '3',           // CVC words are typically 3 letters
-        'digraph': 'any',     // Digraphs vary
-        'blend': 'any',       // Blends vary
-        'magic-e': '4',       // Magic E often 4 letters (like, hope)
-        'floss': 'any',       // FLOSS varies
-        'welded': 'any',      // Welded varies
-        'vowel-team': 'any',  // Vowel teams vary
-        'r-controlled': 'any', // R-controlled vary
-        'morphology': 'any',  // Morphology varies
-        'all': 'traditional'  // Default to 5
-    };
-    
-    if (lengthMap[pattern]) {
-        lengthSelect.value = lengthMap[pattern];
+    if (!patternSelect || !lengthSelect) return;
+
+    const pattern = patternSelect.value;
+    const rule = PATTERN_LENGTH_RULES[pattern];
+    if (rule && rule.preferred) {
+        lengthSelect.value = rule.preferred;
+        lengthAutoSet = true;
+        return;
+    }
+    if (lengthAutoSet) {
+        lengthSelect.value = 'traditional';
+        lengthAutoSet = false;
+    }
+}
+
+function updatePatternLengthCompatibility() {
+    const patternSelect = document.getElementById("pattern-select");
+    const lengthSelect = document.getElementById("length-select");
+    if (!patternSelect || !lengthSelect) return;
+
+    const lengthVal = lengthSelect.value;
+    const numericLength = lengthVal === 'traditional'
+        ? 5
+        : lengthVal === 'any'
+            ? null
+            : parseInt(lengthVal, 10);
+
+    Array.from(patternSelect.options).forEach(option => {
+        const rule = PATTERN_LENGTH_RULES[option.value];
+        if (!rule || !rule.valid || !numericLength) {
+            option.disabled = false;
+            return;
+        }
+        option.disabled = !rule.valid.includes(numericLength);
+    });
+
+    const currentOption = patternSelect.options[patternSelect.selectedIndex];
+    if (currentOption && currentOption.disabled) {
+        patternSelect.value = 'all';
     }
 }
 
@@ -1330,7 +1506,10 @@ function updateGrid() {
 
 function toggleCase() {
     isUpperCase = !isUpperCase;
-    document.getElementById("case-toggle").textContent = isUpperCase ? "ABC" : "abc";
+    const caseToggle = document.getElementById("case-toggle");
+    if (caseToggle) {
+        caseToggle.textContent = isUpperCase ? "ABC" : "abc";
+    }
     initKeyboard();
     document.querySelectorAll(".tile").forEach(t => {
         if(t.textContent) t.textContent = isUpperCase ? t.textContent.toUpperCase() : t.textContent.toLowerCase();
@@ -1428,12 +1607,17 @@ function showEndModal(win) {
     
     // Handle both data structures (your multilingual format vs simple format)
     let def, sentence;
-    if (currentEntry.en) {
+    const wordData = (typeof WORDS_DATA !== 'undefined') ? WORDS_DATA[currentWord] : null;
+    const enData = wordData && wordData.en ? wordData.en : null;
+    if (enData) {
+        def = enData.def;
+        sentence = enData.sentence;
+    } else if (currentEntry && currentEntry.en) {
         def = currentEntry.en.def;
         sentence = currentEntry.en.sentence;
     } else {
-        def = currentEntry.def;
-        sentence = currentEntry.sentence;
+        def = currentEntry?.def || "";
+        sentence = currentEntry?.sentence || "";
     }
     
     document.getElementById("modal-def").textContent = def;
@@ -1447,36 +1631,90 @@ function showEndModal(win) {
     const playTranslatedDef = document.getElementById("play-translated-def");
     const playTranslatedSentence = document.getElementById("play-translated-sentence");
     
+    const pinCheckbox = document.getElementById("pin-language");
+    const pinStatus = document.getElementById("translation-pin-status");
+
+    const renderTranslation = (selectedLang) => {
+        if (!translationDisplay || !translatedDef || !translatedSentence) return;
+        if (!selectedLang || selectedLang === "en") {
+            translationDisplay.classList.add("hidden");
+            return;
+        }
+
+        const translation = getTranslationData(currentWord, selectedLang);
+        if (translation && (translation.definition || translation.sentence)) {
+            translatedDef.textContent = translation.definition || '';
+            translatedSentence.textContent = translation.sentence ? `"${translation.sentence}"` : '';
+
+            if (playTranslatedDef) {
+                playTranslatedDef.onclick = () => playTextInLanguage(translation.definition, selectedLang);
+            }
+            if (playTranslatedSentence) {
+                playTranslatedSentence.onclick = () => playTextInLanguage(translation.sentence, selectedLang);
+            }
+
+            translationDisplay.classList.remove("hidden");
+        } else {
+            translatedDef.textContent = "Translation not available";
+            translatedSentence.textContent = "";
+            if (playTranslatedDef) playTranslatedDef.onclick = null;
+            if (playTranslatedSentence) playTranslatedSentence.onclick = null;
+            translationDisplay.classList.remove("hidden");
+        }
+    };
+
+    const updatePinStatus = () => {
+        if (!pinStatus) return;
+        if (appSettings.translation?.pinned && appSettings.translation?.lang && appSettings.translation.lang !== 'en') {
+            const optionLabel = languageSelect?.selectedOptions?.[0]?.textContent || appSettings.translation.lang;
+            pinStatus.textContent = `Locked to ${optionLabel}.`;
+            pinStatus.classList.remove('hidden');
+        } else {
+            pinStatus.textContent = "";
+            pinStatus.classList.add('hidden');
+        }
+    };
+
     if (languageSelect) {
-        languageSelect.value = "en";
+        const pinned = appSettings.translation?.pinned;
+        const pinnedLang = appSettings.translation?.lang || 'en';
+        languageSelect.value = pinned ? pinnedLang : 'en';
         translationDisplay.classList.add("hidden");
-        
+
+        if (pinCheckbox) {
+            pinCheckbox.checked = !!pinned;
+        }
+
+        renderTranslation(languageSelect.value);
+        updatePinStatus();
+
         languageSelect.onchange = () => {
             const selectedLang = languageSelect.value;
-            if (selectedLang === "en") {
-                translationDisplay.classList.add("hidden");
-            } else {
-                const translation = window.TRANSLATIONS.getTranslation(currentWord, selectedLang);
-                if (translation && translation.definition) {
-                    translatedDef.textContent = translation.definition;
-                    translatedSentence.textContent = `"${translation.sentence}"`;
-                    
-                    // Set up audio buttons for translations
-                    if (playTranslatedDef) {
-                        playTranslatedDef.onclick = () => playTextInLanguage(translation.definition, selectedLang);
-                    }
-                    if (playTranslatedSentence) {
-                        playTranslatedSentence.onclick = () => playTextInLanguage(translation.sentence, selectedLang);
-                    }
-                    
-                    translationDisplay.classList.remove("hidden");
-                } else {
-                    translatedDef.textContent = "Translation not available";
-                    translatedSentence.textContent = "";
-                    translationDisplay.classList.remove("hidden");
+            renderTranslation(selectedLang);
+
+            if (pinCheckbox && pinCheckbox.checked) {
+                appSettings.translation.lang = selectedLang;
+                if (selectedLang === 'en') {
+                    appSettings.translation.pinned = false;
+                    pinCheckbox.checked = false;
                 }
+                saveSettings();
             }
+            updatePinStatus();
         };
+
+        if (pinCheckbox) {
+            pinCheckbox.onchange = () => {
+                const selectedLang = languageSelect.value;
+                const shouldPin = pinCheckbox.checked && selectedLang !== 'en';
+                appSettings.translation.pinned = shouldPin;
+                if (shouldPin) {
+                    appSettings.translation.lang = selectedLang;
+                }
+                saveSettings();
+                updatePinStatus();
+            };
+        }
     }
     
     // Store that we should show bonus when modal closes (if won)
@@ -1494,6 +1732,7 @@ function openTeacherMode() {
     
     // Initialize voice control settings
     initTeacherVoiceControl();
+    applySettings();
     
     inp.focus();
 }
@@ -1504,36 +1743,86 @@ function openTeacherMode() {
 
 function initTeacherVoiceControl() {
     const toggle = document.getElementById('teacher-voice-toggle');
-    const clearBtn = document.getElementById('clear-all-recordings');
     const statusText = document.getElementById('recording-count');
-    
-    if (!toggle) return; // Elements not ready
-    
-    // Load saved preference (default: true/ON)
+    const deleteAllBtn = document.getElementById('delete-all-recordings');
+    const deleteWordBtn = document.getElementById('delete-word-recording');
+    const deleteSentenceBtn = document.getElementById('delete-sentence-recording');
+    const deleteAllWordBtn = document.getElementById('delete-all-word-recordings');
+    const deleteAllSentenceBtn = document.getElementById('delete-all-sentence-recordings');
+    const deletePhonemeBtn = document.getElementById('delete-phoneme-recording');
+
+    if (!toggle) return;
+
     const useTeacherVoice = localStorage.getItem('useTeacherRecordings') !== 'false';
     toggle.checked = useTeacherVoice;
-    
-    // Update status display
+
     updateRecordingStatus();
-    
-    // Toggle handler
+
     toggle.onchange = () => {
         const enabled = toggle.checked;
         localStorage.setItem('useTeacherRecordings', enabled.toString());
         updateVoiceIndicator();
-        
-        if (enabled) {
-            showToast('✅ Teacher voice enabled');
-        } else {
-            showToast('🔊 Using system voice');
-        }
+        showToast(enabled ? '✅ Teacher voice enabled' : '🔊 Using system voice');
     };
-    
-    // Clear all recordings handler
-    if (clearBtn) {
-        clearBtn.onclick = () => {
+
+    if (deleteWordBtn) {
+        deleteWordBtn.onclick = async () => {
+            if (!currentWord) return showToast('No word selected yet.');
+            if (confirm(`Delete the word recording for "${currentWord}"?`)) {
+                await deleteAudioFromDB(`${currentWord}_word`);
+                showToast('✅ Word recording deleted');
+                updateRecordingStatus();
+            }
+        };
+    }
+
+    if (deleteSentenceBtn) {
+        deleteSentenceBtn.onclick = async () => {
+            if (!currentWord) return showToast('No word selected yet.');
+            if (confirm(`Delete the sentence recording for "${currentWord}"?`)) {
+                await deleteAudioFromDB(`${currentWord}_sentence`);
+                showToast('✅ Sentence recording deleted');
+                updateRecordingStatus();
+            }
+        };
+    }
+
+    if (deletePhonemeBtn) {
+        deletePhonemeBtn.onclick = async () => {
+            if (!currentSelectedSound?.sound) return showToast('Select a sound in the Sounds guide first.');
+            const key = `phoneme_${currentSelectedSound.sound}`;
+            if (confirm(`Delete the phoneme recording for "${currentSelectedSound.sound}"?`)) {
+                await deleteAudioFromDB(key);
+                showToast('✅ Phoneme recording deleted');
+                updateRecordingStatus();
+            }
+        };
+    }
+
+    if (deleteAllWordBtn) {
+        deleteAllWordBtn.onclick = async () => {
+            if (confirm('Delete all word recordings? This cannot be undone.')) {
+                const count = await deleteAudioByFilter(key => key.endsWith('_word'));
+                showToast(`✅ Deleted ${count} word recording${count === 1 ? '' : 's'}`);
+                updateRecordingStatus();
+            }
+        };
+    }
+
+    if (deleteAllSentenceBtn) {
+        deleteAllSentenceBtn.onclick = async () => {
+            if (confirm('Delete all sentence recordings? This cannot be undone.')) {
+                const count = await deleteAudioByFilter(key => key.endsWith('_sentence'));
+                showToast(`✅ Deleted ${count} sentence recording${count === 1 ? '' : 's'}`);
+                updateRecordingStatus();
+            }
+        };
+    }
+
+    if (deleteAllBtn) {
+        deleteAllBtn.onclick = async () => {
             if (confirm('Delete all your voice recordings? This cannot be undone.')) {
-                clearAllTeacherRecordings();
+                await clearAllTeacherRecordings();
             }
         };
     }
@@ -1541,70 +1830,45 @@ function initTeacherVoiceControl() {
 
 function updateRecordingStatus() {
     const statusText = document.getElementById('recording-count');
-    const clearBtn = document.getElementById('clear-all-recordings');
-    
-    if (!statusText || !clearBtn) return;
-    
-    // Check how many recordings exist
-    checkRecordingCount().then(count => {
-        if (count > 0) {
-            statusText.textContent = `${count} word${count === 1 ? '' : 's'} recorded`;
-            clearBtn.disabled = false;
-            clearBtn.style.opacity = '1';
+    if (!statusText) return;
+
+    countRecordingsByType().then(counts => {
+        const total = counts.total || 0;
+        if (total > 0) {
+            statusText.textContent = `${counts.word} word • ${counts.sentence} sentence${counts.sentence === 1 ? '' : 's'} recorded`;
             localStorage.setItem('hasRecordings', 'true');
         } else {
             statusText.textContent = 'No recordings yet';
-            clearBtn.disabled = true;
-            clearBtn.style.opacity = '0.5';
             localStorage.setItem('hasRecordings', 'false');
         }
     });
 }
 
-function checkRecordingCount() {
-    return new Promise((resolve) => {
-        if (!window.audioDB) {
-            resolve(0);
-            return;
-        }
-        
-        try {
-            const transaction = audioDB.transaction(["audio"], "readonly");
-            const store = transaction.objectStore("audio");
-            const request = store.count();
-            
-            request.onsuccess = () => resolve(request.result || 0);
-            request.onerror = () => resolve(0);
-        } catch (e) {
-            resolve(0);
-        }
-    });
-}
-
-function clearAllTeacherRecordings() {
-    if (!window.audioDB) {
+async function clearAllTeacherRecordings() {
+    const database = await ensureDBReady();
+    if (!database) {
         showToast('❌ No recordings to delete');
         return;
     }
-    
-    try {
-        const transaction = audioDB.transaction(["audio"], "readwrite");
-        const store = transaction.objectStore("audio");
+
+    return new Promise((resolve) => {
+        const transaction = database.transaction(STORE_NAME, "readwrite");
+        const store = transaction.objectStore(STORE_NAME);
         const request = store.clear();
-        
+
         request.onsuccess = () => {
             showToast('✅ All recordings deleted');
             localStorage.setItem('hasRecordings', 'false');
             updateRecordingStatus();
             updateVoiceIndicator();
+            resolve(true);
         };
-        
+
         request.onerror = () => {
             showToast('❌ Error deleting recordings');
+            resolve(false);
         };
-    } catch (e) {
-        showToast('❌ Error deleting recordings');
-    }
+    });
 }
 
 function updateVoiceIndicator() {
@@ -1659,10 +1923,12 @@ function closeModal() {
     const progressModal = document.getElementById("progress-modal");
     const phonemeModal = document.getElementById("phoneme-modal");
     const helpModal = document.getElementById("help-modal");
+    const bonusModal = document.getElementById("bonus-modal");
     if (decodableModal) decodableModal.classList.add("hidden");
     if (progressModal) progressModal.classList.add("hidden");
     if (phonemeModal) phonemeModal.classList.add("hidden");
     if (helpModal) helpModal.classList.add("hidden");
+    if (bonusModal) bonusModal.classList.add("hidden");
     
     if (document.activeElement) document.activeElement.blur();
     document.body.focus();
@@ -1670,7 +1936,9 @@ function closeModal() {
     // Show bonus content if closing word modal after win
     if (wasGameModalOpen && sessionStorage.getItem('showBonusOnClose') === 'true') {
         sessionStorage.removeItem('showBonusOnClose');
-        setTimeout(() => showBonusContent(), 500);  // Brief delay after modal closes
+        if (shouldShowBonusContent()) {
+            setTimeout(() => showBonusContent(), 300);
+        }
     }
     
     // Auto-start new game after closing win/loss modal
@@ -1786,6 +2054,14 @@ const BONUS_CONTENT = {
     ]
 };
 
+function shouldShowBonusContent() {
+    const frequency = appSettings.bonus?.frequency || 'sometimes';
+    if (frequency === 'off') return false;
+    if (frequency === 'often') return true;
+    if (frequency === 'rare') return Math.random() < 0.2;
+    return Math.random() < 0.4;
+}
+
 function showBonusContent() {
     // Randomly choose joke, fact, or quote
     const types = ['jokes', 'facts', 'quotes'];
@@ -1794,57 +2070,20 @@ function showBonusContent() {
     
     const emoji = type === 'jokes' ? '😄' : type === 'facts' ? '🌟' : '💭';
     const title = type === 'jokes' ? 'Joke Time!' : type === 'facts' ? 'Fun Fact!' : 'Quote of the Day';
-    
-    const popup = document.createElement('div');
-    popup.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 24px 32px;
-        border-radius: 16px;
-        box-shadow: 0 20px 60px rgba(102, 126, 234, 0.5);
-        z-index: 3000;
-        max-width: 500px;
-        text-align: center;
-        font-size: 1.1rem;
-        line-height: 1.6;
-        animation: bonusSlideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-    `;
-    
-    popup.innerHTML = `
-        <div style="font-size: 3rem; margin-bottom: 12px;">${emoji}</div>
-        <div style="font-weight: 700; font-size: 1.3rem; margin-bottom: 12px;">${title}</div>
-        <div style="font-size: 1.05rem; font-weight: 400;">${content}</div>
-    `;
-    
-    document.body.appendChild(popup);
-    
-    setTimeout(() => {
-        popup.style.opacity = '0';
-        popup.style.transform = 'translate(-50%, -50%) scale(0.9)';
-        popup.style.transition = 'all 0.3s ease-out';
-        setTimeout(() => popup.remove(), 300);
-    }, 6000);
-}
 
-// Add bonus animation
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes bonusSlideIn {
-        from {
-            opacity: 0;
-            transform: translate(-50%, -60%) scale(0.8);
-        }
-        to {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
-        }
-    }
-`;
-document.head.appendChild(style);
+    const bonusModal = document.getElementById('bonus-modal');
+    if (!bonusModal) return;
+
+    modalOverlay.classList.remove('hidden');
+    bonusModal.classList.remove('hidden');
+
+    const emojiEl = document.getElementById('bonus-emoji');
+    const titleEl = document.getElementById('bonus-title');
+    const textEl = document.getElementById('bonus-text');
+    if (emojiEl) emojiEl.textContent = emoji;
+    if (titleEl) titleEl.textContent = title;
+    if (textEl) textEl.textContent = content;
+}
 
 /* ==========================================
    NEW FEATURES: Translation, Decodable Texts, Progress, Phoneme Guide
@@ -1991,12 +2230,6 @@ function initNewFeatures() {
     const progressBtn = document.getElementById('progress-btn');
     if (progressBtn) {
         progressBtn.onclick = openProgressModal;
-    }
-    
-    // Phoneme button
-    const phonemeBtn = document.getElementById('phoneme-btn');
-    if (phonemeBtn) {
-        phonemeBtn.onclick = openPhonemeGuide;
     }
     
     // Phoneme cards are created when the phoneme modal opens.
@@ -2190,31 +2423,158 @@ function exportProgressData() {
 
 // Current selected sound for detailed view
 let currentSelectedSound = null;
+let currentSelectedTile = null;
+let soundGuideBuilt = false;
 
-function populatePhonemeGrid() {
-    console.log("Initializing Advanced Articulation Guide...");
-    
-    if (!window.PHONEME_DATA || !window.LETTER_SOUNDS) {
+function populatePhonemeGrid(preselectSound = null) {
+    if (!window.PHONEME_DATA) {
         console.error('Phoneme data not loaded!');
         return;
     }
-    
-    // Setup tab navigation
-    initPhonemeTabNavigation();
-    
-    // Populate all grids
-    populateVowelsGrid();
-    populateConsonantsGrid(); 
-    populateLettersGrid();
-    populateSoundWall();
-    
-    // Setup audio controls
-    initArticulationAudioControls();
 
-    // Initialize mouth animations now that cards exist
-    initPhonemeCards();
-    
-    console.log("✓ Advanced Articulation Guide ready");
+    if (!soundGuideBuilt) {
+        buildVowelRow();
+        buildAlphabetBoard();
+        buildSoundSection('digraph-board', getDigraphSounds());
+        buildSoundSection('blend-board', getBlendSounds());
+        buildSoundSection('vowel-team-board', getVowelTeamSounds(), { vowel: true });
+        buildSoundSection('rcontrolled-board', getRControlledSounds(), { vowel: true });
+        buildSoundSection('welded-board', getWeldedSounds(), { vowel: true });
+        initArticulationAudioControls();
+        soundGuideBuilt = true;
+    }
+
+    const defaultSound = preselectSound || currentSelectedSound?.sound || 'a';
+    selectSoundByKey(defaultSound);
+}
+
+function buildVowelRow() {
+    const vowels = ['a', 'e', 'i', 'o', 'u'];
+    buildSoundSection('vowel-row', vowels, { vowel: true });
+}
+
+function buildAlphabetBoard() {
+    const board = document.getElementById('alphabet-board');
+    if (!board) return;
+    board.innerHTML = '';
+
+    const letters = 'abcdefghijklmnopqrstuvwxyz'.split('');
+    letters.forEach(letter => {
+        const data = getLetterTileData(letter);
+        if (!data) return;
+        const tile = createSoundTile(data.soundKey, data.phoneme, data.label, data.vowel);
+        board.appendChild(tile);
+    });
+}
+
+function buildSoundSection(containerId, sounds, options = {}) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '';
+
+    sounds.forEach(item => {
+        const config = typeof item === 'string' ? { soundKey: item } : item;
+        const phoneme = window.PHONEME_DATA[config.soundKey];
+        if (!phoneme) return;
+        const label = config.label || phoneme.grapheme || config.soundKey;
+        const tile = createSoundTile(config.soundKey, phoneme, label, options.vowel);
+        container.appendChild(tile);
+    });
+}
+
+function getLetterTileData(letter) {
+    const vowels = ['a', 'e', 'i', 'o', 'u'];
+    if (window.PHONEME_DATA[letter]) {
+        return {
+            soundKey: letter,
+            phoneme: window.PHONEME_DATA[letter],
+            label: letter.toUpperCase(),
+            vowel: vowels.includes(letter)
+        };
+    }
+
+    const fallback = {
+        c: { soundKey: 'k', name: 'Hard C', example: 'cat', sound: '/k/' },
+        q: { soundKey: 'k', name: 'Q (kw)', example: 'quit', sound: '/kw/' },
+        x: { soundKey: 'k', name: 'X (ks)', example: 'box', sound: '/ks/' }
+    }[letter];
+
+    if (!fallback || !window.PHONEME_DATA[fallback.soundKey]) return null;
+    const base = window.PHONEME_DATA[fallback.soundKey];
+    return {
+        soundKey: fallback.soundKey,
+        phoneme: {
+            ...base,
+            name: fallback.name,
+            example: fallback.example,
+            sound: fallback.sound,
+            grapheme: letter.toUpperCase(),
+            description: `${fallback.name} as in ${fallback.example}`
+        },
+        label: letter.toUpperCase(),
+        vowel: vowels.includes(letter)
+    };
+}
+
+function getDigraphSounds() {
+    const sounds = ['sh', 'ch', 'th', 'wh', 'ph'];
+    return [
+        ...sounds,
+        { soundKey: 'k', label: 'CK' }
+    ].filter(item => {
+        const key = typeof item === 'string' ? item : item.soundKey;
+        return window.PHONEME_DATA[key];
+    });
+}
+
+function getBlendSounds() {
+    const blends = window.PHONEME_GROUPS?.consonants?.blends || [
+        'bl', 'cl', 'fl', 'gl', 'pl', 'sl',
+        'br', 'cr', 'dr', 'fr', 'gr', 'pr', 'tr',
+        'sk', 'sm', 'sn', 'sp', 'st', 'sw'
+    ];
+    return blends.filter(sound => window.PHONEME_DATA[sound]);
+}
+
+function getVowelTeamSounds() {
+    const vowelTeams = [
+        'ay', 'ee', 'igh', 'oa', 'oo',
+        'ow', 'ou', 'oi', 'oy', 'aw', 'ah'
+    ];
+    return vowelTeams.filter(sound => window.PHONEME_DATA[sound]);
+}
+
+function getRControlledSounds() {
+    const rSounds = ['ar', 'er', 'ir', 'or', 'ur'];
+    return rSounds.filter(sound => window.PHONEME_DATA[sound]);
+}
+
+function getWeldedSounds() {
+    const welded = ['ang', 'ing', 'ong', 'ung', 'ank', 'ink', 'onk', 'unk'];
+    return welded.filter(sound => window.PHONEME_DATA[sound]);
+}
+
+function createSoundTile(soundKey, phoneme, label, isVowel = false) {
+    const tile = document.createElement('button');
+    tile.type = 'button';
+    tile.className = `sound-tile${isVowel ? ' vowel' : ''}`;
+    tile.dataset.sound = soundKey;
+    tile.dataset.label = label;
+    tile.textContent = label.toUpperCase();
+
+    tile.onclick = () => {
+        selectSound(soundKey, phoneme, label, tile);
+    };
+
+    return tile;
+}
+
+function selectSoundByKey(soundKey) {
+    const tile = document.querySelector(`.sound-tile[data-sound="${soundKey}"]`);
+    const phoneme = window.PHONEME_DATA[soundKey];
+    if (phoneme) {
+        selectSound(soundKey, phoneme, phoneme.grapheme || soundKey, tile);
+    }
 }
 
 function initPhonemeTabNavigation() {
@@ -2505,28 +2865,40 @@ function createPhonemeCard(sound, phoneme) {
     return card;
 }
 
-function selectSound(sound, phoneme) {
-    currentSelectedSound = { sound, phoneme };
-    
-    // Show detailed view
+function selectSound(sound, phoneme, labelOverride = null, tile = null) {
+    if (!phoneme) return;
+
+    currentSelectedSound = { sound, phoneme, label: labelOverride };
+
+    if (currentSelectedTile) {
+        currentSelectedTile.classList.remove('selected');
+    }
+    if (tile) {
+        tile.classList.add('selected');
+        currentSelectedTile = tile;
+    }
+
     const display = document.getElementById('selected-sound-display');
-    display.classList.remove('hidden');
-    
-    // Populate detailed information
-    document.getElementById('sound-letter').textContent = (phoneme.grapheme || sound).toUpperCase();
-    document.getElementById('sound-name').textContent = phoneme.name || '';
-    document.getElementById('mouth-cue').textContent = phoneme.cue || '';
-    document.getElementById('mouth-description').textContent = phoneme.description || '';
-    
-    // Update mouth visual
+    if (display) display.classList.remove('hidden');
+
+    const displayLabel = labelOverride || phoneme.grapheme || sound;
+    const soundLetter = document.getElementById('sound-letter');
+    if (soundLetter) soundLetter.textContent = displayLabel.toUpperCase();
+
+    const soundName = document.getElementById('sound-name');
+    if (soundName) soundName.textContent = phoneme.name || '';
+
+    const mouthCue = document.getElementById('mouth-cue');
+    if (mouthCue) mouthCue.textContent = phoneme.cue || '';
+
+    const mouthDescription = document.getElementById('mouth-description');
+    if (mouthDescription) mouthDescription.textContent = phoneme.description || '';
+
     const mouthVisual = document.getElementById('mouth-visual');
     if (mouthVisual) {
         const mouthClass = getMouthClass(phoneme);
         mouthVisual.innerHTML = `<div class="mouth ${mouthClass}"></div>`;
     }
-    
-    // Scroll to top
-    display.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function showLetterSounds(letter) {
@@ -2588,7 +2960,7 @@ function initArticulationAudioControls() {
     if (hearLetterBtn) {
         hearLetterBtn.onclick = () => {
             if (currentSelectedSound) {
-                const grapheme = currentSelectedSound.phoneme.grapheme || currentSelectedSound.sound;
+                const grapheme = currentSelectedSound.label || currentSelectedSound.phoneme.grapheme || currentSelectedSound.sound;
                 speakSpelling(grapheme);
             }
         };
@@ -2743,7 +3115,7 @@ function showPhonemeMouth(sound, phonemeData) {
     }, 8000);
 }
 
-function openPhonemeGuide() {
+function openPhonemeGuide(preselectSound = null) {
     modalOverlay.classList.remove('hidden');
     const phonemeModal = document.getElementById('phoneme-modal');
     if (!phonemeModal) {
@@ -2751,16 +3123,14 @@ function openPhonemeGuide() {
         return;
     }
     phonemeModal.classList.remove('hidden');
-    
-    // Force populate the grid
-    console.log("Opening Sounds Guide - populating phoneme grid...");
+
     try {
         if (typeof populatePhonemeGrid === 'function') {
-            populatePhonemeGrid();
+            populatePhonemeGrid(preselectSound);
         } else {
             console.error("populatePhonemeGrid function not found!");
         }
-    } catch(e) {
+    } catch (e) {
         console.error("Error populating phoneme grid:", e);
     }
 }
@@ -2782,8 +3152,13 @@ function openPhonemeGuide() {
 function getWordTranslation(word, langCode) {
     const wordLower = word.toLowerCase();
     // Use window.TRANSLATIONS from translations.js (loaded via script tag)
-    if (window.TRANSLATIONS && window.TRANSLATIONS[wordLower] && window.TRANSLATIONS[wordLower][langCode]) {
-        return window.TRANSLATIONS[wordLower][langCode];
+    if (window.TRANSLATIONS) {
+        if (typeof window.TRANSLATIONS.getTranslation === 'function') {
+            return window.TRANSLATIONS.getTranslation(wordLower, langCode);
+        }
+        if (window.TRANSLATIONS[wordLower] && window.TRANSLATIONS[wordLower][langCode]) {
+            return window.TRANSLATIONS[wordLower][langCode];
+        }
     }
     return null;
 }
@@ -2847,7 +3222,7 @@ function initTutorial() {
             if (dontShowCheckbox && dontShowCheckbox.checked) {
                 localStorage.setItem('tutorialShown', 'true');
             }
-            welcomeModal.classList.add('hidden');
+            closeModal();
         };
     }
 }
@@ -2874,16 +3249,42 @@ function initFocusToggle() {
     }
 }
 
-// Initialize on page load
-window.addEventListener('DOMContentLoaded', () => {
-    initTutorial();
-    initFocusToggle();
-    
-    // Populate phoneme grid when modal opens
-    const phonemeBtn = document.getElementById('phoneme-btn');
-    if (phonemeBtn) {
-        phonemeBtn.addEventListener('click', () => {
-            setTimeout(() => populatePhonemeGrid(), 100);
-        });
-    }
-});
+function getDismissableModal() {
+    const modals = document.querySelectorAll('.modal');
+    return Array.from(modals).find(modal => {
+        const isVisible = !modal.classList.contains('hidden');
+        const canClose = modal.dataset.overlayClose === 'true';
+        return isVisible && canClose;
+    });
+}
+
+function initModalDismissals() {
+    if (!modalOverlay) return;
+
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target !== modalOverlay) return;
+        const active = getDismissableModal();
+        if (active) {
+            if (active.id === 'welcome-modal') {
+                const startBtn = document.getElementById('start-playing-btn');
+                if (startBtn) return startBtn.click();
+            }
+            closeModal();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        const activeEl = document.activeElement;
+        if (activeEl && ['INPUT', 'TEXTAREA', 'SELECT'].includes(activeEl.tagName)) return;
+        const active = getDismissableModal();
+        if (!active) return;
+        if (active.id === 'welcome-modal') {
+            const startBtn = document.getElementById('start-playing-btn');
+            if (startBtn) return startBtn.click();
+        }
+        closeModal();
+    });
+}
+
+// Initialize on page load handled above.

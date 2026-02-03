@@ -57,8 +57,8 @@ body.hide-mouth-cues #mouth-description {
 /* HEADER - Integrated seamless design */
 header {
     width: 100%; 
-    max-width: 600px; 
-    padding: 10px 16px;
+    max-width: 900px; 
+    padding: 14px 16px 8px;
     background: transparent;
     border: none;
     flex-shrink: 0;
@@ -68,7 +68,9 @@ header {
     display: flex; 
     justify-content: space-between; 
     align-items: center; 
-    margin-bottom: 8px; 
+    gap: 12px;
+    margin-bottom: 10px; 
+    flex-wrap: wrap;
 }
 
 h1 { 
@@ -82,6 +84,7 @@ h1 {
     display: flex; 
     gap: 8px; 
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .text-btn { 
@@ -117,6 +120,21 @@ h1 {
     border-color: #cbd5f5;
 }
 
+#teacher-btn {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background: #f8fafc;
+    color: #1f2937;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#teacher-btn:hover {
+    background: #eef2f7;
+    border-color: #cbd5f5;
+}
+
 .text-btn:hover {
     background: #e8e8e8;
     border-color: #b0b0b0;
@@ -139,13 +157,20 @@ h1 {
 /* Game Setup Controls - Grouped visually */
 .controls { 
     display: grid;
-    grid-template-columns: 2fr 1fr 1.5fr auto;
+    grid-template-columns: minmax(240px, 2fr) minmax(160px, 1fr);
     gap: 12px; 
     align-items: end;
-    margin-bottom: 10px;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
+    margin-bottom: 6px;
+}
+
+@media (max-width: 700px) {
+    .controls {
+        grid-template-columns: 1fr;
+    }
+    .header-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
 }
 
 .control-group { 
@@ -170,6 +195,10 @@ select {
     cursor: pointer;
     width: 100%; /* Stay in grid column */
     max-width: 100%;
+}
+
+#pattern-select {
+    min-width: 260px;
 }
 
 select:focus {
@@ -209,7 +238,6 @@ option:checked {
     padding: 8px 16px; 
     border-radius: 6px; 
     font-weight: 600; 
-    align-self: flex-end; 
     cursor: pointer;
     transition: background 0.2s;
 }
@@ -251,27 +279,21 @@ option:checked {
 
 /* Focus Panel - Collapsible */
 .focus-panel { 
-    position: fixed;
-    top: 180px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 90%;
-    max-width: 600px;
+    position: relative;
+    width: 100%;
+    max-width: 900px;
     background: white; 
     padding: 14px 16px; 
     border-radius: 12px; 
     border: 2px solid #667eea; 
     box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    margin: 0 auto 12px;
     transition: all 0.3s ease;
     opacity: 1;
-    z-index: 100;
-    pointer-events: all;
 }
 
 .focus-panel.hidden {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-20px);
-    pointer-events: none;
+    display: none;
 }
 
 
@@ -390,6 +412,71 @@ option:checked {
     color: #ccc;
 }
 
+/* Warm-up panel */
+.warmup-panel {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto 12px;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.warmup-title {
+    font-weight: 700;
+    color: #1f2937;
+    font-size: 1rem;
+}
+
+.warmup-subtitle {
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+.warmup-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.warmup-btn {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid #cbd5f5;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.warmup-quick {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.warmup-tile {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background: #fefcfb;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.warmup-tile:hover {
+    border-color: #667eea;
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.25);
+}
+
 
 /* UNIFIED GAME CANVAS - Board + Keyboard centered together */
 #game-canvas {
@@ -400,7 +487,7 @@ option:checked {
     justify-content: center;
     width: 100%;
     max-width: 600px;
-    padding: 0 10px;
+    padding: 0 10px 24px;
     gap: 20px; /* Intentional, small gap */
 }
 
@@ -528,6 +615,7 @@ main {
     flex-direction: column; 
     gap: 6px; 
     max-width: 600px;
+    margin-bottom: 12px;
 }
 
 .keyboard-row { 
@@ -643,6 +731,31 @@ main {
     text-align: center; 
 }
 
+#phoneme-modal {
+    max-width: 1100px;
+    width: 95%;
+    overflow: hidden;
+}
+
+#phoneme-modal .modal-content {
+    max-width: none;
+}
+
+.modal-content {
+    position: relative;
+}
+
+.modal .close-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: transparent;
+    border: none;
+    font-size: 1.6rem;
+    cursor: pointer;
+    color: #6b7280;
+}
+
 .top-right-x {
     position: absolute; 
     top: 12px; 
@@ -673,6 +786,32 @@ main {
     margin-bottom: 16px; 
     line-height: 1.5; 
     color: #555; 
+}
+
+.bonus-modal {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-align: center;
+}
+
+.bonus-modal .close-btn {
+    color: rgba(255,255,255,0.7);
+}
+
+.bonus-emoji {
+    font-size: 3rem;
+    margin-bottom: 8px;
+}
+
+.bonus-title {
+    font-weight: 700;
+    font-size: 1.3rem;
+    margin-bottom: 10px;
+}
+
+.bonus-text {
+    font-size: 1.05rem;
+    line-height: 1.6;
 }
 
 /* ---------- Teacher modal layout ---------- */
@@ -814,6 +953,59 @@ main {
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 10px;
+    align-items: center;
+}
+
+#teacher-modal .teacher-voice-row {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+#teacher-modal .teacher-subtext {
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+#teacher-modal .teacher-hint {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-top: 8px;
+}
+
+#teacher-modal .voice-delete-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+#teacher-modal .voice-delete-grid button {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background: #f9fafb;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#teacher-modal .voice-delete-grid button.danger {
+    background: #fee2e2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
+
+#teacher-modal .toggle-row.inline {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 0.85rem;
+    color: #4b5563;
+}
+
+#teacher-modal .toggle-row.select-row {
+    display: grid;
+    gap: 6px;
     align-items: center;
 }
 
@@ -1051,8 +1243,8 @@ main {
 }
 
 .phoneme-card.vowel-card {
-    background: #fff0f6;
-    border-color: #f48fb1;
+    background: #eef2ff;
+    border-color: #c7d2fe;
 }
 
 .phoneme-card:hover {
@@ -1079,8 +1271,8 @@ main {
 }
 
 .phoneme-card.vowel-card:hover {
-    border-color: #e91e63;
-    background: #ffe4f1;
+    border-color: #818cf8;
+    background: #e0e7ff;
 }
 
 .phoneme-letter {
@@ -1105,8 +1297,8 @@ main {
 
 /* Vowel cards get soft blue background */
 .vowel-card {
-    background: #e3f2fd !important;
-    border-color: #90caf9 !important;
+    background: #eef2ff !important;
+    border-color: #c7d2fe !important;
 }
 
 .vowel-card .phoneme-letter {
@@ -1207,6 +1399,7 @@ main {
     top: 55%;
     transform: translate(-50%, -50%);
     transition: all 0.3s ease;
+    animation: none !important;
 }
 
 /* MOUTH SHAPES */
@@ -1897,6 +2090,202 @@ button:active:not(:disabled) {
   margin-bottom: 8px;
 }
 
+/* ========================================
+   SOUNDS WARM-UP GUIDE (UFLI/Wilson-inspired)
+   ======================================== */
+
+.phoneme-modal {
+    max-width: 1000px;
+    padding: 24px;
+}
+
+.sound-guide-subtitle {
+    text-align: center;
+    color: #6b7280;
+    margin: 6px 0 18px;
+    font-size: 0.95rem;
+}
+
+.sound-guide-layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 360px) 1fr;
+    gap: 20px;
+    align-items: start;
+}
+
+.sound-guide-card {
+    position: sticky;
+    top: 0;
+}
+
+.sound-guide-board {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.sound-guide-section {
+    margin-bottom: 16px;
+}
+
+.sound-guide-section h3 {
+    font-size: 0.95rem;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.sound-row,
+.alphabet-board {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
+    gap: 6px;
+}
+
+.alphabet-board.small {
+    grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
+}
+
+.sound-tile {
+    border: 1px solid #d1d5db;
+    background: #fffdfb;
+    border-radius: 8px;
+    padding: 8px 6px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.sound-tile:hover {
+    border-color: #667eea;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+    transform: translateY(-1px);
+}
+
+.sound-tile.vowel {
+    background: #f0f9ff;
+    border-color: #bae6fd;
+    color: #1d4ed8;
+}
+
+.sound-tile.selected {
+    border-color: #667eea;
+    background: #eef2ff;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+}
+
+.selected-sound {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 16px;
+    padding: 18px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.selected-sound::before {
+    content: "";
+    position: absolute;
+    inset: -40%;
+    background: radial-gradient(circle, rgba(255,255,255,0.15), transparent 60%);
+    animation: shimmer 6s ease-in-out infinite;
+}
+
+.sound-card-header {
+    position: relative;
+    z-index: 1;
+    margin-bottom: 12px;
+}
+
+.sound-letter {
+    font-size: 3rem;
+    font-weight: 700;
+}
+
+.sound-name {
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+.sound-card-body {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 12px;
+    align-items: center;
+}
+
+.sound-mouth {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 110px;
+}
+
+.sound-cue {
+    background: rgba(255,255,255,0.18);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: left;
+}
+
+.sound-cue-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    opacity: 0.8;
+    margin-bottom: 6px;
+}
+
+.sound-description {
+    margin-top: 6px;
+    font-size: 0.85rem;
+    opacity: 0.85;
+}
+
+.sound-card-actions {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(80px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.sound-card-actions button {
+    padding: 8px 6px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(255,255,255,0.2);
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.sound-card-actions button:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+@media (max-width: 900px) {
+    .sound-guide-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .sound-guide-board {
+        max-height: none;
+    }
+
+    .sound-guide-card {
+        position: static;
+    }
+
+    .sound-card-actions {
+        grid-template-columns: 1fr;
+    }
+}
+
 .phoneme-example {
   font-size: 0.9rem;
   color: #6b7280;
@@ -1931,6 +2320,26 @@ button:active:not(:disabled) {
     border: 1px solid #ddd;
     border-radius: 6px;
     font-size: 0.9rem;
+}
+
+.translation-pin {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 0.85rem;
+    color: #4b5563;
+}
+
+.translation-pin input {
+    width: 16px;
+    height: 16px;
+}
+
+.translation-pin-status {
+    margin-top: 6px;
+    font-size: 0.8rem;
+    color: #6b7280;
 }
 
 .translation-display {

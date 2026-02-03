@@ -24,12 +24,18 @@
 
 <body>
   <header>
-    <h1>Decode the Word</h1>
+    <div class="header-top">
+      <h1>Decode the Word</h1>
+      <div class="header-actions">
+        <button id="teacher-btn" type="button">🎓 Teacher</button>
+        <button id="new-word-btn" type="button">New Word</button>
+        <a id="madlibs-btn" class="link-btn" href="madlibs.html">Mad Libs</a>
+      </div>
+    </div>
 
     <div class="controls">
-      <button id="case-toggle" type="button">abc</button>
-
-      <label>Focus:
+      <div class="control-group">
+        <label for="pattern-select">Focus</label>
         <select id="pattern-select">
           <option value="all" selected>All Words</option>
           
@@ -59,10 +65,10 @@
           <option value="compound">Compound Words</option>
           <option value="multisyllable">Multisyllabic Words</option>
         </select>
-      </label>
+      </div>
 
-      <label>Length:
-        <!-- Default 5x6 Wordle board -->
+      <div class="control-group">
+        <label for="length-select">Length</label>
         <select id="length-select">
           <option value="traditional" selected>Traditional (5)</option>
           <option value="any">Any Length</option>
@@ -75,28 +81,34 @@
           <option value="9">9</option>
           <option value="10">10</option>
         </select>
-      </label>
-
-      <button id="new-word-btn" type="button">New Word</button>
-
-      <!-- Clear utility buttons with text -->
-      <button id="help-btn" type="button" style="padding: 8px 14px;">❓ Help</button>
-      <button id="focus-toggle-btn" class="mini-btn" type="button" style="padding: 8px 14px;">💡 Hints</button>
-      <button id="phoneme-btn" type="button" style="padding: 8px 14px;">🔤 Sounds</button>
-      
-      <!-- Teacher tools entry point -->
-      <button id="teacher-btn" type="button">🎓 Teacher</button>
-      <a id="madlibs-btn" class="link-btn" href="madlibs.html">Mad Libs</a>
+      </div>
     </div>
   </header>
 
   <main>
     <!-- Minimal Focus Info -->
-    <section id="focus-panel" class="focus-panel hidden">
+    <section id="focus-panel" class="focus-panel">
       <div id="focus-title" class="focus-title" style="font-size: 1.1rem; font-weight: 600; margin-bottom: 4px;"></div>
       <div id="focus-desc" class="focus-desc" style="font-size: 0.85rem; color: #666;"></div>
       <div id="focus-examples" class="focus-examples hidden" style="font-size: 0.85rem; margin-top: 6px; color: #444;"></div>
       <div id="quick-tiles-row" class="quick-tiles-row hidden" style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:10px;"></div>
+    </section>
+
+    <section id="warmup-panel" class="warmup-panel">
+      <div class="warmup-text">
+        <div class="warmup-title">Warm-Up: Sounds</div>
+        <div class="warmup-subtitle">Quick articulation practice before the game.</div>
+      </div>
+      <div class="warmup-actions">
+        <button id="phoneme-btn" type="button" class="warmup-btn">Open Sounds Guide</button>
+        <div class="warmup-quick" aria-label="Quick vowel warm-up">
+          <button class="warmup-tile" type="button" data-sound="a">A</button>
+          <button class="warmup-tile" type="button" data-sound="e">E</button>
+          <button class="warmup-tile" type="button" data-sound="i">I</button>
+          <button class="warmup-tile" type="button" data-sound="o">O</button>
+          <button class="warmup-tile" type="button" data-sound="u">U</button>
+        </div>
+      </div>
     </section>
 
     <!-- Game -->
@@ -121,7 +133,7 @@
   <div id="modal-overlay" class="modal-overlay hidden"></div>
 
   <!-- End / Reveal Modal -->
-  <div id="modal" class="modal hidden">
+  <div id="modal" class="modal hidden" data-overlay-close="true">
     <div class="modal-content">
       <button class="close-btn" type="button">×</button>
 
@@ -145,6 +157,11 @@
             <option value="pt">Português</option>
             <option value="hi">हिन्दी</option>
           </select>
+          <label class="translation-pin">
+            <input type="checkbox" id="pin-language">
+            Remember this language
+          </label>
+          <div id="translation-pin-status" class="translation-pin-status hidden"></div>
         </div>
         <div id="translation-display" class="translation-display hidden">
           <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
@@ -165,8 +182,18 @@
     </div>
   </div>
 
+  <!-- Bonus Modal (Joke / Fun Fact / Quote) -->
+  <div id="bonus-modal" class="modal hidden" data-overlay-close="true">
+    <div class="modal-content bonus-modal">
+      <button class="close-btn" type="button">×</button>
+      <div id="bonus-emoji" class="bonus-emoji"></div>
+      <div id="bonus-title" class="bonus-title"></div>
+      <div id="bonus-text" class="bonus-text"></div>
+    </div>
+  </div>
+
   <!-- Welcome Modal -->
-  <div id="welcome-modal" class="modal hidden">
+  <div id="welcome-modal" class="modal hidden" data-overlay-close="true">
     <div class="modal-content wordle-help" style="max-width: 480px; padding: 24px;">
       <h2 style="margin-bottom: 16px;">How To Play</h2>
       <p style="margin-bottom: 12px;">Guess the word in 6 tries.</p>
@@ -229,6 +256,46 @@
         </select>
       </div>
 
+      <div class="teacher-block">
+        <label>Recorded Voice:</label>
+        <div class="teacher-voice-row">
+          <label class="toggle-row">
+            <input type="checkbox" id="teacher-voice-toggle">
+            Use my recordings when available
+          </label>
+          <div id="recording-count" class="teacher-subtext">No recordings yet</div>
+        </div>
+        <div class="voice-delete-grid">
+          <button id="delete-word-recording" type="button">Delete this word</button>
+          <button id="delete-sentence-recording" type="button">Delete this sentence</button>
+          <button id="delete-phoneme-recording" type="button">Delete this phoneme</button>
+          <button id="delete-all-word-recordings" type="button">Delete all words</button>
+          <button id="delete-all-sentence-recordings" type="button">Delete all sentences</button>
+          <button id="delete-all-recordings" type="button" class="danger">Delete all recordings</button>
+        </div>
+        <div class="teacher-hint">Tip: use Recording Studio to capture word and sentence audio.</div>
+      </div>
+
+      <div class="teacher-block">
+        <label for="translation-default-select">Translation Default:</label>
+        <div class="teacher-row">
+          <select id="translation-default-select">
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="zh">中文</option>
+            <option value="vi">Tiếng Việt</option>
+            <option value="tl">Filipino</option>
+            <option value="pt">Português</option>
+            <option value="hi">हिन्दी</option>
+          </select>
+          <label class="toggle-row inline">
+            <input type="checkbox" id="translation-lock-toggle">
+            Lock for class
+          </label>
+        </div>
+        <div class="teacher-hint">Locked language auto-applies in word reveals until you change it.</div>
+      </div>
+
       <details class="teacher-tools">
         <summary>Classroom Tools</summary>
         <div class="teacher-tools-grid">
@@ -256,6 +323,15 @@
             <label for="speech-rate">Speech rate</label>
             <input type="range" id="speech-rate" min="0.6" max="1.05" step="0.05" value="0.85">
             <span id="speech-rate-value">0.85x</span>
+          </div>
+          <div class="toggle-row select-row">
+            <label for="bonus-frequency">Fun popup frequency</label>
+            <select id="bonus-frequency">
+              <option value="often">Often</option>
+              <option value="sometimes">Sometimes</option>
+              <option value="rare">Rare</option>
+              <option value="off">Off</option>
+            </select>
           </div>
         </div>
       </details>
@@ -332,7 +408,7 @@
         <!-- Sentence -->
         <div style="margin-bottom: 32px;">
           <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">Example Sentence</label>
-          <textarea id="studio-sentence-display" rows="2" style="width: 100%; padding: 12px; font-size: 1rem; border: 2px solid #ddd; border-radius: 8px; font-family: 'Inter', sans-serif; resize: vertical;" placeholder="Sentence will appear here..."></textarea>
+          <textarea id="studio-sentence-display" rows="4" style="width: 100%; padding: 12px; font-size: 1rem; border: 2px solid #ddd; border-radius: 8px; font-family: 'Inter', sans-serif; resize: vertical; min-height: 120px;" placeholder="Sentence will appear here..."></textarea>
         </div>
 
         <!-- Recording Status -->
@@ -386,148 +462,62 @@
 
   <!-- Advanced Phoneme Guide Modal -->
   <div id="phoneme-modal" class="modal hidden">
-    <div class="modal-content phoneme-card-modal" style="max-width: 900px; padding: 24px;">
+    <div class="modal-content phoneme-modal">
       <button class="close-btn" type="button">×</button>
-      <h2 style="text-align: center; margin-bottom: 8px;">Articulation Guide</h2>
-      <p style="text-align: center; color: #666; margin-bottom: 24px;">Master pronunciation with visual mouth cues and sound practice</p>
-      
-      <!-- Navigation Tabs -->
-      <div class="phoneme-tabs" style="display: flex; justify-content: center; margin-bottom: 24px; background: #f8fafc; border-radius: 8px; padding: 4px;">
-        <button class="phoneme-tab active" data-tab="soundwall" style="flex: 1; padding: 8px 16px; border: none; background: white; border-radius: 6px; font-weight: 500; cursor: pointer;">Sound Wall</button>
-        <button class="phoneme-tab" data-tab="vowels" style="flex: 1; padding: 8px 16px; border: none; background: transparent; border-radius: 6px; font-weight: 500; cursor: pointer; color: #6b7280;">Vowels</button>
-        <button class="phoneme-tab" data-tab="consonants" style="flex: 1; padding: 8px 16px; border: none; background: transparent; border-radius: 6px; font-weight: 500; cursor: pointer; color: #6b7280;">Consonants</button>
-        <button class="phoneme-tab" data-tab="letters" style="flex: 1; padding: 8px 16px; border: none; background: transparent; border-radius: 6px; font-weight: 500; cursor: pointer; color: #6b7280;">Letters</button>
-      </div>
-      
-      <!-- Selected Sound Display -->
-      <div id="selected-sound-display" class="selected-sound hidden" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px; padding: 20px; margin-bottom: 24px; text-align: center;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div style="flex: 1;">
-            <div style="font-size: 3rem; font-weight: 700; margin-bottom: 8px;" id="sound-letter"></div>
-            <div style="font-size: 1.2rem; opacity: 0.9;" id="sound-name"></div>
-          </div>
-          <div style="flex: 2; padding: 0 20px;">
-            <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 16px; margin-bottom: 12px;">
-              <div style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 4px;">MOUTH POSITION</div>
-              <div style="font-weight: 600;" id="mouth-cue"></div>
+      <h2>Sounds Warm-Up</h2>
+      <p class="sound-guide-subtitle">Tap a tile to see the articulation card and hear the sound.</p>
+
+      <div class="sound-guide-layout">
+        <div class="sound-guide-card">
+          <div id="selected-sound-display" class="selected-sound">
+            <div class="sound-card-header">
+              <div id="sound-letter" class="sound-letter"></div>
+              <div id="sound-name" class="sound-name"></div>
             </div>
-            <div style="display: flex; gap: 8px;">
-              <button id="hear-letter-name" style="flex: 1; padding: 8px; background: rgba(255,255,255,0.2); border: none; border-radius: 6px; color: white; font-weight: 500; cursor: pointer;">Spelling</button>
-              <button id="hear-example-word" style="flex: 1; padding: 8px; background: rgba(255,255,255,0.2); border: none; border-radius: 6px; color: white; font-weight: 500; cursor: pointer;">Example</button>
-              <button id="hear-phoneme-sound" style="flex: 1; padding: 8px; background: rgba(255,255,255,0.2); border: none; border-radius: 6px; color: white; font-weight: 500; cursor: pointer;">Sound</button>
+            <div class="sound-card-body">
+              <div id="mouth-visual" class="sound-mouth"></div>
+              <div class="sound-cue">
+                <div class="sound-cue-label">Mouth Position</div>
+                <div id="mouth-cue"></div>
+                <div id="mouth-description" class="sound-description"></div>
+              </div>
             </div>
-          </div>
-          <div style="flex: 1; text-align: right;">
-            <div id="mouth-visual"></div>
-            <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 8px;" id="mouth-description"></div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Sound Grid -->
-      <div id="phoneme-content">
-        <!-- Sound Wall Tab -->
-        <div id="soundwall-content" class="tab-content">
-          <details class="soundwall-filters">
-            <summary>Sound Wall Filters</summary>
-            <div class="filter-grid">
-              <label><input type="checkbox" data-section="vowel-valley" checked> Short vowels (valley)</label>
-              <label><input type="checkbox" data-section="long-vowels" checked> Long vowels / teams</label>
-              <label><input type="checkbox" data-section="r-controlled" checked> R-controlled</label>
-              <label><input type="checkbox" data-section="diphthongs" checked> Diphthongs</label>
-              <label><input type="checkbox" data-section="welded" checked> Glued / welded</label>
-              <label><input type="checkbox" data-section="schwa" checked> Schwa</label>
-              <label><input type="checkbox" data-section="consonant-grid" checked> Consonant grid</label>
-              <label><input type="checkbox" data-section="blends" checked> Blends</label>
+            <div class="sound-card-actions">
+              <button id="hear-letter-name" type="button">Letter Name</button>
+              <button id="hear-example-word" type="button">Example Word</button>
+              <button id="hear-phoneme-sound" type="button">Sound</button>
             </div>
-          </details>
-          <div class="soundwall-section" data-section="vowel-valley">
-            <h3>Vowel Valley (Short Vowels)</h3>
-            <div id="vowel-valley" class="vowel-valley"></div>
-          </div>
-          <div class="soundwall-section" data-section="long-vowels">
-            <h3>Long Vowels / Vowel Teams</h3>
-            <div id="soundwall-long-vowels" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
-          </div>
-          <div class="soundwall-section" data-section="r-controlled">
-            <h3>R-Controlled</h3>
-            <div id="soundwall-rcontrolled" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
-          </div>
-          <div class="soundwall-section" data-section="diphthongs">
-            <h3>Diphthongs</h3>
-            <div id="soundwall-diphthongs" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
-          </div>
-          <div class="soundwall-section" data-section="welded">
-            <h3>Glued / Welded</h3>
-            <div id="soundwall-welded" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
-          </div>
-          <div class="soundwall-section" data-section="schwa">
-            <h3>Schwa</h3>
-            <div id="soundwall-schwa" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
-          </div>
-          <div class="soundwall-section" data-section="consonant-grid">
-            <h3>Consonant Grid</h3>
-            <div id="consonant-grid" class="consonant-grid"></div>
-          </div>
-          <div class="soundwall-section" data-section="blends">
-            <h3>Blends</h3>
-            <div id="soundwall-blends" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 10px;"></div>
           </div>
         </div>
 
-        <!-- Vowels Tab -->
-        <div id="vowels-content" class="tab-content hidden">
-          <div class="phoneme-section">
-            <h3>Short Vowels</h3>
-            <div id="vowels-short-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+        <div class="sound-guide-board">
+          <div class="sound-guide-section">
+            <h3>Short Vowels (A‑E‑I‑O‑U)</h3>
+            <div id="vowel-row" class="sound-row"></div>
           </div>
-          <div class="phoneme-section">
-            <h3>Long Vowels / Vowel Teams</h3>
-            <div id="vowels-long-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+          <div class="sound-guide-section">
+            <h3>Alphabet</h3>
+            <div id="alphabet-board" class="alphabet-board"></div>
           </div>
-          <div class="phoneme-section">
-            <h3>R-Controlled</h3>
-            <div id="vowels-rcontrolled-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
-          </div>
-          <div class="phoneme-section">
-            <h3>Diphthongs</h3>
-            <div id="vowels-diphthongs-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
-          </div>
-          <div class="phoneme-section">
-            <h3>Glued / Welded</h3>
-            <div id="vowels-welded-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
-          </div>
-          <div class="phoneme-section">
-            <h3>Schwa</h3>
-            <div id="vowels-schwa-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
-          </div>
-        </div>
-        
-        <!-- Consonants Tab -->
-        <div id="consonants-content" class="tab-content hidden">
-          <div class="phoneme-section">
-            <h3>Single Consonants</h3>
-            <div id="consonants-single-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
-          </div>
-          <div class="phoneme-section">
+          <div class="sound-guide-section">
             <h3>Digraphs</h3>
-            <div id="consonants-digraphs-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+            <div id="digraph-board" class="alphabet-board small"></div>
           </div>
-          <div class="phoneme-section">
+          <div class="sound-guide-section">
             <h3>Blends</h3>
-            <div id="consonants-blends-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+            <div id="blend-board" class="alphabet-board small"></div>
           </div>
-        </div>
-        
-        <!-- Letters Tab -->
-        <div id="letters-content" class="tab-content hidden">
-          <div style="margin-bottom: 16px; text-align: center; color: #6b7280;">
-            Select a letter to explore all its possible sounds
+          <div class="sound-guide-section">
+            <h3>Vowel Teams &amp; Diphthongs</h3>
+            <div id="vowel-team-board" class="alphabet-board small"></div>
           </div>
-          <div id="letters-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px;"></div>
-          <div id="letter-sounds-display" class="hidden" style="margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 8px;">
-            <h4 style="margin: 0 0 12px 0; color: #374151;">Sounds for letter "<span id="selected-letter"></span>":</h4>
-            <div id="letter-sounds-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;"></div>
+          <div class="sound-guide-section">
+            <h3>R-Controlled</h3>
+            <div id="rcontrolled-board" class="alphabet-board small"></div>
+          </div>
+          <div class="sound-guide-section">
+            <h3>Glued / Welded</h3>
+            <div id="welded-board" class="alphabet-board small"></div>
           </div>
         </div>
       </div>
