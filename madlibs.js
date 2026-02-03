@@ -1,28 +1,28 @@
 const TEMPLATES = [
     {
-        id: 'classroom-adventure',
-        title: 'Classroom Adventure',
-        template: 'Today our class visited the {place}. We saw a {adjective} {animal} and it {verb_past} loudly. Everyone felt {feeling}.'
+        id: 'cafeteria-caper',
+        title: 'Cafeteria Caper',
+        template: 'At the {place} cafeteria, lunch smelled like {type_of_food} and {silly_topping}. The chef wore a {adjective} hat and served a {snack} the size of a {animal}.\n\nSuddenly, {silly_name} {verb_past} in and shouted "{silly_sound}!" We all {verb_past} to our seats, giggling with {feeling}.'
     },
     {
-        id: 'space-mission',
-        title: 'Space Mission',
-        template: 'Captain {name} launched the {noun} into space. The crew {verb_past} past a {adjective} planet and discovered a {noun}.'
+        id: 'field-trip-fiasco',
+        title: 'Field Trip Fiasco',
+        template: 'On our field trip, we rode a {vehicle} to the {place}. The guide showed us a {color} {animal} that could {verb} with its {body_part}.\n\nWhen the stormy {weather} hit, our {silly_name} {verb_past} and everyone made a {silly_sound} noise. We stayed cozy and ate {type_of_food}.'
     },
     {
-        id: 'weather-report',
-        title: 'Weather Report',
-        template: 'Good morning! Today will be {adjective} with a chance of {noun_plural}. The wind will {verb} from the {direction}.'
+        id: 'pet-talent-show',
+        title: 'Pet Talent Show',
+        template: 'Welcome to the Pet Talent Show! First up, a {adjective} {animal} named {silly_name} who can {talent}.\n\nThe crowd cheered "{silly_sound}!" and tossed {snack}. The judge laughed so hard they {verb_past} their {body_part}.'
     },
     {
-        id: 'fairy-tale',
-        title: 'Fairy Tale Remix',
-        template: 'Once upon a time, a {adjective} {noun} met a {adjective} {animal}. They decided to {verb} to the {place}.'
+        id: 'weather-wizard',
+        title: 'Weather Wizard',
+        template: 'Today’s forecast: {weather}! A {adjective} wizard used {superpower} to turn the clouds into {type_of_food}.\n\nEveryone {verb_past} outside, waving their {body_part} and chanting "{silly_sound}". It was the most {feeling} day ever.'
     },
     {
-        id: 'sports-day',
-        title: 'Sports Day',
-        template: 'Our team practiced {verb_ing} and felt {feeling}. The coach said, "{interjection}!" We scored a {adjective} win.'
+        id: 'space-snack-attack',
+        title: 'Space Snack Attack',
+        template: 'Captain {silly_name} blasted off toward {planet} with a crate of {snack}. The ship’s computer was {adjective} and kept saying "{silly_sound}".\n\nAn alien with a {body_part} shaped like a {animal} {verb_past} onboard and traded {type_of_food} for a high five. Mission success!'
     }
 ];
 
@@ -30,13 +30,22 @@ const PLACEHOLDER_LABELS = {
     adjective: 'Adjective',
     adverb: 'Adverb',
     animal: 'Animal',
+    body_part: 'Body part',
+    color: 'Color',
     direction: 'Direction',
     feeling: 'Feeling',
     interjection: 'Interjection',
-    name: 'Name',
-    noun: 'Noun',
-    noun_plural: 'Plural Noun',
+    planet: 'Planet',
     place: 'Place',
+    silly_name: 'Silly name',
+    silly_sound: 'Silly sound',
+    silly_topping: 'Silly topping',
+    snack: 'Snack',
+    superpower: 'Superpower',
+    talent: 'Talent',
+    type_of_food: 'Type of food',
+    vehicle: 'Vehicle',
+    weather: 'Type of weather',
     verb: 'Verb',
     verb_ing: 'Verb ending in -ing',
     verb_past: 'Verb (past tense)'
@@ -46,13 +55,22 @@ const PLACEHOLDER_EXAMPLES = {
     adjective: 'Example: bright',
     adverb: 'Example: quickly',
     animal: 'Example: rabbit',
+    body_part: 'Example: elbow',
+    color: 'Example: purple',
     direction: 'Example: north',
     feeling: 'Example: excited',
     interjection: 'Example: wow',
-    name: 'Example: Maya',
-    noun: 'Example: backpack',
-    noun_plural: 'Example: balloons',
+    planet: 'Example: Mars',
     place: 'Example: library',
+    silly_name: 'Example: Captain Giggles',
+    silly_sound: 'Example: boing',
+    silly_topping: 'Example: glitter sauce',
+    snack: 'Example: popcorn',
+    superpower: 'Example: invisibility',
+    talent: 'Example: tap dance',
+    type_of_food: 'Example: spaghetti',
+    vehicle: 'Example: bus',
+    weather: 'Example: thunderstorm',
     verb: 'Example: jump',
     verb_ing: 'Example: jumping',
     verb_past: 'Example: jumped'
@@ -62,13 +80,22 @@ const WORD_BANKS = {
     adjective: ['bright', 'mysterious', 'tiny', 'brave', 'sparkly'],
     adverb: ['quickly', 'quietly', 'happily', 'carefully'],
     animal: ['rabbit', 'dolphin', 'owl', 'turtle'],
+    body_part: ['elbow', 'nose', 'knee', 'toe', 'ear'],
+    color: ['purple', 'turquoise', 'gold', 'lime', 'scarlet'],
     direction: ['north', 'south', 'east', 'west'],
     feeling: ['excited', 'curious', 'proud', 'calm'],
     interjection: ['wow', 'hooray', 'oops', 'yay'],
-    name: ['Maya', 'Noah', 'Ava', 'Liam'],
-    noun: ['backpack', 'rocket', 'lantern', 'puzzle'],
-    noun_plural: ['balloons', 'stories', 'sandwiches', 'dragons'],
+    planet: ['Mars', 'Jupiter', 'Saturn', 'Neptune', 'Pluto'],
     place: ['library', 'park', 'museum', 'playground'],
+    silly_name: ['Captain Giggles', 'Professor Noodle', 'Queen Wobble', 'Sir Sprinkles'],
+    silly_sound: ['boing', 'kaboom', 'meep', 'sploot'],
+    silly_topping: ['glitter sauce', 'marshmallow fog', 'rainbow sprinkles'],
+    snack: ['popcorn', 'pretzels', 'apple slices', 'graham crackers'],
+    superpower: ['invisibility', 'super speed', 'ice breath', 'giant jumps'],
+    talent: ['tap dance', 'juggle', 'sing opera', 'do backflips'],
+    type_of_food: ['spaghetti', 'tacos', 'pancakes', 'dumplings'],
+    vehicle: ['bus', 'train', 'submarine', 'hot-air balloon'],
+    weather: ['rainstorm', 'snowy day', 'windy weather', 'sunny skies'],
     verb: ['jump', 'explore', 'build', 'discover'],
     verb_ing: ['jumping', 'exploring', 'building', 'discovering'],
     verb_past: ['jumped', 'explored', 'built', 'discovered']

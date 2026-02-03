@@ -18,6 +18,7 @@ let lengthAutoSet = false;
 let patternLengthCache = null;
 let voicesReadyPromise = null;
 let speechStartTimeout = null;
+let modalDismissBound = false;
 
 // DOM Elements - will be initialized after DOM loads
 let board, keyboard, modalOverlay, welcomeModal, teacherModal, studioModal, gameModal;
@@ -33,6 +34,15 @@ const DEFAULT_SETTINGS = {
     speechRate: 0.85,
     voiceDialect: 'en-US',
     autoHear: true,
+    funHud: {
+        enabled: true,
+        coins: 0,
+        hearts: 3,
+        maxHearts: 3,
+        challenge: false,
+        sfx: false,
+        style: 'playful'
+    },
     translation: {
         pinned: false,
         lang: 'en'
@@ -164,6 +174,10 @@ function loadSettings() {
         appSettings = {
             ...DEFAULT_SETTINGS,
             ...parsed,
+            funHud: {
+                ...DEFAULT_SETTINGS.funHud,
+                ...(parsed.funHud || {})
+            },
             translation: {
                 ...DEFAULT_SETTINGS.translation,
                 ...(parsed.translation || {})
@@ -199,6 +213,7 @@ function applySettings() {
     document.body.classList.toggle('hide-ipa', !appSettings.showIPA);
     document.body.classList.toggle('hide-examples', !appSettings.showExamples);
     document.body.classList.toggle('hide-mouth-cues', !appSettings.showMouthCues);
+    updateFunHudVisibility();
 
     const calmToggle = document.getElementById('toggle-calm-mode');
     if (calmToggle) calmToggle.checked = appSettings.calmMode;
@@ -283,10 +298,13 @@ document.addEventListener("DOMContentLoaded", () => {
     initWarmupButtons();
     initKeyboard();
     initVoiceLoader(); 
+    notifyMissingEnglishVoice();
+    updateFunHudVisibility();
     initStudio();
     initNewFeatures();
     initTutorial();
     initFocusToggle();
+    enableOverlayCloseForAllModals();
     initModalDismissals();
     initVoiceSourceControls(); // Voice source toggle
     initTeacherTools();
@@ -304,6 +322,99 @@ document.addEventListener("DOMContentLoaded", () => {
     checkFirstTimeVisitor();
 });
 
+function enableOverlayCloseForAllModals() {
+    if (modalDismissBound) return;
+    const modals = getAllModalElements();
+    modals.forEach(modal => {
+        modal.dataset.overlayClose = 'true';
+    });
+    modalDismissBound = true;
+}
+
+function ensureFunHud() {
+    let hud = document.getElementById('fun-hud');
+    if (!hud) {
+        hud = document.createElement('div');
+        hud.id = 'fun-hud';
+        hud.className = 'fun-hud hidden';
+        hud.innerHTML = `
+            <div class="fun-hud-item">
+                <span class="fun-hud-icon">❤️</span>
+                <span class="fun-hud-value" id="fun-hud-hearts">3</span>
+            </div>
+            <div class="fun-hud-item">
+                <span class="fun-hud-icon">🪙</span>
+                <span class="fun-hud-value" id="fun-hud-coins">0</span>
+            </div>
+        `;
+        document.body.appendChild(hud);
+    }
+    return hud;
+}
+
+function renderFunHud() {
+    const maxHearts = appSettings.funHud?.maxHearts ?? 3;
+    if (!appSettings.funHud?.hearts || appSettings.funHud.hearts < 1) {
+        appSettings.funHud.hearts = maxHearts;
+    }
+    const hearts = document.getElementById('fun-hud-hearts');
+    const coins = document.getElementById('fun-hud-coins');
+    if (hearts) hearts.textContent = String(appSettings.funHud?.hearts ?? 3);
+    if (coins) coins.textContent = String(appSettings.funHud?.coins ?? 0);
+}
+
+function updateFunHudVisibility() {
+    const hud = ensureFunHud();
+    const enabled = !!appSettings.funHud?.enabled;
+    hud.classList.toggle('hidden', !enabled);
+    document.body.classList.toggle('fun-mode', enabled);
+    document.body.classList.toggle('fun-studio', enabled && appSettings.funHud?.style === 'studio');
+    if (enabled) renderFunHud();
+}
+
+function applyFunHudOutcome(win) {
+    if (!appSettings.funHud?.enabled) return;
+    const maxHearts = appSettings.funHud?.maxHearts ?? 3;
+    let hearts = appSettings.funHud?.hearts ?? maxHearts;
+    if (appSettings.funHud?.challenge) {
+        hearts = win ? Math.min(maxHearts, hearts + 1) : Math.max(1, hearts - 1);
+    }
+    appSettings.funHud.hearts = hearts;
+    saveSettings();
+    renderFunHud();
+}
+
+let funAudioContext = null;
+function playFunChime(type = 'win') {
+    if (!appSettings.funHud?.sfx) return;
+    try {
+        if (!funAudioContext) {
+            funAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        const ctx = funAudioContext;
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        const base = type === 'win' ? 660 : 520;
+        osc.frequency.setValueAtTime(base, now);
+        osc.frequency.exponentialRampToValueAtTime(base * 1.25, now + 0.12);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.12, now + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.4);
+    } catch (e) {
+        console.warn('SFX unavailable', e);
+    }
+}
+
+function getAllModalElements() {
+    return Array.from(document.querySelectorAll('.modal, [role="dialog"], [id$="-modal"], [id$="modal"]'));
+}
+
 /* --- VOICE LOADING & PICKER --- */
 function initVoiceLoader() {
     const voiceSelect = document.getElementById("system-voice-select");
@@ -311,6 +422,7 @@ function initVoiceLoader() {
     const load = () => {
         cachedVoices = window.speechSynthesis.getVoices();
         populateVoiceList();
+        updateVoiceInstallPrompt();
     };
 
     const populateVoiceList = () => {
@@ -533,7 +645,18 @@ function ensureTranslationAudioNote() {
 }
 
 function getVoiceInstallHint() {
-    return 'Install enhanced voices in System Settings → Accessibility → Spoken Content → System Voice → Manage Voices.';
+    return 'Install enhanced voices in System Settings → Accessibility → Spoken Content → System Voice → Manage Voices. Voices can take a moment to load the first time.';
+}
+
+async function notifyMissingEnglishVoice() {
+    const voices = await getVoicesAsync();
+    const dialect = getPreferredEnglishDialect();
+    const hasHighQuality = !!pickBestVoiceForLang(voices, dialect, { requireHighQuality: true }) ||
+        (dialect !== 'en' && !!pickBestVoiceForLang(voices, 'en', { requireHighQuality: true }));
+    if (!hasHighQuality && !localStorage.getItem('hq_english_voice_notice')) {
+        showToast('Install enhanced English voices for clearer phoneme audio.');
+        localStorage.setItem('hq_english_voice_notice', 'true');
+    }
 }
 
 function setTranslationAudioNote(message, withTooltip = false) {
@@ -819,7 +942,9 @@ function initWarmupButtons() {
 
 function initTeacherTools() {
     ensureVoiceQualityHint();
+    updateVoiceInstallPrompt();
     ensureAutoHearToggle();
+    ensureFunHudControls();
     const calmToggle = document.getElementById('toggle-calm-mode');
     if (calmToggle) {
         calmToggle.onchange = () => {
@@ -919,9 +1044,43 @@ function ensureVoiceQualityHint() {
         hint.id = 'voice-quality-hint';
         hint.className = 'voice-quality-hint';
         const tip = getVoiceInstallHint();
-        hint.innerHTML = `Enhanced voices <span class="tiny-tooltip" title="${tip}" aria-label="${tip}">ⓘ</span>`;
+        hint.innerHTML = `Enhanced voices (may load after first play) <span class="tiny-tooltip" title="${tip}" aria-label="${tip}">ⓘ</span>`;
         voiceSelect.insertAdjacentElement('afterend', hint);
     }
+}
+
+function ensureVoiceInstallPrompt() {
+    const voiceSelect = document.getElementById('system-voice-select');
+    if (!voiceSelect) return null;
+    let row = document.getElementById('voice-install-row');
+    if (!row) {
+        row = document.createElement('div');
+        row.id = 'voice-install-row';
+        row.className = 'voice-install-row hidden';
+        row.innerHTML = `
+            <button type="button" id="voice-install-btn">Install better voices</button>
+            <span>Boost clarity for phonemes and definitions.</span>
+        `;
+        voiceSelect.insertAdjacentElement('afterend', row);
+    }
+    const btn = row.querySelector('#voice-install-btn');
+    if (btn && !btn.dataset.bound) {
+        btn.dataset.bound = 'true';
+        btn.onclick = () => {
+            alert(getVoiceInstallHint());
+        };
+    }
+    return row;
+}
+
+async function updateVoiceInstallPrompt() {
+    const row = ensureVoiceInstallPrompt();
+    if (!row) return;
+    const voices = await getVoicesAsync();
+    const dialect = getPreferredEnglishDialect();
+    const hasHQ = !!pickBestVoiceForLang(voices, dialect, { requireHighQuality: true }) ||
+        (dialect !== 'en' && !!pickBestVoiceForLang(voices, 'en', { requireHighQuality: true }));
+    row.classList.toggle('hidden', hasHQ);
 }
 
 function ensureAutoHearToggle() {
@@ -936,6 +1095,94 @@ function ensureAutoHearToggle() {
         Auto-play word, definition, and sentence
     `;
     grid.appendChild(row);
+}
+
+function ensureFunHudControls() {
+    const grid = document.querySelector('#teacher-modal .teacher-tools-grid');
+    if (!grid) return;
+    if (document.getElementById('toggle-fun-hud')) return;
+
+    const row = document.createElement('label');
+    row.className = 'toggle-row';
+    row.innerHTML = `
+        <input type="checkbox" id="toggle-fun-hud" />
+        Fun mode (coins & hearts)
+    `;
+    grid.appendChild(row);
+
+    const toggle = row.querySelector('#toggle-fun-hud');
+    toggle.checked = !!appSettings.funHud?.enabled;
+    toggle.onchange = () => {
+        appSettings.funHud.enabled = toggle.checked;
+        saveSettings();
+        updateFunHudVisibility();
+    };
+
+    const modeRow = document.createElement('label');
+    modeRow.className = 'toggle-row';
+    modeRow.innerHTML = `
+        <input type="checkbox" id="toggle-fun-challenge" />
+        Hearts change on wins/losses
+    `;
+    grid.appendChild(modeRow);
+
+    const sfxRow = document.createElement('label');
+    sfxRow.className = 'toggle-row';
+    sfxRow.innerHTML = `
+        <input type="checkbox" id="toggle-fun-sfx" />
+        Tiny reward sounds
+    `;
+    grid.appendChild(sfxRow);
+
+    const styleRow = document.createElement('label');
+    styleRow.className = 'toggle-row select-row';
+    styleRow.innerHTML = `
+        <span>Fun style</span>
+        <select id="fun-style-select">
+            <option value="playful">Playful</option>
+            <option value="studio">Studio</option>
+        </select>
+    `;
+    grid.appendChild(styleRow);
+
+    const resetRow = document.createElement('div');
+    resetRow.className = 'toggle-row inline';
+    resetRow.innerHTML = `
+        <button type="button" id="reset-fun-hud" class="teacher-secondary-btn">Reset fun counters</button>
+    `;
+    grid.appendChild(resetRow);
+
+    const challengeToggle = modeRow.querySelector('#toggle-fun-challenge');
+    challengeToggle.checked = !!appSettings.funHud?.challenge;
+    challengeToggle.onchange = () => {
+        appSettings.funHud.challenge = challengeToggle.checked;
+        saveSettings();
+        renderFunHud();
+    };
+
+    const sfxToggle = sfxRow.querySelector('#toggle-fun-sfx');
+    sfxToggle.checked = !!appSettings.funHud?.sfx;
+    sfxToggle.onchange = () => {
+        appSettings.funHud.sfx = sfxToggle.checked;
+        saveSettings();
+    };
+
+    const styleSelect = styleRow.querySelector('#fun-style-select');
+    styleSelect.value = appSettings.funHud?.style || 'playful';
+    styleSelect.onchange = () => {
+        appSettings.funHud.style = styleSelect.value;
+        saveSettings();
+        updateFunHudVisibility();
+    };
+
+    const resetBtn = resetRow.querySelector('#reset-fun-hud');
+    resetBtn.onclick = () => {
+        appSettings.funHud.coins = 0;
+        appSettings.funHud.hearts = appSettings.funHud.maxHearts || 3;
+        saveSettings();
+        renderFunHud();
+        showToast('Fun counters reset.');
+    };
 }
 
 function initSoundWallFilters() {
@@ -1613,8 +1860,8 @@ function detectPrimarySound(word) {
 function speakPhoneme(sound) {
     if (!sound) return;
     const phonemeData = window.PHONEME_DATA ? window.PHONEME_DATA[sound.toLowerCase()] : null;
-    const text = phonemeData ? getPhonemeTts(phonemeData) : sound;
-    speakText(text);
+    const text = phonemeData ? getPhonemeTts(phonemeData, sound) : sound;
+    speakText(text, 'phoneme');
 }
 
 function canShowMouthPosition(sound) {
@@ -1932,6 +2179,65 @@ function prepareTranslationSection() {
     return section;
 }
 
+function ensureTranslationElements(modalContent) {
+    const container = modalContent || document;
+    const translationSelector = container.querySelector('.translation-selector') || document.querySelector('.translation-selector');
+
+    let translationDisplay = document.getElementById('translation-display');
+    if (!translationDisplay) {
+        translationDisplay = document.createElement('div');
+        translationDisplay.id = 'translation-display';
+        translationDisplay.className = 'translation-display hidden';
+    }
+
+    let translatedDef = document.getElementById('translated-def');
+    if (!translatedDef) {
+        translatedDef = document.createElement('div');
+        translatedDef.id = 'translated-def';
+        translationDisplay.appendChild(translatedDef);
+    }
+
+    let translatedSentence = document.getElementById('translated-sentence');
+    if (!translatedSentence) {
+        translatedSentence = document.createElement('div');
+        translatedSentence.id = 'translated-sentence';
+        translationDisplay.appendChild(translatedSentence);
+    }
+
+    let audioRow = translationDisplay.querySelector('.translation-audio-row');
+    if (!audioRow) {
+        audioRow = document.createElement('div');
+        audioRow.className = 'translation-audio-row';
+        translationDisplay.appendChild(audioRow);
+    }
+
+    let playTranslatedDef = document.getElementById('play-translated-def');
+    if (!playTranslatedDef) {
+        playTranslatedDef = document.createElement('button');
+        playTranslatedDef.id = 'play-translated-def';
+        playTranslatedDef.type = 'button';
+        playTranslatedDef.textContent = 'Hear Definition';
+    }
+    if (audioRow && !audioRow.contains(playTranslatedDef)) audioRow.appendChild(playTranslatedDef);
+
+    let playTranslatedSentence = document.getElementById('play-translated-sentence');
+    if (!playTranslatedSentence) {
+        playTranslatedSentence = document.createElement('button');
+        playTranslatedSentence.id = 'play-translated-sentence';
+        playTranslatedSentence.type = 'button';
+        playTranslatedSentence.textContent = 'Hear Sentence';
+    }
+    if (audioRow && !audioRow.contains(playTranslatedSentence)) audioRow.appendChild(playTranslatedSentence);
+
+    if (translationSelector && !translationSelector.contains(translationDisplay)) {
+        translationSelector.appendChild(translationDisplay);
+    } else if (modalContent && !modalContent.contains(translationDisplay)) {
+        modalContent.appendChild(translationDisplay);
+    }
+
+    return { translationDisplay, translatedDef, translatedSentence, playTranslatedDef, playTranslatedSentence, translationSelector };
+}
+
 function setupModalAudioControls(definitionText, sentenceText) {
     if (!gameModal) return;
     const modalContent = gameModal.querySelector('.modal-content') || gameModal;
@@ -1951,12 +2257,18 @@ function setupModalAudioControls(definitionText, sentenceText) {
         actionRow.className = 'modal-action-row';
     }
 
-    const speakBtn = document.getElementById('speak-btn');
-    if (speakBtn) {
-        speakBtn.textContent = 'Hear Word';
-        speakBtn.classList.add('modal-audio-btn');
-        if (!audioControls.contains(speakBtn)) audioControls.appendChild(speakBtn);
+    let speakBtn = document.getElementById('speak-btn');
+    if (!speakBtn) {
+        speakBtn = document.createElement('button');
+        speakBtn.id = 'speak-btn';
+        speakBtn.type = 'button';
     }
+    speakBtn.textContent = 'Hear Word';
+    speakBtn.classList.add('modal-audio-btn');
+    speakBtn.onclick = () => {
+        if (currentWord) speak(currentWord, 'word');
+    };
+    if (!audioControls.contains(speakBtn)) audioControls.appendChild(speakBtn);
 
     let defBtn = document.getElementById('modal-hear-def');
     if (!defBtn) {
@@ -2007,6 +2319,7 @@ function showEndModal(win) {
     
     modalOverlay.classList.remove("hidden");
     gameModal.classList.remove("hidden");
+    gameModal.dataset.overlayClose = 'true';
     gameModal.classList.toggle("win", win);
     gameModal.classList.toggle("loss", !win);
     document.getElementById("modal-title").textContent = win ? "Great Job!" : "Nice Try!";
@@ -2034,14 +2347,22 @@ function showEndModal(win) {
     document.getElementById("modal-sentence").textContent = `"${sentence}"`;
 
     setupModalAudioControls(def, sentence);
+
+    if (win && appSettings.funHud?.enabled) {
+        appSettings.funHud.coins = (appSettings.funHud.coins || 0) + 1;
+        saveSettings();
+        renderFunHud();
+    }
     
     // Set up translation dropdown functionality
     const languageSelect = document.getElementById("language-select");
-    const translationDisplay = document.getElementById("translation-display");
-    const translatedDef = document.getElementById("translated-def");
-    const translatedSentence = document.getElementById("translated-sentence");
-    const playTranslatedDef = document.getElementById("play-translated-def");
-    const playTranslatedSentence = document.getElementById("play-translated-sentence");
+    const modalContent = gameModal.querySelector('.modal-content') || gameModal;
+    const translationElements = ensureTranslationElements(modalContent);
+    const translationDisplay = translationElements.translationDisplay;
+    const translatedDef = translationElements.translatedDef;
+    const translatedSentence = translationElements.translatedSentence;
+    const playTranslatedDef = translationElements.playTranslatedDef;
+    const playTranslatedSentence = translationElements.playTranslatedSentence;
     
     const pinCheckbox = document.getElementById("pin-language");
     const pinStatus = document.getElementById("translation-pin-status");
@@ -2867,7 +3188,10 @@ function populatePhonemeGrid(preselectSound = null) {
         buildAlphabetBoard();
         buildSoundSection('digraph-board', getDigraphSounds());
         buildSoundSection('blend-board', getBlendSounds());
-        buildSoundSection('vowel-team-board', getVowelTeamSounds(), { vowel: true });
+        buildSoundSectionGrouped('vowel-team-board', [
+            { title: 'Vowel Teams', sounds: getVowelTeamOnlySounds() },
+            { title: 'Diphthongs', sounds: getDiphthongSounds() }
+        ], { vowel: true });
         buildSoundSection('rcontrolled-board', getRControlledSounds(), { vowel: true });
         buildSoundSection('welded-board', getWeldedSounds(), { vowel: true });
         initArticulationAudioControls();
@@ -2909,6 +3233,38 @@ function buildSoundSection(containerId, sounds, options = {}) {
         const label = config.label || phoneme.grapheme || config.soundKey;
         const tile = createSoundTile(config.soundKey, phoneme, label, options.vowel);
         container.appendChild(tile);
+    });
+}
+
+function buildSoundSectionGrouped(containerId, groups, options = {}) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '';
+
+    groups.forEach(group => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'sound-subsection';
+
+        if (group.title) {
+            const heading = document.createElement('div');
+            heading.className = 'sound-subsection-title';
+            heading.textContent = group.title;
+            wrapper.appendChild(heading);
+        }
+
+        const row = document.createElement('div');
+        row.className = 'sound-row';
+        group.sounds.forEach(item => {
+            const config = typeof item === 'string' ? { soundKey: item } : item;
+            const phoneme = window.PHONEME_DATA[config.soundKey];
+            if (!phoneme) return;
+            const label = config.label || phoneme.grapheme || config.soundKey;
+            const tile = createSoundTile(config.soundKey, phoneme, label, options.vowel);
+            row.appendChild(tile);
+        });
+
+        wrapper.appendChild(row);
+        container.appendChild(wrapper);
     });
 }
 
@@ -2967,11 +3323,19 @@ function getBlendSounds() {
 }
 
 function getVowelTeamSounds() {
-    const vowelTeams = [
-        'ay', 'ee', 'igh', 'oa', 'oo',
-        'ow', 'ou', 'oi', 'oy', 'aw', 'ah'
-    ];
-    return vowelTeams.filter(sound => window.PHONEME_DATA[sound]);
+    return getVowelTeamOnlySounds();
+}
+
+function getVowelTeamOnlySounds() {
+    const fallback = ['ay', 'ee', 'igh', 'oa', 'oo', 'ah'];
+    const fromGroups = window.PHONEME_GROUPS?.vowels?.long || fallback;
+    return fromGroups.filter(sound => window.PHONEME_DATA[sound]);
+}
+
+function getDiphthongSounds() {
+    const fallback = ['ow', 'ou', 'oi', 'oy', 'aw'];
+    const fromGroups = window.PHONEME_GROUPS?.vowels?.diphthongs || fallback;
+    return fromGroups.filter(sound => window.PHONEME_DATA[sound]);
 }
 
 function getRControlledSounds() {
@@ -3295,6 +3659,49 @@ function createPhonemeCard(sound, phoneme) {
     return card;
 }
 
+function getSoundNameLabel(phoneme) {
+    if (!phoneme || !phoneme.name) return '';
+    const label = phoneme.name.toString();
+    const lowered = label.toLowerCase();
+    if (lowered.includes('blend') || lowered.includes('digraph') || lowered.includes('sound')) return '';
+    return label;
+}
+
+function ensureArticulationCard(phoneme) {
+    let display = document.getElementById('selected-sound-display');
+    if (!display) {
+        display = document.querySelector('.sound-guide-card') || document.querySelector('.sound-guide-layout');
+    }
+    if (!display || !phoneme) return;
+    let card = document.getElementById('articulation-card');
+    if (!card) {
+        card = document.createElement('div');
+        card.id = 'articulation-card';
+        card.className = 'articulation-card';
+        card.innerHTML = `
+            <div class="articulation-title">Articulation Card</div>
+            <div class="articulation-visual">
+                <div class="articulation-mouth"><div class="mouth"></div></div>
+            </div>
+            <div class="articulation-caption"></div>
+        `;
+        const selectedCard = display.querySelector('.selected-sound') || display.firstElementChild;
+        if (selectedCard) {
+            selectedCard.insertAdjacentElement('afterend', card);
+        } else {
+            display.appendChild(card);
+        }
+    }
+    const mouth = card.querySelector('.articulation-mouth .mouth');
+    if (mouth) {
+        mouth.className = `mouth ${getMouthClass(phoneme)}`;
+    }
+    const caption = card.querySelector('.articulation-caption');
+    if (caption) {
+        caption.textContent = phoneme.cue || phoneme.description || '';
+    }
+}
+
 function selectSound(sound, phoneme, labelOverride = null, tile = null) {
     if (!phoneme) return;
 
@@ -3316,7 +3723,11 @@ function selectSound(sound, phoneme, labelOverride = null, tile = null) {
     if (soundLetter) soundLetter.textContent = displayLabel.toUpperCase();
 
     const soundName = document.getElementById('sound-name');
-    if (soundName) soundName.textContent = phoneme.name || '';
+    if (soundName) {
+        const label = getSoundNameLabel(phoneme);
+        soundName.textContent = label;
+        soundName.classList.toggle('hidden', !label);
+    }
 
     const mouthCue = document.getElementById('mouth-cue');
     if (mouthCue) mouthCue.textContent = phoneme.cue || '';
@@ -3329,6 +3740,8 @@ function selectSound(sound, phoneme, labelOverride = null, tile = null) {
         const mouthClass = getMouthClass(phoneme);
         mouthVisual.innerHTML = `<div class="mouth ${mouthClass}"></div>`;
     }
+
+    ensureArticulationCard(phoneme);
 }
 
 function showLetterSounds(letter) {
@@ -3407,7 +3820,7 @@ function initArticulationAudioControls() {
     if (hearSoundBtn) {
         hearSoundBtn.onclick = () => {
             if (currentSelectedSound) {
-                speakPhonemeSound(currentSelectedSound.phoneme);
+                speakPhonemeSound(currentSelectedSound.phoneme, currentSelectedSound.sound);
             }
         };
     }
@@ -3423,7 +3836,7 @@ function playLetterSequence(letter, word, phoneme) {
 
     setTimeout(() => {
         const phonemeData = window.getPhonemeData ? window.getPhonemeData(phoneme) : null;
-        speakPhonemeSound(phonemeData);
+        speakPhonemeSound(phonemeData, phoneme);
     }, 1800);
 }
 
@@ -3454,16 +3867,60 @@ function speakSpelling(grapheme) {
     speakText(letters, 'phoneme');
 }
 
-function getPhonemeTts(phoneme) {
-    if (!phoneme) return '';
-    if (phoneme.tts) return phoneme.tts;
-    if (phoneme.name && phoneme.example) return `${phoneme.name}, as in ${phoneme.example}`;
-    if (phoneme.example) return phoneme.example;
-    return phoneme.sound || '';
+function normalizePhonemeForTTS(sound) {
+    if (!sound) return '';
+    let cleaned = sound.toString().replace(/[\/\[\]]/g, '').trim();
+    const multiMap = {
+        'iː': 'ee',
+        'uː': 'oo',
+        'eɪ': 'ay',
+        'aɪ': 'eye',
+        'oʊ': 'oh',
+        'aʊ': 'ow',
+        'ɔɪ': 'oy',
+        'ɜː': 'er'
+    };
+    Object.entries(multiMap).forEach(([key, value]) => {
+        cleaned = cleaned.replace(new RegExp(key, 'g'), value);
+    });
+    const charMap = {
+        'æ': 'a',
+        'ɑ': 'ah',
+        'ɒ': 'o',
+        'ɔ': 'aw',
+        'ə': 'uh',
+        'ʌ': 'uh',
+        'ɛ': 'eh',
+        'ɪ': 'ih',
+        'ʊ': 'oo',
+        'ʃ': 'sh',
+        'ʒ': 'zh',
+        'ʧ': 'ch',
+        'ʤ': 'j',
+        'θ': 'th',
+        'ð': 'th',
+        'ŋ': 'ng',
+        'ɜ': 'er',
+        'ː': ''
+    };
+    cleaned = cleaned.replace(/[æɑɒɔəʌɛɪʊʃʒʧʤθðŋɜː]/g, (match) => charMap[match] || match);
+    return cleaned.replace(/\s+/g, ' ').trim();
 }
 
-function speakPhonemeSound(phoneme) {
-    const tts = getPhonemeTts(phoneme);
+function getPhonemeTts(phoneme, soundKey = '') {
+    if (!phoneme) return '';
+    if (phoneme.tts) return phoneme.tts;
+    const rawSound = phoneme.sound ? phoneme.sound.toString().replace(/[\/\[\]]/g, '').trim() : '';
+    const normalized = normalizePhonemeForTTS(rawSound);
+    if (normalized) return normalized;
+    if (rawSound) return rawSound;
+    if (phoneme.grapheme) return phoneme.grapheme.toString().toLowerCase();
+    if (soundKey) return soundKey.toString().toLowerCase();
+    return '';
+}
+
+function speakPhonemeSound(phoneme, soundKey = '') {
+    const tts = getPhonemeTts(phoneme, soundKey);
     if (!tts) return;
     speakText(tts, 'phoneme');
 }
@@ -3689,8 +4146,8 @@ function initFocusToggle() {
 }
 
 function getDismissableModal() {
-    const modals = document.querySelectorAll('.modal');
-    return Array.from(modals).find(modal => {
+    const modals = getAllModalElements();
+    return modals.find(modal => {
         const isVisible = !modal.classList.contains('hidden');
         const canClose = modal.dataset.overlayClose === 'true';
         return isVisible && canClose;
