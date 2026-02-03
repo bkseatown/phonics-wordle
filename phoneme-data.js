@@ -304,5 +304,66 @@
         return window.PHONEME_DATA[firstChar] || null;
     };
 
+    // Letters with multiple sounds - Advanced Articulation System
+    window.LETTER_SOUNDS = {
+        'a': [
+            { sound: '/æ/', name: 'Short A', example: 'cat', phoneme: 'a' },
+            { sound: '/eɪ/', name: 'Long A', example: 'cake', phoneme: 'ay' },
+            { sound: '/ɑ/', name: 'Broad A', example: 'father', phoneme: 'ah' }
+        ],
+        'c': [
+            { sound: '/k/', name: 'Hard C', example: 'cat', phoneme: 'k' },
+            { sound: '/s/', name: 'Soft C', example: 'city', phoneme: 's' }
+        ],
+        'g': [
+            { sound: '/g/', name: 'Hard G', example: 'go', phoneme: 'g' },
+            { sound: '/ʤ/', name: 'Soft G', example: 'gem', phoneme: 'j' }
+        ],
+        'e': [
+            { sound: '/ɛ/', name: 'Short E', example: 'bed', phoneme: 'e' },
+            { sound: '/iː/', name: 'Long E', example: 'me', phoneme: 'ee' }
+        ],
+        'i': [
+            { sound: '/ɪ/', name: 'Short I', example: 'sit', phoneme: 'i' },
+            { sound: '/aɪ/', name: 'Long I', example: 'kite', phoneme: 'igh' }
+        ],
+        'o': [
+            { sound: '/ɒ/', name: 'Short O', example: 'hot', phoneme: 'o' },
+            { sound: '/oʊ/', name: 'Long O', example: 'hope', phoneme: 'oa' }
+        ],
+        'u': [
+            { sound: '/ʌ/', name: 'Short U', example: 'cup', phoneme: 'u' },
+            { sound: '/uː/', name: 'Long U', example: 'cute', phoneme: 'oo' }
+        ],
+        's': [
+            { sound: '/s/', name: 'Voiceless S', example: 'sun', phoneme: 's' },
+            { sound: '/z/', name: 'Voiced S', example: 'has', phoneme: 'z' }
+        ],
+        'y': [
+            { sound: '/j/', name: 'Y Consonant', example: 'yes', phoneme: 'y' },
+            { sound: '/ɪ/', name: 'Y as I', example: 'gym', phoneme: 'i' },
+            { sound: '/aɪ/', name: 'Y as Long I', example: 'fly', phoneme: 'igh' }
+        ]
+    };
+    
+    // Categorize phonemes for organization
+    window.PHONEME_CATEGORIES = {
+        vowels: ['a', 'e', 'i', 'o', 'u', 'ay', 'ee', 'igh', 'oa', 'oo'],
+        consonants: ['b', 'p', 'd', 't', 'g', 'k', 'f', 'v', 's', 'z', 'sh', 'ch', 'th', 'j', 'h', 'l', 'r', 'w', 'y', 'm', 'n']
+    };
+    
+    // Mouth position visual mapping
+    window.MOUTH_VISUALS = {
+        'wide-open': '😮',
+        'slight-smile': '😊',
+        'relaxed': '😐',
+        'round': '😮',
+        'lips-together': '😗',
+        'tongue-up': '😛',
+        'throat': '😮',
+        'teeth-together': '😬'
+    };
+
     console.log('✓ Phoneme data loaded with', Object.keys(window.PHONEME_DATA).length, 'phonemes');
+    console.log('✓ Letter sound mappings loaded for', Object.keys(window.LETTER_SOUNDS).length, 'letters');
 })();

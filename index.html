@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Decode the Word</title>
 
-  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2218%22%20fill%3D%22%231f2937%22/%3E%3Ctext%20x%3D%2250%22%20y%3D%2262%22%20font-size%3D%2252%22%20text-anchor%3D%22middle%22%20fill%3D%22white%22%20font-family%3D%22Arial%2C%20sans-serif%22%3EDtW%3C/text%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Crect%20width%3D%22100%22%20height%3D%22100%22%20rx%3D%2218%22%20fill%3D%22%231f2937%22/%3E%3Ctext%20x%3D%2250%22%20y%3D%2262%22%20font-size%3D%2252%22%20text-anchor%3D%22middle%22%20fill%3D%22white%22%20font-family%3D%22Arial%2C%20sans-serif%22%3EDtW%3C/text%3E%3C/svg%3E" alt="Decode the Word favicon">
   
-  <!-- Inter font for clear I vs l distinction -->
+  <!-- Inter font for clear I vs l distinction and readability -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fredoka:wght@400;600&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="style.css" />
 
@@ -107,6 +107,9 @@
         <button id="simple-hear-sentence" type="button" class="hint-btn" aria-label="Hear sentence" style="font-size: 1rem; padding: 10px 20px; min-width: 140px;">💬 Sentence</button>
       </div>
 
+      <!-- Sentence preview - shows when sentence button is clicked -->
+      <div id="sentence-preview" class="sentence-preview hidden" style="text-align: center; margin: 10px auto; max-width: 500px; padding: 12px 16px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #667eea; font-style: italic; color: #374151;"></div>
+
       <div id="keyboard"></div>
     </div>
 <div id="banner-container" class="banner hidden"></div>
@@ -143,8 +146,14 @@
           </select>
         </div>
         <div id="translation-display" class="translation-display hidden">
-          <p id="translated-def" class="translated-text"></p>
-          <p id="translated-sentence" class="translated-text"></p>
+          <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+            <p id="translated-def" class="translated-text" style="flex: 1; margin: 0;"></p>
+            <button id="play-translated-def" type="button" class="mini-audio-btn" title="Hear definition">🔊</button>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 8px;">
+            <p id="translated-sentence" class="translated-text" style="flex: 1; margin: 0;"></p>
+            <button id="play-translated-sentence" type="button" class="mini-audio-btn" title="Hear sentence">🔊</button>
+          </div>
         </div>
       </div>
 
@@ -282,6 +291,12 @@
           <div id="studio-word-display" style="font-size: 3rem; font-weight: 700; color: #1f2937; letter-spacing: 2px;"></div>
         </div>
 
+        <!-- Definition -->
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">Definition</label>
+          <div id="studio-definition-display" style="padding: 12px; background: #f0f9ff; border-radius: 8px; color: #1e40af; font-style: italic; min-height: 44px; display: flex; align-items: center;"></div>
+        </div>
+
         <!-- Sentence -->
         <div style="margin-bottom: 32px;">
           <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 0.95rem;">Example Sentence</label>
@@ -313,9 +328,14 @@
           </div>
         </div>
 
-        <!-- Next Button -->
-        <div style="display: flex; justify-content: flex-end;">
-          <button id="next-item-btn" type="button" style="padding: 14px 32px; font-size: 1.1rem; font-weight: 600; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; transition: background 0.2s;">Next Word →</button>
+        <!-- Navigation Buttons -->
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <button id="prev-item-btn" type="button" style="padding: 14px 24px; font-size: 1rem; font-weight: 500; background: #f3f4f6; color: #374151; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;">← Previous</button>
+          
+          <div style="display: flex; gap: 12px;">
+            <button id="skip-item-btn" type="button" style="padding: 14px 20px; font-size: 1rem; font-weight: 500; background: #fbbf24; color: #92400e; border: 2px solid #f59e0b; border-radius: 8px; cursor: pointer; transition: all 0.2s;">Skip Word</button>
+            <button id="next-item-btn" type="button" style="padding: 14px 32px; font-size: 1.1rem; font-weight: 600; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; transition: background 0.2s;">Next Word →</button>
+          </div>
         </div>
       </div>
 
@@ -332,14 +352,69 @@
     </div>
   </div>
 
-  <!-- Progress Modal -->
-  <!-- Phoneme Guide Modal -->
+  <!-- Advanced Phoneme Guide Modal -->
   <div id="phoneme-modal" class="modal hidden">
-    <div class="modal-content phoneme-card-modal">
+    <div class="modal-content phoneme-card-modal" style="max-width: 900px; padding: 24px;">
       <button class="close-btn" type="button">×</button>
-      <h2>Sounds Guide</h2>
-      <p class="muted">Tap a sound card to hear it and see mouth cues.</p>
-      <div id="phoneme-grid" class="phoneme-grid"></div>
+      <h2 style="text-align: center; margin-bottom: 8px;">🔤 Articulation Guide</h2>
+      <p style="text-align: center; color: #666; margin-bottom: 24px;">Master pronunciation with visual mouth cues and sound practice</p>
+      
+      <!-- Navigation Tabs -->
+      <div class="phoneme-tabs" style="display: flex; justify-content: center; margin-bottom: 24px; background: #f8fafc; border-radius: 8px; padding: 4px;">
+        <button class="phoneme-tab active" data-tab="vowels" style="flex: 1; padding: 8px 16px; border: none; background: white; border-radius: 6px; font-weight: 500; cursor: pointer;">📢 Vowels</button>
+        <button class="phoneme-tab" data-tab="consonants" style="flex: 1; padding: 8px 16px; border: none; background: transparent; border-radius: 6px; font-weight: 500; cursor: pointer; color: #6b7280;">🗣️ Consonants</button>
+        <button class="phoneme-tab" data-tab="letters" style="flex: 1; padding: 8px 16px; border: none; background: transparent; border-radius: 6px; font-weight: 500; cursor: pointer; color: #6b7280;">🔤 Letters</button>
+      </div>
+      
+      <!-- Selected Sound Display -->
+      <div id="selected-sound-display" class="selected-sound hidden" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px; padding: 20px; margin-bottom: 24px; text-align: center;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="flex: 1;">
+            <div style="font-size: 3rem; font-weight: 700; margin-bottom: 8px;" id="sound-letter"></div>
+            <div style="font-size: 1.2rem; opacity: 0.9;" id="sound-name"></div>
+          </div>
+          <div style="flex: 2; padding: 0 20px;">
+            <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+              <div style="font-size: 0.9rem; opacity: 0.8; margin-bottom: 4px;">MOUTH POSITION</div>
+              <div style="font-weight: 600;" id="mouth-cue"></div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button id="hear-letter-name" style="flex: 1; padding: 8px; background: rgba(255,255,255,0.2); border: none; border-radius: 6px; color: white; font-weight: 500; cursor: pointer;">📝 Letter</button>
+              <button id="hear-example-word" style="flex: 1; padding: 8px; background: rgba(255,255,255,0.2); border: none; border-radius: 6px; color: white; font-weight: 500; cursor: pointer;">🔊 Word</button>
+              <button id="hear-phoneme-sound" style="flex: 1; padding: 8px; background: rgba(255,255,255,0.2); border: none; border-radius: 6px; color: white; font-weight: 500; cursor: pointer;">🎵 Sound</button>
+            </div>
+          </div>
+          <div style="flex: 1; text-align: right;">
+            <div style="width: 80px; height: 80px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto;" id="mouth-visual">👄</div>
+            <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 8px;" id="mouth-description"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Sound Grid -->
+      <div id="phoneme-content">
+        <!-- Vowels Tab -->
+        <div id="vowels-content" class="tab-content">
+          <div id="vowels-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+        </div>
+        
+        <!-- Consonants Tab -->
+        <div id="consonants-content" class="tab-content hidden">
+          <div id="consonants-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;"></div>
+        </div>
+        
+        <!-- Letters Tab -->
+        <div id="letters-content" class="tab-content hidden">
+          <div style="margin-bottom: 16px; text-align: center; color: #6b7280;">
+            Select a letter to explore all its possible sounds
+          </div>
+          <div id="letters-grid" class="phoneme-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px;"></div>
+          <div id="letter-sounds-display" class="hidden" style="margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 8px;">
+            <h4 style="margin: 0 0 12px 0; color: #374151;">Sounds for letter "<span id="selected-letter"></span>":</h4>
+            <div id="letter-sounds-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 

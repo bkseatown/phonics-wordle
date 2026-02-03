@@ -83,6 +83,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Initialize adaptive actions
     if (typeof initAdaptiveActions === 'function') {
         initAdaptiveActions();
+    } else {
+        console.log('initAdaptiveActions not available - skipping');
     }
     
     startNewGame();
@@ -163,12 +165,22 @@ async function speak(text, type = "word") {
     let dbKey = "";
     if (type === "word") {
         dbKey = `${text.toLowerCase()}_word`;
-    } else {
-        if (currentEntry && text === currentEntry.sentence) {
+    } else if (type === "sentence") {
+        // Handle both data structures for sentences
+        let currentSentence = null;
+        if (currentEntry && currentEntry.en && currentEntry.en.sentence) {
+            currentSentence = currentEntry.en.sentence;
+        } else if (currentEntry && currentEntry.sentence) {
+            currentSentence = currentEntry.sentence;
+        }
+        
+        if (currentSentence && text === currentSentence) {
             dbKey = `${currentWord.toLowerCase()}_sentence`;
         } else {
             dbKey = "unknown"; 
         }
+    } else {
+        dbKey = "unknown";
     }
 
     const blob = await getAudioFromDB(dbKey);
@@ -209,6 +221,46 @@ async function speak(text, type = "word") {
     window.speechSynthesis.speak(msg);
 }
 
+/* Play text in a specific language for translations */
+function playTextInLanguage(text, languageCode) {
+    if (!text) return;
+    window.speechSynthesis.cancel();
+    
+    const msg = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    
+    // Language code mappings for voice selection
+    const langMappings = {
+        'es': 'es',
+        'zh': 'zh',
+        'vi': 'vi',
+        'tl': 'tl', 
+        'pt': 'pt',
+        'hi': 'hi'
+    };
+    
+    const targetLang = langMappings[languageCode] || languageCode;
+    
+    // Find best voice for the language
+    let preferredVoice = voices.find(v => v.lang.startsWith(targetLang + '-'));
+    if (!preferredVoice) {
+        preferredVoice = voices.find(v => v.lang.startsWith(targetLang));
+    }
+    
+    if (preferredVoice) {
+        msg.voice = preferredVoice;
+        msg.lang = preferredVoice.lang;
+    } else {
+        // Fallback to setting language without specific voice
+        msg.lang = targetLang;
+    }
+    
+    msg.rate = 0.8; // Slightly slower for non-English
+    msg.pitch = 1.0;
+    
+    window.speechSynthesis.speak(msg);
+}
+
 /* --- CONTROLS & EVENTS --- */
 function initControls() {
     document.getElementById("new-word-btn").onclick = () => {
@@ -246,7 +298,20 @@ function initControls() {
     
     if (hearWordBtn) {
         hearWordBtn.onclick = () => {
-            if (currentWord) speak(currentWord, 'word');
+            if (currentWord) {
+                // Add visual feedback
+                const originalText = hearWordBtn.innerHTML;
+                hearWordBtn.innerHTML = '🔊 Playing...';
+                hearWordBtn.style.opacity = '0.7';
+                
+                speak(currentWord, 'word');
+                
+                // Reset button after a short delay
+                setTimeout(() => {
+                    hearWordBtn.innerHTML = originalText;
+                    hearWordBtn.style.opacity = '1';
+                }, 2000);
+            }
             hearWordBtn.blur();
         };
     }
@@ -260,8 +325,51 @@ function initControls() {
                 sentence = currentEntry.sentence;
             }
             
+            const sentencePreview = document.getElementById('sentence-preview');
+            
             if (sentence) {
+                // Show sentence preview
+                if (sentencePreview) {
+                    sentencePreview.textContent = `"${sentence}"`;
+                    sentencePreview.classList.remove('hidden');
+                    
+                    // Hide preview after 5 seconds
+                    setTimeout(() => {
+                        sentencePreview.classList.add('hidden');
+                    }, 5000);
+                }
+                
+                // Add visual feedback
+                const originalText = hearSentenceBtn.innerHTML;
+                hearSentenceBtn.innerHTML = '🔊 Playing...';
+                hearSentenceBtn.style.opacity = '0.7';
+                
                 speak(sentence, 'sentence');
+                
+                // Reset button after a short delay
+                setTimeout(() => {
+                    hearSentenceBtn.innerHTML = originalText;
+                    hearSentenceBtn.style.opacity = '1';
+                }, 2000);
+            } else {
+                // Show feedback if no sentence available
+                if (sentencePreview) {
+                    sentencePreview.textContent = 'No example sentence available for this word.';
+                    sentencePreview.classList.remove('hidden');
+                    
+                    setTimeout(() => {
+                        sentencePreview.classList.add('hidden');
+                    }, 3000);
+                }
+                
+                const originalText = hearSentenceBtn.innerHTML;
+                hearSentenceBtn.innerHTML = '❌ No sentence';
+                hearSentenceBtn.style.opacity = '0.7';
+                
+                setTimeout(() => {
+                    hearSentenceBtn.innerHTML = originalText;
+                    hearSentenceBtn.style.opacity = '1';
+                }, 1500);
             }
             hearSentenceBtn.blur();
         };
@@ -392,6 +500,8 @@ function initStudio() {
     document.getElementById("play-sentence-preview").onclick = () => playPreview("sentence");
     
     document.getElementById("next-item-btn").onclick = nextStudioItem;
+    document.getElementById("prev-item-btn").onclick = prevStudioItem;
+    document.getElementById("skip-item-btn").onclick = skipStudioItem;
 }
 
 function openStudioSetup() {
@@ -426,24 +536,40 @@ async function startStudioSession() {
     }
 
     if (rawList.length === 0) {
-        alert("No words found.");
+        alert("No words found. Please check your selection or pasted list.");
         return;
     }
 
     studioList = [];
     for (let w of rawList) {
-        const entry = window.WORD_ENTRIES[w] || { sentence: `The word is ${w}.` };
+        const entry = window.WORD_ENTRIES[w];
+        let sentence = `The word is ${w}.`; // fallback
+        
+        // Extract sentence from multilingual data structure
+        if (entry) {
+            if (entry.en && entry.en.sentence) {
+                sentence = entry.en.sentence;
+            } else if (entry.sentence) {
+                sentence = entry.sentence;
+            }
+        }
         
         if (skipExisting) {
             const hasWord = await getAudioFromDB(`${w}_word`);
             const hasSent = await getAudioFromDB(`${w}_sentence`);
             if (hasWord && hasSent) continue; 
         }
-        studioList.push({ word: w, sentence: entry.sentence });
+        
+        studioList.push({ 
+            word: w, 
+            sentence: sentence,
+            definition: entry?.en?.def || entry?.def || `Definition for ${w}`,
+            entry: entry
+        });
     }
 
     if (studioList.length === 0) {
-        alert("All words already have recordings!");
+        alert("All selected words already have recordings! Try unchecking 'Skip existing' or choose different words.");
         return;
     }
 
@@ -455,17 +581,50 @@ async function startStudioSession() {
 
 function loadStudioItem() {
     if (studioIndex >= studioList.length) {
-        alert("Session Complete!");
-        closeModal();
+        showStudioCompletionModal();
         return;
     }
 
     const item = studioList[studioIndex];
-    document.getElementById("studio-progress").textContent = `${studioIndex + 1} / ${studioList.length}`;
+    const progressElement = document.getElementById("studio-progress");
+    const definitionElement = document.getElementById("studio-definition-display");
+    
+    // Enhanced progress display
+    const progressText = `Word ${studioIndex + 1} of ${studioList.length}`;
+    const percentComplete = Math.round(((studioIndex) / studioList.length) * 100);
+    progressElement.innerHTML = `<strong>${progressText}</strong> • ${percentComplete}% Complete`;
+    
+    // Populate word data
     document.getElementById("studio-word-display").textContent = item.word.toUpperCase();
     document.getElementById("studio-sentence-display").value = item.sentence || "";
+    
+    // Show definition
+    if (definitionElement) {
+        definitionElement.textContent = item.definition || "No definition available";
+    }
 
     resetRecordButtons();
+    updateNavigationButtons();
+    
+    // Auto-scroll to top of recording area
+    const recordView = document.getElementById("studio-record-view");
+    if (recordView) {
+        recordView.scrollTop = 0;
+    }
+}
+
+function showStudioCompletionModal() {
+    const totalWords = studioList.length;
+    const wordsRecorded = studioIndex;
+    
+    const message = `🎉 Recording Session Complete!\n\n` +
+                   `✅ ${totalWords} words processed\n` +
+                   `🎙️ Recordings saved to device\n\n` +
+                   `Your custom recordings will now be used when students play with these words. ` +
+                   `The app will automatically prefer your recordings over computer-generated speech.`;
+    
+    alert(message);
+    closeModal();
 }
 
 function resetRecordButtons() {
@@ -474,17 +633,45 @@ function resetRecordButtons() {
     const playW = document.getElementById("play-word-preview");
     const playS = document.getElementById("play-sentence-preview");
 
-    wordBtn.textContent = "Record Word";
+    // Reset button states
+    wordBtn.innerHTML = "🎤 Record Word";
     wordBtn.classList.remove("recording");
-    sentBtn.textContent = "Record Sentence";
-    sentBtn.classList.remove("recording");
+    wordBtn.style.background = "#dc2626";
     
+    sentBtn.innerHTML = "🎤 Record Sentence";
+    sentBtn.classList.remove("recording");
+    sentBtn.style.background = "#dc2626";
+    
+    // Reset play buttons
     playW.disabled = true;
+    playW.style.background = "#e5e7eb";
+    playW.style.color = "#9ca3af";
+    
     playS.disabled = true;
+    playS.style.background = "#e5e7eb";
+    playS.style.color = "#9ca3af";
 
+    // Check for existing recordings and update play button states
     const w = studioList[studioIndex].word;
-    getAudioFromDB(`${w}_word`).then(b => { if(b) playW.disabled = false; });
-    getAudioFromDB(`${w}_sentence`).then(b => { if(b) playS.disabled = false; });
+    getAudioFromDB(`${w}_word`).then(blob => { 
+        if(blob) {
+            playW.disabled = false;
+            playW.style.background = "#10b981";
+            playW.style.color = "white";
+            wordBtn.innerHTML = "✅ Re-record Word";
+            wordBtn.style.background = "#059669";
+        }
+    });
+    
+    getAudioFromDB(`${w}_sentence`).then(blob => { 
+        if(blob) {
+            playS.disabled = false;
+            playS.style.background = "#10b981";
+            playS.style.color = "white";
+            sentBtn.innerHTML = "✅ Re-record Sentence";
+            sentBtn.style.background = "#059669";
+        }
+    });
 }
 
 function toggleRecording(type) {
@@ -516,34 +703,55 @@ function toggleRecording(type) {
             saveAudioToDB(key, blob);
             
             const btn = document.getElementById(type === "word" ? "record-word-btn" : "record-sentence-btn");
-            btn.textContent = "Re-Record";
-            btn.classList.remove("recording");
-            
             const playBtn = document.getElementById(type === "word" ? "play-word-preview" : "play-sentence-preview");
+            
+            // Update button to show successful recording
+            btn.innerHTML = type === "word" ? "✅ Re-record Word" : "✅ Re-record Sentence";
+            btn.classList.remove("recording");
+            btn.style.background = "#059669";
+            
+            // Enable and style the play button
             playBtn.disabled = false;
+            playBtn.style.background = "#10b981";
+            playBtn.style.color = "white";
 
-            document.getElementById("recording-status").textContent = "Saved!";
+            // Show success message
+            const statusElement = document.getElementById("recording-status");
+            statusElement.style.display = "block";
+            statusElement.style.background = "#d1fae5";
+            statusElement.style.color = "#065f46";
+            statusElement.innerHTML = `🎉 ${type === "word" ? "Word" : "Sentence"} recording saved!`;
+            
             setTimeout(() => {
-                document.getElementById("recording-status").textContent = "";
+                statusElement.style.display = "none";
                 
                 // CRITICAL FIX: Only auto-advance if we just finished the SENTENCE.
                 // This ensures the user stays on the card after recording the Word.
                 if (document.getElementById("studio-auto-advance").checked && recordingType === 'sentence') {
                     setTimeout(nextStudioItem, 500);
                 }
-            }, 1000);
+            }, 2000);
         };
 
         mediaRecorder.start();
         
         const btn = document.getElementById(type === "word" ? "record-word-btn" : "record-sentence-btn");
-        btn.textContent = "Stop ■";
+        const statusElement = document.getElementById("recording-status");
+        
+        // Update button for recording state
+        btn.innerHTML = "🔴 Stop Recording";
         btn.classList.add("recording");
-        document.getElementById("recording-status").textContent = "Recording...";
+        btn.style.background = "#ef4444";
+        
+        // Show recording status
+        statusElement.style.display = "block";
+        statusElement.style.background = "#fee2e2";
+        statusElement.style.color = "#dc2626";
+        statusElement.innerHTML = `🔴 Recording ${type === "word" ? "word" : "sentence"}... Click button to stop.`;
 
     }).catch(err => {
         console.error("Mic Error:", err);
-        alert("Could not access microphone. Check permissions.");
+        alert("Could not access microphone. Please check permissions and try again.");
     });
 }
 
@@ -560,6 +768,36 @@ async function playPreview(type) {
 function nextStudioItem() {
     studioIndex++;
     loadStudioItem();
+}
+
+function prevStudioItem() {
+    if (studioIndex > 0) {
+        studioIndex--;
+        loadStudioItem();
+    }
+    updateNavigationButtons();
+}
+
+function skipStudioItem() {
+    const confirmSkip = confirm(`Skip recording "${studioList[studioIndex].word}"?\n\nYou can come back to it later by using the Previous button.`);
+    if (confirmSkip) {
+        nextStudioItem();
+    }
+}
+
+function updateNavigationButtons() {
+    const prevBtn = document.getElementById("prev-item-btn");
+    const nextBtn = document.getElementById("next-item-btn");
+    
+    if (prevBtn) {
+        prevBtn.disabled = studioIndex === 0;
+        prevBtn.style.opacity = studioIndex === 0 ? "0.5" : "1";
+    }
+    
+    if (nextBtn) {
+        const isLast = studioIndex >= studioList.length - 1;
+        nextBtn.innerHTML = isLast ? "🏁 Finish Session" : "Next Word →";
+    }
 }
 
 /* --- GAME LOGIC --- */
@@ -1027,6 +1265,8 @@ function showEndModal(win) {
     const translationDisplay = document.getElementById("translation-display");
     const translatedDef = document.getElementById("translated-def");
     const translatedSentence = document.getElementById("translated-sentence");
+    const playTranslatedDef = document.getElementById("play-translated-def");
+    const playTranslatedSentence = document.getElementById("play-translated-sentence");
     
     if (languageSelect) {
         languageSelect.value = "en";
@@ -1038,18 +1278,26 @@ function showEndModal(win) {
                 translationDisplay.classList.add("hidden");
             } else {
                 const translation = window.TRANSLATIONS.getTranslation(currentWord, selectedLang);
-                if (translation) {
+                if (translation && translation.definition) {
                     translatedDef.textContent = translation.definition;
                     translatedSentence.textContent = `"${translation.sentence}"`;
+                    
+                    // Set up audio buttons for translations
+                    if (playTranslatedDef) {
+                        playTranslatedDef.onclick = () => playTextInLanguage(translation.definition, selectedLang);
+                    }
+                    if (playTranslatedSentence) {
+                        playTranslatedSentence.onclick = () => playTextInLanguage(translation.sentence, selectedLang);
+                    }
+                    
+                    translationDisplay.classList.remove("hidden");
                 } else {
                     translatedDef.textContent = "Translation not available";
                     translatedSentence.textContent = "";
+                    translationDisplay.classList.remove("hidden");
                 }
-                translationDisplay.classList.remove("hidden");
             }
         };
-    }
-        if (translationResult) translationResult.textContent = '';
     }
     
     // Store that we should show bonus when modal closes (if won)
@@ -1757,50 +2005,312 @@ function exportProgressData() {
    ========================================== */
 
 
-function populatePhonemeGrid() {
-    const grid = document.getElementById('phoneme-grid');
-    if (!grid) {
-        console.error('phoneme-grid element not found!');
-        return;
-    }
-    
-    if (!window.PHONEME_DATA) {
-        console.error('PHONEME_DATA not loaded!');
-        return;
-    }
-    
-    // Don't rebuild if already built
-    if (grid.dataset.built === '1') {
-        console.log('Phoneme grid already populated');
-        return;
-    }
+/* ==========================================================================
+   ADVANCED ARTICULATION SYSTEM
+   Comprehensive phoneme guide with mouth positioning and multiple sounds
+   ========================================================================== */
 
-    const sounds = Object.keys(window.PHONEME_DATA);
-    console.log(`Populating phoneme grid with ${sounds.length} sounds...`);
+// Current selected sound for detailed view
+let currentSelectedSound = null;
+
+function populatePhonemeGrid() {
+    console.log("Initializing Advanced Articulation Guide...");
     
+    if (!window.PHONEME_DATA || !window.LETTER_SOUNDS) {
+        console.error('Phoneme data not loaded!');
+        return;
+    }
+    
+    // Setup tab navigation
+    initPhonemeTabNavigation();
+    
+    // Populate all grids
+    populateVowelsGrid();
+    populateConsonantsGrid(); 
+    populateLettersGrid();
+    
+    // Setup audio controls
+    initArticulationAudioControls();
+    
+    console.log("✓ Advanced Articulation Guide ready");
+}
+
+function initPhonemeTabNavigation() {
+    const tabs = document.querySelectorAll('.phoneme-tab');
+    const contents = document.querySelectorAll('.tab-content');
+    
+    tabs.forEach(tab => {
+        tab.onclick = () => {
+            // Update tab appearance
+            tabs.forEach(t => {
+                t.classList.remove('active');
+                t.style.background = 'transparent';
+                t.style.color = '#6b7280';
+            });
+            tab.classList.add('active');
+            tab.style.background = 'white';
+            tab.style.color = '#374151';
+            
+            // Show corresponding content
+            const targetTab = tab.dataset.tab;
+            contents.forEach(content => {
+                content.classList.add('hidden');
+            });
+            document.getElementById(targetTab + '-content').classList.remove('hidden');
+        };
+    });
+}
+
+function populateVowelsGrid() {
+    const grid = document.getElementById('vowels-grid');
+    if (!grid) return;
+    
+    const vowels = window.PHONEME_CATEGORIES.vowels.filter(v => window.PHONEME_DATA[v]);
     grid.innerHTML = '';
     
-    sounds.forEach(sound => {
-        const p = window.PHONEME_DATA[sound];
+    vowels.forEach(sound => {
+        const phoneme = window.PHONEME_DATA[sound];
+        const card = createPhonemeCard(sound, phoneme);
+        grid.appendChild(card);
+    });
+}
+
+function populateConsonantsGrid() {
+    const grid = document.getElementById('consonants-grid');
+    if (!grid) return;
+    
+    const consonants = window.PHONEME_CATEGORIES.consonants.filter(c => window.PHONEME_DATA[c]);
+    grid.innerHTML = '';
+    
+    consonants.forEach(sound => {
+        const phoneme = window.PHONEME_DATA[sound];
+        const card = createPhonemeCard(sound, phoneme);
+        grid.appendChild(card);
+    });
+}
+
+function populateLettersGrid() {
+    const grid = document.getElementById('letters-grid');
+    if (!grid) return;
+    
+    const letters = Object.keys(window.LETTER_SOUNDS);
+    grid.innerHTML = '';
+    
+    letters.forEach(letter => {
         const card = document.createElement('div');
-        card.className = 'phoneme-card';
-        card.dataset.sound = sound;
-        card.dataset.example = p.example || '';
-        
-        card.innerHTML = `
-            <div class="phoneme-letter" style="font-size: 2rem; font-weight: 700; margin-bottom: 4px;">${sound.toUpperCase()}</div>
-            <div class="phoneme-example" style="font-size: 0.85rem; color: #666;">${p.example || ''}</div>
-            <div class="phoneme-description" style="font-size: 0.75rem; color: #888; margin-top: 4px;">${p.description || ''}</div>
+        card.className = 'letter-card';
+        card.style.cssText = `
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: white;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 700;
+            font-size: 2rem;
         `;
+        
+        card.textContent = letter.toUpperCase();
+        card.onclick = () => showLetterSounds(letter);
+        
+        card.addEventListener('mouseenter', () => {
+            card.style.transform = 'translateY(-2px)';
+            card.style.boxShadow = '0 8px 16px rgba(0,0,0,0.2)';
+        });
+        
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = 'translateY(0)';
+            card.style.boxShadow = 'none';
+        });
         
         grid.appendChild(card);
     });
+}
 
-    grid.dataset.built = '1';
-    console.log(`✓ Phoneme grid populated with ${sounds.length} cards`);
+function createPhonemeCard(sound, phoneme) {
+    const card = document.createElement('div');
+    card.className = 'phoneme-card';
+    card.dataset.sound = sound;
+    card.style.cssText = `
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        min-height: 120px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    `;
     
-    // Initialize click handlers
-    initPhonemeCards();
+    const mouthEmoji = window.MOUTH_VISUALS[phoneme.mouthShape] || '👄';
+    
+    card.innerHTML = `
+        <div style="font-size: 2.5rem; margin-bottom: 4px;">${sound.toUpperCase()}</div>
+        <div style="font-size: 1.2rem; margin-bottom: 4px;">${mouthEmoji}</div>
+        <div style="font-size: 0.85rem; color: #666; font-weight: 500;">${phoneme.example}</div>
+        <div style="font-size: 0.75rem; color: #888; margin-top: 4px;">${phoneme.sound}</div>
+    `;
+    
+    card.onclick = () => selectSound(sound, phoneme);
+    
+    // Hover effects
+    card.addEventListener('mouseenter', () => {
+        card.style.borderColor = phoneme.color || '#3b82f6';
+        card.style.transform = 'translateY(-2px)';
+        card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+    });
+    
+    card.addEventListener('mouseleave', () => {
+        card.style.borderColor = '#e5e7eb';
+        card.style.transform = 'translateY(0)';
+        card.style.boxShadow = 'none';
+    });
+    
+    return card;
+}
+
+function selectSound(sound, phoneme) {
+    currentSelectedSound = { sound, phoneme };
+    
+    // Show detailed view
+    const display = document.getElementById('selected-sound-display');
+    display.classList.remove('hidden');
+    
+    // Populate detailed information
+    document.getElementById('sound-letter').textContent = sound.toUpperCase();
+    document.getElementById('sound-name').textContent = phoneme.name;
+    document.getElementById('mouth-cue').textContent = phoneme.cue;
+    document.getElementById('mouth-description').textContent = phoneme.description;
+    
+    // Update mouth visual
+    const mouthVisual = document.getElementById('mouth-visual');
+    const emoji = window.MOUTH_VISUALS[phoneme.mouthShape] || '👄';
+    mouthVisual.textContent = emoji;
+    
+    // Scroll to top
+    display.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function showLetterSounds(letter) {
+    const sounds = window.LETTER_SOUNDS[letter];
+    if (!sounds) return;
+    
+    document.getElementById('selected-letter').textContent = letter.toUpperCase();
+    
+    const grid = document.getElementById('letter-sounds-grid');
+    grid.innerHTML = '';
+    
+    sounds.forEach(soundInfo => {
+        const card = document.createElement('div');
+        card.style.cssText = `
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        `;
+        
+        card.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="font-size: 2rem; font-weight: 700;">${letter.toUpperCase()}</div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; color: #374151;">${soundInfo.name}</div>
+                    <div style="font-size: 0.9rem; color: #6b7280;">${soundInfo.sound} as in "${soundInfo.example}"</div>
+                </div>
+                <button style="padding: 8px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 0.85rem;">🔊 Play</button>
+            </div>
+        `;
+        
+        card.onclick = () => {
+            if (window.PHONEME_DATA[soundInfo.phoneme]) {
+                selectSound(soundInfo.phoneme, window.PHONEME_DATA[soundInfo.phoneme]);
+            }
+        };
+        
+        // Find and setup the play button
+        const playBtn = card.querySelector('button');
+        playBtn.onclick = (e) => {
+            e.stopPropagation();
+            playLetterSequence(letter, soundInfo.example, soundInfo.phoneme);
+        };
+        
+        grid.appendChild(card);
+    });
+    
+    document.getElementById('letter-sounds-display').classList.remove('hidden');
+    document.getElementById('letter-sounds-display').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function initArticulationAudioControls() {
+    const hearLetterBtn = document.getElementById('hear-letter-name');
+    const hearWordBtn = document.getElementById('hear-example-word');
+    const hearSoundBtn = document.getElementById('hear-phoneme-sound');
+    
+    if (hearLetterBtn) {
+        hearLetterBtn.onclick = () => {
+            if (currentSelectedSound) {
+                playLetterSequence(
+                    currentSelectedSound.sound,
+                    currentSelectedSound.phoneme.example,
+                    currentSelectedSound.sound
+                );
+            }
+        };
+    }
+    
+    if (hearWordBtn) {
+        hearWordBtn.onclick = () => {
+            if (currentSelectedSound) {
+                speakText(currentSelectedSound.phoneme.example);
+            }
+        };
+    }
+    
+    if (hearSoundBtn) {
+        hearSoundBtn.onclick = () => {
+            if (currentSelectedSound) {
+                speakPhoneme(currentSelectedSound.sound);
+            }
+        };
+    }
+}
+
+function playLetterSequence(letter, word, phoneme) {
+    // Play: Letter name → Example word → Phoneme sound
+    speakText(`Letter ${letter.toUpperCase()}`);
+    
+    setTimeout(() => {
+        speakText(word);
+    }, 1500);
+    
+    setTimeout(() => {
+        speakPhoneme(phoneme);
+    }, 3000);
+}
+
+function speakText(text) {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.8;
+    utterance.pitch = 1.0;
+    window.speechSynthesis.speak(utterance);
+}
+
+function speakPhoneme(sound) {
+    // Use existing speakPhoneme function if available, otherwise fallback
+    if (typeof window.speakPhoneme === 'function') {
+        window.speakPhoneme(sound);
+    } else {
+        const phoneme = window.PHONEME_DATA[sound];
+        if (phoneme) {
+            speakText(phoneme.sound);
+        }
+    }
 }
 
 function initPhonemeCards() {
