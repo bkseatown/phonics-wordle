@@ -1418,6 +1418,56 @@ function showBonusContent() {
         }, window.POPUP_SETTINGS.duration);
     }
 }
+    
+    const popup = document.createElement('div');
+    popup.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 24px 32px;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(102, 126, 234, 0.5);
+        z-index: 3000;
+        max-width: 500px;
+        text-align: center;
+        font-size: 1.1rem;
+        line-height: 1.6;
+        animation: bonusSlideIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    `;
+    
+    popup.innerHTML = `
+        <div style="font-size: 3rem; margin-bottom: 12px;">${emoji}</div>
+        <div style="font-weight: 700; font-size: 1.3rem; margin-bottom: 12px;">${title}</div>
+        <div style="font-size: 1.05rem; font-weight: 400;">${content}</div>
+    `;
+    
+    document.body.appendChild(popup);
+    
+    setTimeout(() => {
+        popup.style.opacity = '0';
+        popup.style.transform = 'translate(-50%, -50%) scale(0.9)';
+        popup.style.transition = 'all 0.3s ease-out';
+        setTimeout(() => popup.remove(), 300);
+    }, 6000);
+}
+
+// Add bonus animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes bonusSlideIn {
+        from {
+            opacity: 0;
+            transform: translate(-50%, -60%) scale(0.8);
+        }
+        to {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+    }
+`;
 document.head.appendChild(style);
 
 /* ==========================================
