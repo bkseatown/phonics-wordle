@@ -556,12 +556,12 @@ function notifyMissingHighQualityVoice() {
 }
 
 /* Play text in a specific language for translations */
-function playTextInLanguage(text, languageCode) {
+async function playTextInLanguage(text, languageCode) {
     if (!text) return;
     window.speechSynthesis.cancel();
     
     const msg = new SpeechSynthesisUtterance(text);
-    const voices = cachedVoices.length ? cachedVoices : window.speechSynthesis.getVoices();
+    const voices = await getVoicesAsync();
     const targetLang = getTranslationVoiceTarget(languageCode);
     
     // Find best voice for the language
@@ -902,7 +902,8 @@ function ensureVoiceQualityHint() {
         hint = document.createElement('div');
         hint.id = 'voice-quality-hint';
         hint.className = 'voice-quality-hint';
-        hint.textContent = 'Tip: Install enhanced voices for clearer audio (System Settings → Accessibility → Spoken Content → System Voice → Manage Voices).';
+        const tip = getVoiceInstallHint();
+        hint.innerHTML = `Enhanced voices <span class="tiny-tooltip" title="${tip}" aria-label="${tip}">ⓘ</span>`;
         voiceSelect.insertAdjacentElement('afterend', hint);
     }
 }
@@ -2606,7 +2607,7 @@ function speakWithSystemVoice(text) {
     }
     
     utterance.rate = getSpeechRate();
-    speechSynthesis.speak(utterance);
+    speakUtterance(utterance);
 }
 
 // Open decodable texts
