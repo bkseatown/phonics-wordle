@@ -167,6 +167,154 @@ const COMPREHENSION_SETS = [
                 type: 'Detail'
             }
         ]
+    },
+    {
+        id: 'seed-sprout',
+        title: 'Seed Sprout',
+        gradeBand: 'K-2',
+        lexileBand: 'Emergent',
+        passage: 'Ava planted a seed in a cup by the window. She watered it each morning. After a week, a tiny sprout leaned toward the light.',
+        questions: [
+            {
+                prompt: 'Why did the sprout lean toward the light?',
+                choices: ['It wanted water.', 'It was growing toward sunlight.', 'It was looking for food.'],
+                answer: 1,
+                type: 'Inference',
+                feedback: 'Plants grow toward sunlight to help them make energy.'
+            },
+            {
+                prompt: 'Where did Ava put the cup?',
+                choices: ['By the window', 'Under the desk', 'On the floor'],
+                answer: 0,
+                type: 'Detail'
+            }
+        ]
+    },
+    {
+        id: 'feelings-corner',
+        title: 'Feelings Corner',
+        gradeBand: 'K-2',
+        lexileBand: 'Emergent',
+        passage: 'Jamal felt nervous before sharing. His friend nodded and smiled, so Jamal took a deep breath and started to read.',
+        questions: [
+            {
+                prompt: 'How did Jamal feel at first?',
+                choices: ['Nervous', 'Sleepy', 'Angry'],
+                answer: 0,
+                type: 'Detail'
+            },
+            {
+                prompt: 'Why did Jamal take a deep breath?',
+                choices: ['To calm down', 'To run faster', 'To hide'],
+                answer: 0,
+                type: 'Inference'
+            }
+        ]
+    },
+    {
+        id: 'bridge-test',
+        title: 'Bridge Test',
+        gradeBand: '3-5',
+        lexileBand: 'Developing',
+        passage: 'Sasha built a paper bridge for science class. She added extra folds after the first test sagged. The second test held the weight longer.',
+        questions: [
+            {
+                prompt: 'Why did Sasha add extra folds?',
+                choices: ['To make the bridge stronger.', 'To make it shorter.', 'To change the color.'],
+                answer: 0,
+                type: 'Inference'
+            },
+            {
+                prompt: 'What happened during the first test?',
+                choices: ['The bridge sagged.', 'The bridge flew away.', 'The bridge melted.'],
+                answer: 0,
+                type: 'Detail'
+            }
+        ]
+    },
+    {
+        id: 'recess-coach',
+        title: 'Recess Coach',
+        gradeBand: '3-5',
+        lexileBand: 'Developing',
+        passage: 'During recess, Mateo noticed two friends arguing about the rules. He suggested they take turns explaining their ideas and then choose a fair plan.',
+        questions: [
+            {
+                prompt: 'What can you infer about Mateo?',
+                choices: ['He likes to help solve problems.', 'He wants to leave recess.', 'He ignores his friends.'],
+                answer: 0,
+                type: 'Inference'
+            },
+            {
+                prompt: 'What did Mateo suggest?',
+                choices: ['Taking turns explaining ideas', 'Playing a new game', 'Telling a joke'],
+                answer: 0,
+                type: 'Detail'
+            }
+        ]
+    },
+    {
+        id: 'reef-data',
+        title: 'Reef Data',
+        gradeBand: '6-8',
+        lexileBand: 'Fluent',
+        passage: 'The marine club recorded water temperature at the reef each hour. When the temperature rose, they noticed fewer fish near the surface.',
+        questions: [
+            {
+                prompt: 'What can you infer about the fish?',
+                choices: ['They moved to cooler water.', 'They stopped swimming.', 'They ate more food.'],
+                answer: 0,
+                type: 'Inference'
+            },
+            {
+                prompt: 'What data did the club record?',
+                choices: ['Water temperature', 'Air pressure', 'Wind speed'],
+                answer: 0,
+                type: 'Detail'
+            }
+        ]
+    },
+    {
+        id: 'peer-mentor',
+        title: 'Peer Mentor',
+        gradeBand: '6-8',
+        lexileBand: 'Fluent',
+        passage: 'Riley volunteered as a peer mentor. When a new student looked lost, Riley walked with her to class and introduced her to a partner.',
+        questions: [
+            {
+                prompt: 'Why did Riley walk with the new student?',
+                choices: ['To help her feel welcome', 'To skip class', 'To avoid homework'],
+                answer: 0,
+                type: 'Inference'
+            },
+            {
+                prompt: 'What role did Riley have?',
+                choices: ['Peer mentor', 'Coach', 'Principal'],
+                answer: 0,
+                type: 'Detail'
+            }
+        ]
+    },
+    {
+        id: 'lab-ethics',
+        title: 'Lab Ethics',
+        gradeBand: '9-12',
+        lexileBand: 'Advanced',
+        passage: 'In biology lab, the class debated how to design a fair test. They agreed to keep one variable the same so their results could be trusted.',
+        questions: [
+            {
+                prompt: 'Why did they keep one variable the same?',
+                choices: ['To make results reliable', 'To finish faster', 'To avoid writing notes'],
+                answer: 0,
+                type: 'Inference'
+            },
+            {
+                prompt: 'What did the class debate?',
+                choices: ['How to design a fair test', 'Which lunch to eat', 'Where to sit'],
+                answer: 0,
+                type: 'Detail'
+            }
+        ]
     }
 ];
 

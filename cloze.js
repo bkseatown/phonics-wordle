@@ -68,6 +68,48 @@ const CLOZE_SETS = [
         passage: 'Our class fixed a __1__ robot with a __2__ screwdriver and a __3__ bolt.\n\nWhen the robot said "__4__!", we felt __5__ and did a __6__ dance.',
         answers: ['friendly', 'tiny', 'silver', 'thank you', 'proud', 'silly'],
         distractors: ['grumpy', 'huge', 'rusty', 'beep', 'tired', 'quiet']
+    },
+    {
+        id: 'k2-sel-kindness',
+        title: 'K-2 SEL: Kindness Patrol',
+        passage: 'Our class started a __1__ patrol to help friends feel safe.\n\nWe gave __2__ notes, offered a __3__ seat, and shared our __4__ crayons.\n\nBy the end of the day, everyone felt __5__ and our teacher gave us a __6__ cheer.',
+        answers: ['kindness', 'thank-you', 'quiet', 'extra', 'included', 'happy'],
+        distractors: ['science', 'mystery', 'loud', 'broken', 'tired', 'slow']
+    },
+    {
+        id: 'k2-stem-weather',
+        title: 'K-2 STEM: Weather Watch',
+        passage: 'We used a __1__ to check the temperature outside.\n\nThe __2__ clouds moved fast, and the __3__ wind made the trees sway.\n\nWe wrote our __4__ in a chart and chose a __5__ coat for recess.',
+        answers: ['thermometer', 'gray', 'strong', 'data', 'warm'],
+        distractors: ['calculator', 'glitter', 'tiny', 'stories', 'short']
+    },
+    {
+        id: '35-stem-solar',
+        title: '3-5 STEM: Solar Bake',
+        passage: 'Our team built a __1__ oven using a pizza box and shiny __2__ foil.\n\nWe placed a __3__ cookie inside, then measured the heat with a __4__.\n\nAfter __5__ minutes, the cookie was warm and __6__.',
+        answers: ['solar', 'aluminum', 'chocolate', 'thermometer', 'thirty', 'soft'],
+        distractors: ['sleepy', 'plastic', 'oatmeal', 'calculator', 'seven', 'frozen']
+    },
+    {
+        id: '35-sel-teamwork',
+        title: '3-5 SEL: Team Talk',
+        passage: 'During our group project, we used __1__ voices and took __2__ turns.\n\nWhen someone felt stuck, we offered a __3__ idea and listened with __4__.\n\nThe project was __5__ because we stayed __6__.',
+        answers: ['calm', 'fair', 'helpful', 'care', 'strong', 'focused'],
+        distractors: ['loud', 'random', 'silly', 'noise', 'messy', 'sleepy']
+    },
+    {
+        id: '68-stem-ecosystem',
+        title: '6-8 STEM: Pond Survey',
+        passage: 'Our science club collected a __1__ sample from the pond.\n\nWe tested the __2__ level, counted __3__ insects, and recorded our __4__.\n\nThe data showed the water was __5__ and the habitat was __6__.',
+        answers: ['water', 'ph', 'tiny', 'results', 'clear', 'healthy'],
+        distractors: ['paper', 'music', 'giant', 'stories', 'dark', 'broken']
+    },
+    {
+        id: '68-sel-mediation',
+        title: '6-8 SEL: Mediation Circle',
+        passage: 'Two classmates asked for a __1__ circle to solve a problem.\n\nWe used __2__ statements, shared __3__ feelings, and wrote a __4__ plan.\n\nEveryone left with __5__ respect and a __6__ promise.',
+        answers: ['mediation', 'i', 'honest', 'calm', 'mutual', 'clear'],
+        distractors: ['science', 'you', 'wild', 'rushed', 'broken', 'secret']
     }
 ];
 

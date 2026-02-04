@@ -20,6 +20,9 @@ let voicesReadyPromise = null;
 let speechStartTimeout = null;
 let modalDismissBound = false;
 let assessmentState = null;
+let enhancedVoicePrefetched = false;
+let warmupPrefetchDone = false;
+let fitScreenActive = false;
 let practiceRecorder = {
     stream: null,
     mediaRecorder: null,
@@ -27,6 +30,7 @@ let practiceRecorder = {
     chunks: []
 };
 const practiceRecordings = new Map();
+const phonemeAudioCache = new Map();
 
 // DOM Elements - will be initialized after DOM loads
 let board, keyboard, modalOverlay, welcomeModal, teacherModal, studioModal, gameModal;
@@ -429,6 +433,69 @@ async function countRecordingsByType() {
     return counts;
 }
 
+function getPhonemeRecordingKey(sound = '') {
+    return `phoneme_${sound.toString().toLowerCase()}`;
+}
+
+function clearPhonemeCache(sound = '') {
+    if (!sound) return;
+    const key = getPhonemeRecordingKey(sound);
+    const cached = phonemeAudioCache.get(key);
+    if (cached?.url) URL.revokeObjectURL(cached.url);
+    phonemeAudioCache.delete(key);
+}
+
+function clearAllPhonemeCache() {
+    phonemeAudioCache.forEach(entry => {
+        if (entry?.url) URL.revokeObjectURL(entry.url);
+    });
+    phonemeAudioCache.clear();
+}
+
+async function prefetchPhonemeClips(sounds = []) {
+    const unique = Array.from(new Set((sounds || [])
+        .map(sound => (sound || '').toString().toLowerCase())
+        .filter(Boolean)));
+    if (!unique.length) return;
+    await ensureDBReady();
+    await Promise.all(unique.map(async (sound) => {
+        const key = getPhonemeRecordingKey(sound);
+        if (phonemeAudioCache.has(key)) return;
+        const blob = await getAudioFromDB(key);
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        phonemeAudioCache.set(key, { blob, url, createdAt: Date.now() });
+    }));
+}
+
+async function tryPlayRecordedPhoneme(sound = '') {
+    const useTeacherVoice = localStorage.getItem('useTeacherRecordings') !== 'false';
+    if (!useTeacherVoice) return false;
+    const key = getPhonemeRecordingKey(sound);
+    let cached = phonemeAudioCache.get(key);
+    if (!cached) {
+        await ensureDBReady();
+        const blob = await getAudioFromDB(key);
+        if (!blob) return false;
+        cached = { blob, url: URL.createObjectURL(blob), createdAt: Date.now() };
+        phonemeAudioCache.set(key, cached);
+    }
+    if (!cached?.url) return false;
+    const audio = new Audio(cached.url);
+    audio.play();
+    return true;
+}
+
+function prefetchWarmupPhonemes() {
+    if (warmupPrefetchDone) return;
+    const sounds = Array.from(document.querySelectorAll('.warmup-tile[data-sound]'))
+        .map(tile => tile.dataset.sound)
+        .filter(Boolean);
+    if (!sounds.length) return;
+    warmupPrefetchDone = true;
+    prefetchPhonemeClips(sounds);
+}
+
 function loadSettings() {
     const saved = localStorage.getItem(SETTINGS_KEY);
     if (!saved) return;
@@ -609,7 +676,12 @@ document.addEventListener("DOMContentLoaded", () => {
     startNewGame();
     checkFirstTimeVisitor();
     positionFunHud();
-    window.addEventListener('resize', positionFunHud);
+    updateFitScreenMode();
+    scheduleEnhancedVoicePrefetch();
+    window.addEventListener('resize', () => {
+        positionFunHud();
+        updateFitScreenMode();
+    });
 });
 
 function enableOverlayCloseForAllModals() {
@@ -644,6 +716,12 @@ function ensureFunHud() {
                 <span class="fun-hud-label">Timer</span>
                 <span class="fun-hud-value" id="fun-hud-timer">0:00</span>
             </div>
+            <div class="fun-hud-item fun-hud-help">
+                <button type="button" id="fun-hud-help" class="fun-hud-mini-btn" aria-label="About game modes">?</button>
+            </div>
+            <div class="fun-hud-item fun-hud-quick">
+                <button type="button" id="fun-hud-adventure" class="fun-hud-mini-btn">Adventure</button>
+            </div>
         `;
         document.body.appendChild(hud);
     } else if (!document.getElementById('fun-hud-timer')) {
@@ -664,7 +742,23 @@ function ensureFunHud() {
                 <span class="fun-hud-label">Timer</span>
                 <span class="fun-hud-value" id="fun-hud-timer">0:00</span>
             </div>
+            <div class="fun-hud-item fun-hud-help">
+                <button type="button" id="fun-hud-help" class="fun-hud-mini-btn" aria-label="About game modes">?</button>
+            </div>
+            <div class="fun-hud-item fun-hud-quick">
+                <button type="button" id="fun-hud-adventure" class="fun-hud-mini-btn">Adventure</button>
+            </div>
         `;
+    }
+    const helpBtn = hud.querySelector('#fun-hud-help');
+    if (helpBtn && !helpBtn.dataset.bound) {
+        helpBtn.dataset.bound = 'true';
+        helpBtn.title = 'Fun: coins track wins. Challenge: hearts change on misses. Team: alternate turns and score.';
+    }
+    const adventureBtn = hud.querySelector('#fun-hud-adventure');
+    if (adventureBtn && !adventureBtn.dataset.bound) {
+        adventureBtn.dataset.bound = 'true';
+        adventureBtn.addEventListener('click', openAdventureModal);
     }
     return hud;
 }
@@ -746,6 +840,14 @@ function positionFunHud() {
     hud.style.right = '16px';
 }
 
+function updateFitScreenMode() {
+    const shouldFit = window.innerHeight < 900;
+    if (fitScreenActive === shouldFit) return;
+    fitScreenActive = shouldFit;
+    document.body.classList.toggle('fit-screen', shouldFit);
+    positionFunHud();
+}
+
 function applyFunHudOutcome(win) {
     if (!appSettings.funHud?.enabled) return;
     const maxHearts = appSettings.funHud?.maxHearts ?? 3;
@@ -805,6 +907,7 @@ function initVoiceLoader() {
         cachedVoices = window.speechSynthesis.getVoices();
         populateVoiceList();
         updateVoiceInstallPrompt();
+        updateEnhancedVoicePrompt();
     };
 
     const populateVoiceList = () => {
@@ -832,6 +935,9 @@ function initVoiceLoader() {
         voiceSelect.onchange = () => {
             appSettings.voiceDialect = voiceSelect.value || DEFAULT_SETTINGS.voiceDialect;
             saveSettings();
+            updateVoiceInstallPrompt();
+            updateEnhancedVoicePrompt();
+            prefetchEnhancedVoice();
         };
     }
 }
@@ -1320,16 +1426,21 @@ function initWarmupButtons() {
             openPhonemeGuide(sound);
         };
     });
+
+    prefetchWarmupPhonemes();
 }
 
 function initTeacherTools() {
     compactTeacherLayout();
     ensureVoiceQualityHint();
     updateVoiceInstallPrompt();
+    updateEnhancedVoicePrompt();
     ensureAutoHearToggle();
     ensureFunHudControls();
     ensureAssessmentControls();
     ensureClassroomDockControl();
+    ensurePracticePackRow();
+    ensureTeacherTabs();
     const calmToggle = document.getElementById('toggle-calm-mode');
     if (calmToggle) {
         calmToggle.onchange = () => {
@@ -1435,6 +1546,96 @@ function ensureClassroomDockControl() {
     });
 }
 
+function ensurePracticePackRow() {
+    const grid = document.querySelector('#teacher-modal .teacher-tools-grid');
+    if (!grid || document.getElementById('practice-pack-row')) return;
+
+    const row = document.createElement('div');
+    row.className = 'teacher-pack-row';
+    row.id = 'practice-pack-row';
+    row.innerHTML = `
+        <div class="practice-pack-label">
+            <strong>Download practice pack</strong>
+            <span class="teacher-subtext">CSV summary + audio bundle</span>
+        </div>
+        <div class="practice-pack-actions">
+            <button type="button" id="practice-pack-csv" class="teacher-secondary-btn">CSV</button>
+            <button type="button" id="practice-pack-audio" class="teacher-secondary-btn">Audio bundle</button>
+            <button type="button" id="practice-pack-clear" class="teacher-secondary-btn">Clear local recordings</button>
+        </div>
+    `;
+    grid.appendChild(row);
+
+    row.querySelector('#practice-pack-csv')?.addEventListener('click', downloadPracticePackCsv);
+    row.querySelector('#practice-pack-audio')?.addEventListener('click', downloadPracticeAudioBundle);
+    row.querySelector('#practice-pack-clear')?.addEventListener('click', clearAllPracticeRecordings);
+}
+
+function ensureTeacherTabs() {
+    const modal = document.getElementById('teacher-modal');
+    if (!modal || modal.dataset.tabsInit === 'true') return;
+    const content = modal.querySelector('.modal-content') || modal;
+    if (!content) return;
+    const header = content.querySelector('h2');
+    const closeBtn = content.querySelector('.close-teacher');
+
+    const tabs = document.createElement('div');
+    tabs.className = 'teacher-tabs';
+    tabs.innerHTML = `
+        <button type="button" class="teacher-tab-btn active" data-tab="audio" aria-selected="true">Audio</button>
+        <button type="button" class="teacher-tab-btn" data-tab="assessments" aria-selected="false">Assessments</button>
+    `;
+
+    const audioPanel = document.createElement('div');
+    audioPanel.className = 'teacher-tab-panel active';
+    audioPanel.dataset.tab = 'audio';
+
+    const assessmentPanel = document.createElement('div');
+    assessmentPanel.className = 'teacher-tab-panel';
+    assessmentPanel.dataset.tab = 'assessments';
+
+    if (header) {
+        header.insertAdjacentElement('afterend', tabs);
+    } else {
+        content.prepend(tabs);
+    }
+    tabs.insertAdjacentElement('afterend', audioPanel);
+    audioPanel.insertAdjacentElement('afterend', assessmentPanel);
+
+    const movable = Array.from(content.children).filter(child => (
+        child !== tabs &&
+        child !== audioPanel &&
+        child !== assessmentPanel &&
+        child !== header &&
+        child !== closeBtn
+    ));
+    movable.forEach(child => audioPanel.appendChild(child));
+
+    const assessmentRow = audioPanel.querySelector('#open-assessment-btn')?.closest('.toggle-row');
+    const practiceRow = audioPanel.querySelector('#practice-pack-row');
+    if (assessmentRow) assessmentPanel.appendChild(assessmentRow);
+    if (practiceRow) assessmentPanel.appendChild(practiceRow);
+
+    tabs.querySelectorAll('.teacher-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => setTeacherTab(btn.dataset.tab || 'audio'));
+    });
+
+    modal.dataset.tabsInit = 'true';
+}
+
+function setTeacherTab(tab = 'audio') {
+    const modal = document.getElementById('teacher-modal');
+    if (!modal) return;
+    modal.querySelectorAll('.teacher-tab-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.dataset.tab === tab);
+    });
+    modal.querySelectorAll('.teacher-tab-btn').forEach(btn => {
+        const isActive = btn.dataset.tab === tab;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+}
+
 function compactTeacherLayout() {
     const modal = document.getElementById('teacher-modal');
     if (!modal || modal.dataset.cleaned === 'true') return;
@@ -1516,6 +1717,68 @@ async function updateVoiceInstallPrompt() {
     const hasHQ = !!pickBestVoiceForLang(voices, dialect, { requireHighQuality: true }) ||
         (dialect !== 'en' && !!pickBestVoiceForLang(voices, 'en', { requireHighQuality: true }));
     row.classList.toggle('hidden', hasHQ);
+}
+
+function ensureEnhancedVoicePrompt() {
+    const voiceSelect = document.getElementById('system-voice-select');
+    if (!voiceSelect) return null;
+    let row = document.getElementById('voice-available-row');
+    if (!row) {
+        row = document.createElement('div');
+        row.id = 'voice-available-row';
+        row.className = 'voice-available-row hidden';
+        row.innerHTML = `
+            <span>Enhanced voice available.</span>
+            <button type="button" id="voice-prefetch-btn">Prefetch now</button>
+        `;
+        voiceSelect.insertAdjacentElement('afterend', row);
+    }
+    const btn = row.querySelector('#voice-prefetch-btn');
+    if (btn && !btn.dataset.bound) {
+        btn.dataset.bound = 'true';
+        btn.onclick = () => prefetchEnhancedVoice();
+    }
+    return row;
+}
+
+async function updateEnhancedVoicePrompt() {
+    const row = ensureEnhancedVoicePrompt();
+    if (!row) return;
+    const voices = await getVoicesAsync();
+    const dialect = getPreferredEnglishDialect();
+    const hasHQ = !!pickBestVoiceForLang(voices, dialect, { requireHighQuality: true }) ||
+        (dialect !== 'en' && !!pickBestVoiceForLang(voices, 'en', { requireHighQuality: true }));
+    row.classList.toggle('hidden', !hasHQ);
+}
+
+function scheduleEnhancedVoicePrefetch() {
+    if (enhancedVoicePrefetched) return;
+    const handler = () => {
+        prefetchEnhancedVoice();
+        window.removeEventListener('pointerdown', handler);
+        window.removeEventListener('keydown', handler);
+    };
+    window.addEventListener('pointerdown', handler, { once: true });
+    window.addEventListener('keydown', handler, { once: true });
+}
+
+async function prefetchEnhancedVoice() {
+    if (enhancedVoicePrefetched) return;
+    if (!('speechSynthesis' in window)) return;
+    if (window.speechSynthesis.speaking || window.speechSynthesis.pending) return;
+    const voices = await getVoicesAsync();
+    const dialect = getPreferredEnglishDialect();
+    const preferred = pickBestVoiceForLang(voices, dialect, { requireHighQuality: true }) ||
+        (dialect !== 'en' ? pickBestVoiceForLang(voices, 'en', { requireHighQuality: true }) : null);
+    if (!preferred) return;
+    enhancedVoicePrefetched = true;
+    const utterance = new SpeechSynthesisUtterance(' ');
+    utterance.voice = preferred;
+    utterance.lang = preferred.lang;
+    utterance.rate = getSpeechRate('word');
+    utterance.pitch = 1.0;
+    utterance.volume = 0;
+    window.speechSynthesis.speak(utterance);
 }
 
 function ensureAutoHearToggle() {
@@ -2296,8 +2559,10 @@ function detectPrimarySound(word) {
     return word[0]; // Fallback to first letter
 }
 
-function speakPhoneme(sound) {
+async function speakPhoneme(sound) {
     if (!sound) return;
+    const lower = sound.toString().toLowerCase();
+    if (await tryPlayRecordedPhoneme(lower)) return;
     const phonemeData = window.PHONEME_DATA ? window.PHONEME_DATA[sound.toLowerCase()] : null;
     const text = phonemeData ? getPhonemeTts(phonemeData, sound) : sound;
     speakText(text, 'phoneme');
@@ -2318,6 +2583,7 @@ function openPhonemeGuideToSound(sound) {
         modalOverlay.classList.remove('hidden');
         phonemeModal.classList.remove('hidden');
         setWarmupOpen(true);
+        if (sound) prefetchPhonemeClips([sound]);
     try { populatePhonemeGrid && populatePhonemeGrid(); } catch(e) {}
         
         // Scroll to matching card and highlight
@@ -2550,6 +2816,15 @@ function renderModalWord(word) {
     wordEl.innerHTML = letters
         .map((ch, i) => `<span style="--delay:${(i * 0.08).toFixed(2)}s">${ch}</span>`)
         .join("");
+}
+
+function applyRevealVariant(win) {
+    const wordEl = document.getElementById("modal-word");
+    if (!wordEl) return;
+    const variants = ['lift', 'flip', 'sparkle'];
+    const choice = win ? variants[Math.floor(Math.random() * variants.length)] : 'lift';
+    wordEl.classList.remove('variant-lift', 'variant-flip', 'variant-sparkle');
+    wordEl.classList.add(`variant-${choice}`);
 }
 
 function updateModalSyllables(word, rawSyllables) {
@@ -2853,6 +3128,7 @@ function showEndModal(win) {
     document.getElementById("modal-title").textContent = win ? "Great Job!" : "Nice Try!";
     
     renderModalWord(currentWord);
+    applyRevealVariant(win);
     const syllableText = currentEntry?.syllables ? currentEntry.syllables.replace(/-/g, " • ") : "";
     updateModalSyllables(currentWord, syllableText);
     
@@ -3022,6 +3298,7 @@ function openTeacherMode() {
     const inp = document.getElementById("custom-word-input");
     inp.value = "";
     document.getElementById("teacher-error").textContent = "";
+    setTeacherTab('audio');
     
     // Initialize voice control settings
     initTeacherVoiceControl();
@@ -3086,6 +3363,7 @@ function initTeacherVoiceControl() {
             const key = `phoneme_${currentSelectedSound.sound}`;
             if (confirm(`Delete the phoneme recording for "${currentSelectedSound.sound}"?`)) {
                 await deleteAudioFromDB(key);
+                clearPhonemeCache(currentSelectedSound.sound);
                 showToast('✅ Phoneme recording deleted');
                 updateRecordingStatus();
             }
@@ -3152,6 +3430,7 @@ async function clearAllTeacherRecordings() {
         request.onsuccess = () => {
             showToast('✅ All recordings deleted');
             localStorage.setItem('hasRecordings', 'false');
+            clearAllPhonemeCache();
             updateRecordingStatus();
             updateVoiceIndicator();
             resolve(true);
@@ -3228,7 +3507,10 @@ function closeModal() {
     const infoModal = document.getElementById("info-modal");
     if (decodableModal) decodableModal.classList.add("hidden");
     if (progressModal) progressModal.classList.add("hidden");
-    if (phonemeModal) phonemeModal.classList.add("hidden");
+    if (phonemeModal) {
+        phonemeModal.classList.add("hidden");
+        clearSoundSelection();
+    }
     if (helpModal) helpModal.classList.add("hidden");
     if (bonusModal) bonusModal.classList.add("hidden");
     if (infoModal) infoModal.classList.add("hidden");
@@ -3411,6 +3693,75 @@ function ensurePracticeRecorder(container, key, label) {
     if (playBtn) playBtn.onclick = () => playPracticeRecording(key);
     if (clearBtn) clearBtn.onclick = () => clearPracticeRecording(key);
     updatePracticeRecorderUI(key);
+}
+
+function clearAllPracticeRecordings() {
+    if (practiceRecordings.size === 0) {
+        showToast('No practice recordings to clear.');
+        return;
+    }
+    if (!confirm('Clear all local practice recordings? This only removes audio stored on this device.')) return;
+    if (practiceRecorder.mediaRecorder && practiceRecorder.mediaRecorder.state === 'recording') {
+        practiceRecorder.mediaRecorder.stop();
+    }
+    Array.from(practiceRecordings.keys()).forEach(key => clearPracticeRecording(key));
+    showToast('✅ Local practice recordings cleared');
+}
+
+function parsePracticeKey(key = '') {
+    const [type, label] = key.split(':');
+    return { type: type || 'unknown', label: label || '' };
+}
+
+function buildPracticePackCsv() {
+    const header = ['Type', 'Label', 'Created At'];
+    const rows = [];
+    practiceRecordings.forEach((entry, key) => {
+        const parsed = parsePracticeKey(key);
+        const createdAt = entry?.createdAt ? new Date(entry.createdAt).toISOString() : '';
+        rows.push([parsed.type, parsed.label, createdAt]);
+    });
+    return [header, ...rows].map(row => row.map(escapeCsv).join(',')).join('\n');
+}
+
+function downloadPracticePackCsv() {
+    if (practiceRecordings.size === 0) {
+        showToast('No practice recordings yet.');
+        return;
+    }
+    const csv = buildPracticePackCsv();
+    downloadCSV(csv, `practice_pack_${new Date().toISOString().split('T')[0]}.csv`);
+}
+
+function getAudioExtension(blob) {
+    if (!blob?.type) return 'webm';
+    if (blob.type.includes('mp4')) return 'm4a';
+    if (blob.type.includes('wav')) return 'wav';
+    if (blob.type.includes('mpeg')) return 'mp3';
+    return 'webm';
+}
+
+async function downloadPracticeAudioBundle() {
+    if (practiceRecordings.size === 0) {
+        showToast('No practice recordings yet.');
+        return;
+    }
+    const files = [];
+    for (const [key, entry] of practiceRecordings.entries()) {
+        const parsed = parsePracticeKey(key);
+        if (!entry?.blob) continue;
+        const ext = getAudioExtension(entry.blob);
+        const safeLabel = (parsed.label || 'recording').toString().replace(/[^a-z0-9-_]+/gi, '_');
+        const filename = `practice_${parsed.type}_${safeLabel}.${ext}`;
+        const buffer = await entry.blob.arrayBuffer();
+        files.push({ name: filename, data: new Uint8Array(buffer) });
+    }
+    if (!files.length) {
+        showToast('No audio files found.');
+        return;
+    }
+    const zip = createZipArchive(files);
+    downloadBlob(zip, `practice_audio_${new Date().toISOString().split('T')[0]}.zip`);
 }
 
 function checkFirstTimeVisitor() {
@@ -3936,8 +4287,12 @@ function populatePhonemeGrid(preselectSound = null) {
         soundGuideBuilt = true;
     }
 
-    const defaultSound = preselectSound || currentSelectedSound?.sound || 'a';
-    selectSoundByKey(defaultSound);
+    const defaultSound = preselectSound || currentSelectedSound?.sound || null;
+    if (defaultSound) {
+        selectSoundByKey(defaultSound);
+    } else {
+        clearSoundSelection();
+    }
 }
 
 function buildVowelRow() {
@@ -4237,6 +4592,20 @@ function selectSoundByKey(soundKey) {
     if (phoneme) {
         selectSound(soundKey, phoneme, phoneme.grapheme || soundKey, tile);
     }
+}
+
+function clearSoundSelection() {
+    currentSelectedSound = null;
+    if (currentSelectedTile) {
+        currentSelectedTile.classList.remove('selected');
+        currentSelectedTile = null;
+    }
+    const displayPanel = document.getElementById('selected-sound-display');
+    if (displayPanel) {
+        displayPanel.classList.add('hidden');
+    }
+    const layout = document.querySelector('.sound-guide-layout');
+    if (layout) layout.classList.add('no-card');
 }
 
 function initPhonemeTabNavigation() {
@@ -4673,14 +5042,13 @@ function ensureArticulationCard(phoneme) {
     }
 
     const soundKey = currentSelectedSound?.sound || phoneme.grapheme || '';
-    const clipart = getClipartForSound(soundKey, phoneme);
-    const mouthIcon = getArticulationIconSvg(phoneme);
     const cue = formatMouthCue(phoneme);
     const soundLabel = phoneme.sound ? phoneme.sound.toString() : '';
     const example = phoneme.example || '';
+    const letterBadge = (soundKey || '').toString().toUpperCase();
 
     const exampleLine = example ? `<div class="articulation-example">Example: <strong>${example}</strong></div>` : '';
-    const pictureLine = clipart.label ? `<div class="articulation-picture-label">Picture cue: ${clipart.label}</div>` : '';
+    const pictureLine = `<div class="articulation-picture-label">Letter cue</div>`;
 
     card.innerHTML = `
         <div class="articulation-card-header">
@@ -4690,11 +5058,11 @@ function ensureArticulationCard(phoneme) {
         <div class="articulation-card-body">
             <div class="articulation-visual">
                 <div class="articulation-visual-block">
-                    <div class="articulation-visual-wrap">${mouthIcon}</div>
-                    <div class="articulation-picture-label">Mouth cue</div>
+                    <div class="articulation-visual-wrap articulation-letter">${letterBadge || '•'}</div>
+                    <div class="articulation-picture-label">Target letter</div>
                 </div>
                 <div class="articulation-visual-block">
-                    <div class="articulation-visual-wrap">${clipart.svg}</div>
+                    <div class="articulation-visual-wrap articulation-icon">/</div>
                     ${pictureLine}
                 </div>
             </div>
@@ -4709,6 +5077,11 @@ function ensureArticulationCard(phoneme) {
 function selectSound(sound, phoneme, labelOverride = null, tile = null) {
     if (!phoneme) return;
 
+    if (currentSelectedSound?.sound === sound) {
+        clearSoundSelection();
+        return;
+    }
+
     currentSelectedSound = { sound, phoneme, label: labelOverride };
     clearPracticeGroup('sound:');
 
@@ -4722,6 +5095,8 @@ function selectSound(sound, phoneme, labelOverride = null, tile = null) {
 
     const displayPanel = document.getElementById('selected-sound-display');
     if (displayPanel) displayPanel.classList.remove('hidden');
+    const layout = document.querySelector('.sound-guide-layout');
+    if (layout) layout.classList.remove('no-card');
 
     const displayLabel = labelOverride || phoneme.grapheme || sound;
     const soundLetter = document.getElementById('sound-letter');
@@ -4961,11 +5336,11 @@ function normalizePhonemeForTTS(sound) {
 }
 
 const SOUND_TTS_MAP = {
-    a: 'aeh',
-    e: 'eh',
-    i: 'ih',
-    o: 'aw',
-    u: 'uh',
+    a: 'short a, as in cat',
+    e: 'short e, as in bed',
+    i: 'short i, as in sit',
+    o: 'short o, as in top',
+    u: 'short u, as in up',
     ay: 'ay',
     ee: 'ee',
     igh: 'eye',
@@ -5037,9 +5412,14 @@ function getPhonemeTts(phoneme, soundKey = '') {
     return '';
 }
 
-function speakPhonemeSound(phoneme, soundKey = '') {
+async function speakPhonemeSound(phoneme, soundKey = '') {
     const tts = getPhonemeTts(phoneme, soundKey);
     if (!tts) return;
+    const key = soundKey || phoneme?.grapheme || '';
+    if (key) {
+        const played = await tryPlayRecordedPhoneme(key);
+        if (played) return;
+    }
     speakText(tts, 'phoneme');
 }
 
@@ -5087,8 +5467,14 @@ function openPhonemeGuide(preselectSound = null) {
         console.error("phoneme-modal element not found!");
         return;
     }
+    clearSoundSelection();
     phonemeModal.classList.remove('hidden');
     setWarmupOpen(true);
+    if (preselectSound) {
+        prefetchPhonemeClips([preselectSound]);
+    } else {
+        prefetchWarmupPhonemes();
+    }
 
     try {
         if (typeof populatePhonemeGrid === 'function') {
@@ -6320,6 +6706,129 @@ function downloadCSV(csv, filename) {
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
+}
+
+function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+}
+
+const CRC_TABLE = (() => {
+    const table = new Uint32Array(256);
+    for (let i = 0; i < 256; i += 1) {
+        let c = i;
+        for (let k = 0; k < 8; k += 1) {
+            c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+        }
+        table[i] = c >>> 0;
+    }
+    return table;
+})();
+
+function crc32(data) {
+    let c = 0xffffffff;
+    for (let i = 0; i < data.length; i += 1) {
+        c = CRC_TABLE[(c ^ data[i]) & 0xff] ^ (c >>> 8);
+    }
+    return (c ^ 0xffffffff) >>> 0;
+}
+
+function getDosDateTime(date = new Date()) {
+    const year = Math.max(1980, date.getFullYear());
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const hours = date.getHours();
+    const minutes = date.getMinutes();
+    const seconds = Math.floor(date.getSeconds() / 2);
+    const dosTime = (hours << 11) | (minutes << 5) | seconds;
+    const dosDate = ((year - 1980) << 9) | (month << 5) | day;
+    return { dosTime, dosDate };
+}
+
+function createZipArchive(files = []) {
+    const encoder = new TextEncoder();
+    const fileRecords = [];
+    const chunks = [];
+    let offset = 0;
+
+    files.forEach(file => {
+        const nameBytes = encoder.encode(file.name);
+        const data = file.data || new Uint8Array();
+        const { dosTime, dosDate } = getDosDateTime();
+        const crc = crc32(data);
+
+        const localHeader = new Uint8Array(30 + nameBytes.length);
+        const view = new DataView(localHeader.buffer);
+        view.setUint32(0, 0x04034b50, true);
+        view.setUint16(4, 20, true);
+        view.setUint16(6, 0, true);
+        view.setUint16(8, 0, true);
+        view.setUint16(10, dosTime, true);
+        view.setUint16(12, dosDate, true);
+        view.setUint32(14, crc, true);
+        view.setUint32(18, data.length, true);
+        view.setUint32(22, data.length, true);
+        view.setUint16(26, nameBytes.length, true);
+        view.setUint16(28, 0, true);
+        localHeader.set(nameBytes, 30);
+
+        chunks.push(localHeader, data);
+        fileRecords.push({
+            nameBytes,
+            crc,
+            size: data.length,
+            offset,
+            dosTime,
+            dosDate
+        });
+        offset += localHeader.length + data.length;
+    });
+
+    const centralChunks = [];
+    let centralSize = 0;
+    fileRecords.forEach(record => {
+        const centralHeader = new Uint8Array(46 + record.nameBytes.length);
+        const view = new DataView(centralHeader.buffer);
+        view.setUint32(0, 0x02014b50, true);
+        view.setUint16(4, 20, true);
+        view.setUint16(6, 20, true);
+        view.setUint16(8, 0, true);
+        view.setUint16(10, 0, true);
+        view.setUint16(12, record.dosTime, true);
+        view.setUint16(14, record.dosDate, true);
+        view.setUint32(16, record.crc, true);
+        view.setUint32(20, record.size, true);
+        view.setUint32(24, record.size, true);
+        view.setUint16(28, record.nameBytes.length, true);
+        view.setUint16(30, 0, true);
+        view.setUint16(32, 0, true);
+        view.setUint16(34, 0, true);
+        view.setUint16(36, 0, true);
+        view.setUint32(38, 0, true);
+        view.setUint32(42, record.offset, true);
+        centralHeader.set(record.nameBytes, 46);
+        centralChunks.push(centralHeader);
+        centralSize += centralHeader.length;
+    });
+
+    const endRecord = new Uint8Array(22);
+    const endView = new DataView(endRecord.buffer);
+    endView.setUint32(0, 0x06054b50, true);
+    endView.setUint16(4, 0, true);
+    endView.setUint16(6, 0, true);
+    endView.setUint16(8, fileRecords.length, true);
+    endView.setUint16(10, fileRecords.length, true);
+    endView.setUint32(12, centralSize, true);
+    endView.setUint32(16, offset, true);
+    endView.setUint16(20, 0, true);
+
+    return new Blob([...chunks, ...centralChunks, endRecord], { type: 'application/zip' });
 }
 
 function shuffleList(list) {
