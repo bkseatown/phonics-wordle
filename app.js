@@ -5926,6 +5926,11 @@ function organizeHeaderActions() {
     if (groupModes.children.length) headerActions.appendChild(groupModes);
     if (groupTools.children.length) headerActions.appendChild(groupTools);
     headerActions.dataset.organized = 'true';
+
+    if (newWordBtn) {
+        newWordBtn.classList.add('active');
+        newWordBtn.setAttribute('aria-current', 'page');
+    }
 }
 
 function toggleClassroomDock(forceOpen = null) {

@@ -233,6 +233,20 @@ h1 {
     letter-spacing: 0.2px;
 }
 
+.header-top h1::after,
+.cloze-header h1::after,
+.comp-header h1::after,
+.fluency-header h1::after,
+.madlibs-header h1::after {
+    content: '';
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-left: 8px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.95), rgba(14, 165, 233, 0.85), rgba(249, 115, 22, 0.7));
+}
+
 h2,
 h3,
 .modal-content h2 {
@@ -256,9 +270,10 @@ h3,
     max-width: 100%;
     padding: 4px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(148, 163, 184, 0.3);
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(8px);
 }
 
 .nav-group::before {
@@ -344,9 +359,9 @@ h3,
     top: calc(100% + 6px);
     right: 0;
     background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+    border: 1px solid var(--lab-border);
+    border-radius: 14px;
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.14);
     min-width: 180px;
     padding: 6px;
     display: grid;
@@ -475,6 +490,19 @@ h3,
 .link-btn:hover {
     background: rgba(79, 70, 229, 0.08);
     border-color: rgba(99, 102, 241, 0.45);
+    transform: translateY(-1px);
+}
+
+.link-btn.ghost {
+    background: rgba(99, 102, 241, 0.08);
+    border-color: rgba(99, 102, 241, 0.25);
+    box-shadow: none;
+    padding: 7px 14px;
+    font-size: 0.85rem;
+}
+
+.link-btn.ghost:hover {
+    background: rgba(99, 102, 241, 0.15);
     transform: translateY(-1px);
 }
 
@@ -4787,11 +4815,11 @@ body.cloze-page {
 }
 
 .cloze-panel {
-    background: rgba(255, 255, 255, 0.94);
-    border-radius: 18px;
+    background: var(--lab-card);
+    border-radius: var(--lab-radius);
     padding: 18px;
-    border: 1px solid rgba(226, 232, 240, 0.9);
-    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.12);
+    border: 1px solid var(--lab-border);
+    box-shadow: var(--lab-shadow);
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -5066,14 +5094,14 @@ body.cloze-page {
 }
 
 .madlibs-panel {
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 14px;
-    padding: 12px;
-    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+    background: var(--lab-card);
+    border-radius: var(--lab-radius);
+    padding: 14px;
+    box-shadow: var(--lab-shadow);
     display: flex;
     flex-direction: column;
     gap: 10px;
-    border: 1px solid rgba(226, 232, 240, 0.5);
+    border: 1px solid var(--lab-border);
     position: relative;
     overflow: hidden;
     backdrop-filter: blur(8px);
@@ -5099,20 +5127,19 @@ body.cloze-page {
     pointer-events: none;
 }
 
-.madlibs-header h1::after {
-    content: ' ✨';
-    font-size: 1.05rem;
-}
-
 .madlibs-panel h2 {
     font-size: 1.2rem;
     color: #1f2937;
 }
 
 .madlibs-panel h2::after {
-    content: ' ✨';
-    font-size: 0.95rem;
-    opacity: 0.75;
+    content: '';
+    display: inline-block;
+    width: 28px;
+    height: 6px;
+    margin-left: 8px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(99, 102, 241, 0.9), rgba(14, 165, 233, 0.8));
 }
 
 .madlibs-panel .muted {
@@ -5473,10 +5500,10 @@ body.madlibs-page {
     height: 100dvh;
     overflow: hidden;
     background:
-        radial-gradient(circle at 18% 12%, rgba(122, 162, 247, 0.25), transparent 42%),
-        radial-gradient(circle at 82% 16%, rgba(94, 234, 212, 0.18), transparent 38%),
-        radial-gradient(circle at 50% 78%, rgba(244, 199, 129, 0.18), transparent 46%),
-        linear-gradient(180deg, #eef2ff 0%, #e5ecf7 50%, #dde7f5 100%);
+        radial-gradient(circle at 12% 10%, rgba(56, 189, 248, 0.18), transparent 46%),
+        radial-gradient(circle at 88% 8%, rgba(249, 115, 22, 0.16), transparent 44%),
+        radial-gradient(circle at 50% 82%, rgba(99, 102, 241, 0.12), transparent 50%),
+        linear-gradient(180deg, #fbfdff 0%, #eef4ff 55%, #e6eefb 100%);
     color: #0f172a;
 }
 
@@ -5625,8 +5652,11 @@ body.madlibs-page .fun-hud {
 
 body.comprehension-page {
     min-height: 100dvh;
-    background: radial-gradient(circle at top, #f8fafc 0%, #e2e8f0 60%);
-    color: #111827;
+    background:
+        radial-gradient(circle at 12% 10%, rgba(56, 189, 248, 0.16), transparent 46%),
+        radial-gradient(circle at 88% 8%, rgba(249, 115, 22, 0.14), transparent 44%),
+        linear-gradient(180deg, #fbfdff 0%, #eef4ff 55%, #e6eefb 100%);
+    color: #0f172a;
 }
 
 .comp-header {
@@ -5655,11 +5685,11 @@ body.comprehension-page {
 }
 
 .comp-panel {
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 16px;
-    padding: 14px;
-    border: 1px solid rgba(226, 232, 240, 0.7);
-    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+    background: var(--lab-card);
+    border-radius: var(--lab-radius);
+    padding: 16px;
+    border: 1px solid var(--lab-border);
+    box-shadow: var(--lab-shadow);
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -5718,8 +5748,14 @@ body.comprehension-page {
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: #64748b;
-    margin-bottom: 6px;
+    color: #4338ca;
+    margin-bottom: 8px;
+    background: rgba(99, 102, 241, 0.12);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    display: inline-flex;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-weight: 700;
 }
 
 .comp-choices {
@@ -5763,8 +5799,11 @@ body.comprehension-page {
 
 body.fluency-page {
     min-height: 100dvh;
-    background: radial-gradient(circle at top, #f8fafc 0%, #e2e8f0 60%);
-    color: #111827;
+    background:
+        radial-gradient(circle at 12% 10%, rgba(56, 189, 248, 0.16), transparent 46%),
+        radial-gradient(circle at 88% 8%, rgba(249, 115, 22, 0.14), transparent 44%),
+        linear-gradient(180deg, #fbfdff 0%, #eef4ff 55%, #e6eefb 100%);
+    color: #0f172a;
 }
 
 .fluency-header {
@@ -5793,11 +5832,11 @@ body.fluency-page {
 }
 
 .fluency-panel {
-    background: rgba(255, 255, 255, 0.9);
-    border-radius: 16px;
-    padding: 14px;
-    border: 1px solid rgba(226, 232, 240, 0.7);
-    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+    background: var(--lab-card);
+    border-radius: var(--lab-radius);
+    padding: 16px;
+    border: 1px solid var(--lab-border);
+    box-shadow: var(--lab-shadow);
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -5844,9 +5883,10 @@ body.fluency-page {
 }
 
 .fluency-timer-display {
-    font-size: 2rem;
-    font-weight: 700;
+    font-size: 2.2rem;
+    font-weight: 800;
     text-align: center;
+    color: #0f172a;
 }
 
 .fluency-timer-controls {
