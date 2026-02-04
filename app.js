@@ -4720,8 +4720,8 @@ function selectSound(sound, phoneme, labelOverride = null, tile = null) {
         currentSelectedTile = tile;
     }
 
-    const display = document.getElementById('selected-sound-display');
-    if (display) display.classList.remove('hidden');
+    const displayPanel = document.getElementById('selected-sound-display');
+    if (displayPanel) displayPanel.classList.remove('hidden');
 
     const displayLabel = labelOverride || phoneme.grapheme || sound;
     const soundLetter = document.getElementById('sound-letter');
@@ -4756,13 +4756,12 @@ function selectSound(sound, phoneme, labelOverride = null, tile = null) {
 
     ensureArticulationCard(phoneme);
 
-    const display = document.getElementById('selected-sound-display');
-    if (display && sound) {
-        let soundRecorder = display.querySelector('.practice-recorder-group');
+    if (displayPanel && sound) {
+        let soundRecorder = displayPanel.querySelector('.practice-recorder-group');
         if (!soundRecorder) {
             soundRecorder = document.createElement('div');
             soundRecorder.className = 'practice-recorder-group';
-            display.appendChild(soundRecorder);
+            displayPanel.appendChild(soundRecorder);
         }
         soundRecorder.innerHTML = '';
         ensurePracticeRecorder(soundRecorder, `sound:${sound}`, 'Record Sound');
