@@ -432,6 +432,7 @@ function checkAnswers() {
 }
 
 function init() {
+    applyFriendlyNavLabels();
     applyLightTheme();
     loadProgress();
     updateHud();
@@ -456,3 +457,18 @@ function init() {
 }
 
 init();
+
+function applyFriendlyNavLabels() {
+    const map = {
+        'Cloze': 'Story Fill',
+        'Comprehension': 'Read & Think',
+        'Fluency': 'Speed Sprint',
+        'Mad Libs': 'Silly Stories'
+    };
+    document.querySelectorAll('a, button').forEach((el) => {
+        const label = (el.textContent || '').trim();
+        if (map[label]) {
+            el.textContent = map[label];
+        }
+    });
+}

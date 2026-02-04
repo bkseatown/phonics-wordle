@@ -176,9 +176,9 @@ function initClozeNav() {
     const header = document.querySelector('.madlibs-header');
     if (!header || document.getElementById('madlibs-cloze-link')) return;
     const links = [
-        { id: 'madlibs-cloze-link', href: 'cloze.html', label: 'Cloze' },
-        { id: 'madlibs-comp-link', href: 'comprehension.html', label: 'Comprehension' },
-        { id: 'madlibs-fluency-link', href: 'fluency.html', label: 'Fluency' }
+        { id: 'madlibs-cloze-link', href: 'cloze.html', label: 'Story Fill' },
+        { id: 'madlibs-comp-link', href: 'comprehension.html', label: 'Read & Think' },
+        { id: 'madlibs-fluency-link', href: 'fluency.html', label: 'Speed Sprint' }
     ];
     links.forEach(({ id, href, label }) => {
         const link = document.createElement('a');
@@ -187,6 +187,21 @@ function initClozeNav() {
         link.className = 'link-btn';
         link.textContent = label;
         header.appendChild(link);
+    });
+}
+
+function applyFriendlyNavLabels() {
+    const map = {
+        'Cloze': 'Story Fill',
+        'Comprehension': 'Read & Think',
+        'Fluency': 'Speed Sprint',
+        'Mad Libs': 'Silly Stories'
+    };
+    document.querySelectorAll('a, button').forEach((el) => {
+        const label = (el.textContent || '').trim();
+        if (map[label]) {
+            el.textContent = map[label];
+        }
     });
 }
 
@@ -448,6 +463,7 @@ function wireEvents() {
 }
 
 applyLightTheme();
+applyFriendlyNavLabels();
 initTemplates();
 applyTemplate(currentTemplate);
 wireEvents();

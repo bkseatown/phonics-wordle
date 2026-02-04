@@ -455,6 +455,7 @@ h3,
     box-shadow: none;
     padding: 6px 10px;
     border-radius: 12px;
+    white-space: nowrap;
 }
 
 .header-actions .link-btn:hover {

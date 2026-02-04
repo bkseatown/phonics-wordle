@@ -25,6 +25,7 @@ let warmupPrefetchDone = false;
 let fitScreenActive = false;
 let pronunciationRecognition = null;
 let pronunciationActive = false;
+let pronunciationTimeout = null;
 let practiceRecorder = {
     stream: null,
     mediaRecorder: null,
@@ -546,6 +547,8 @@ function loadSettings() {
         if (!hasActiveModes) {
             appSettings.gameMode.active = false;
         }
+        // Always start with game HUD hidden until "Start Adventure" is pressed.
+        appSettings.gameMode.active = false;
 
     } catch (e) {
         console.warn('Could not parse settings, using defaults.', e);
@@ -3572,6 +3575,10 @@ function closeModal() {
     if (bonusModal) bonusModal.classList.add("hidden");
     if (infoModal) infoModal.classList.add("hidden");
     stopPronunciationCheck();
+    if (practiceRecorder.mediaRecorder && practiceRecorder.mediaRecorder.state === 'recording') {
+        practiceRecorder.mediaRecorder.stop();
+    }
+    releasePracticeStream();
     
     if (document.activeElement) document.activeElement.blur();
     document.body.focus();
@@ -3632,6 +3639,18 @@ async function ensurePracticeStream() {
     }
 }
 
+function releasePracticeStream() {
+    if (!practiceRecorder.stream) return;
+    practiceRecorder.stream.getTracks().forEach(track => {
+        try {
+            track.stop();
+        } catch (err) {
+            // ignore stop errors
+        }
+    });
+    practiceRecorder.stream = null;
+}
+
 function getPracticeRecording(key) {
     return practiceRecordings.get(key);
 }
@@ -3679,6 +3698,7 @@ async function startPracticeRecording(key) {
         practiceRecorder.activeKey = null;
         practiceRecorder.chunks = [];
         updatePracticeRecorderUI(key);
+        releasePracticeStream();
     };
 
     recorder.start();
@@ -5373,11 +5393,18 @@ function clearPronunciationFeedback() {
 }
 
 function stopPronunciationCheck() {
+    if (pronunciationTimeout) {
+        clearTimeout(pronunciationTimeout);
+        pronunciationTimeout = null;
+    }
     if (pronunciationRecognition) {
         try {
             pronunciationRecognition.onresult = null;
             pronunciationRecognition.onerror = null;
             pronunciationRecognition.onend = null;
+            if (typeof pronunciationRecognition.abort === 'function') {
+                pronunciationRecognition.abort();
+            }
             pronunciationRecognition.stop();
         } catch (e) {
             // ignore stop errors
@@ -5429,10 +5456,15 @@ function startPronunciationCheck() {
     pronunciationRecognition = new SpeechRec();
     pronunciationRecognition.lang = getPreferredEnglishDialect();
     pronunciationRecognition.interimResults = false;
+    pronunciationRecognition.continuous = false;
     pronunciationRecognition.maxAlternatives = 3;
     pronunciationActive = true;
 
     pronunciationRecognition.onresult = (event) => {
+        if (pronunciationTimeout) {
+            clearTimeout(pronunciationTimeout);
+            pronunciationTimeout = null;
+        }
         const transcripts = [];
         if (event.results && event.results[0]) {
             const result = event.results[0];
@@ -5444,6 +5476,10 @@ function startPronunciationCheck() {
     };
 
     pronunciationRecognition.onerror = () => {
+        if (pronunciationTimeout) {
+            clearTimeout(pronunciationTimeout);
+            pronunciationTimeout = null;
+        }
         setPronunciationFeedback('warn', [
             'Could not hear that clearly.',
             `Try again: "${target}".`
@@ -5451,11 +5487,23 @@ function startPronunciationCheck() {
     };
 
     pronunciationRecognition.onend = () => {
+        if (pronunciationTimeout) {
+            clearTimeout(pronunciationTimeout);
+            pronunciationTimeout = null;
+        }
         stopPronunciationCheck();
     };
 
     try {
         pronunciationRecognition.start();
+        pronunciationTimeout = setTimeout(() => {
+            if (!pronunciationActive) return;
+            setPronunciationFeedback('warn', [
+                'Recording timed out.',
+                `Try again: "${target}".`
+            ]);
+            stopPronunciationCheck();
+        }, 6000);
     } catch (e) {
         stopPronunciationCheck();
         setPronunciationFeedback('warn', ['Microphone was not available.']);
