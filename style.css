@@ -5649,15 +5649,15 @@ body.fluency-page {
     }
 
     body.comprehension-page .comp-choice {
-        background: rgba(30, 41, 59, 0.7);
+        background: rgba(15, 23, 42, 0.85);
         border-color: rgba(51, 65, 85, 0.8);
-        color: #e2e8f0;
+        color: #f8fafc;
     }
 
     body.comprehension-page .comp-question {
-        background: rgba(30, 41, 59, 0.75);
+        background: rgba(15, 23, 42, 0.9);
         border-color: rgba(51, 65, 85, 0.8);
-        color: #e2e8f0;
+        color: #f8fafc;
     }
 
     body.comprehension-page .comp-question h3 {
@@ -5665,7 +5665,11 @@ body.fluency-page {
     }
 
     body.comprehension-page .comp-question-meta {
-        color: #cbd5f5;
+        color: #c7d2fe;
+    }
+
+    body.comprehension-page .comp-choice span {
+        color: #f8fafc;
     }
 
     body.comprehension-page .comp-hud,
@@ -5685,7 +5689,11 @@ body.fluency-page {
 
 @media (max-height: 900px) {
     header {
-        padding: 8px 12px 4px;
+        padding: 6px 10px 4px;
+    }
+
+    .header-top {
+        margin-bottom: 6px;
     }
 
     .header-actions .link-btn {
@@ -5693,40 +5701,77 @@ body.fluency-page {
         font-size: 0.85rem;
     }
 
+    .controls {
+        gap: 8px;
+        margin-bottom: 4px;
+    }
+
     #game-canvas {
-        gap: 6px;
-        padding: 0 8px 8px;
+        gap: 4px;
+        padding: 0 6px 6px;
+        justify-content: flex-start;
+    }
+
+    #game-board {
+        margin: 8px auto;
+        gap: 5px;
     }
 
     .tile {
-        width: min(50px, 9.5vw, 7.2vh);
-        height: min(50px, 9.5vw, 7.2vh);
-        font-size: clamp(1rem, 2.6vw, 1.35rem);
+        width: min(46px, 8.5vw, 6.4vh);
+        height: min(46px, 8.5vw, 6.4vh);
+        font-size: clamp(0.95rem, 2.2vw, 1.2rem);
     }
 
     .key {
-        height: clamp(30px, 5.2vh, 38px);
-        font-size: clamp(0.75rem, 1.6vw, 0.9rem);
-        max-width: clamp(30px, 7.8vw, 44px);
+        height: clamp(28px, 4.8vh, 34px);
+        font-size: clamp(0.7rem, 1.4vw, 0.85rem);
+        max-width: clamp(28px, 6.8vw, 40px);
     }
 
     .hint-actions {
-        margin: 2px 0 4px;
+        margin: 2px 0;
+    }
+
+    #keyboard {
+        margin-bottom: 6px;
     }
 
     .comp-main,
     .fluency-main {
-        padding-bottom: 16px;
+        gap: 12px;
+        padding-bottom: 12px;
     }
 
     .comp-panel,
     .fluency-panel {
-        padding: 12px;
+        padding: 10px;
     }
 
     .comp-passage,
     .fluency-passage {
-        min-height: 140px;
+        min-height: 120px;
+    }
+
+    .comp-header {
+        padding: 6px 10px;
+    }
+
+    .comp-subtitle {
+        font-size: 0.85rem;
+    }
+
+    .comp-question {
+        padding: 8px 10px;
+    }
+
+    .comp-question h3 {
+        font-size: 0.95rem;
+    }
+
+    .comp-choice {
+        padding: 5px 8px;
+        font-size: 0.9rem;
     }
 }
 
