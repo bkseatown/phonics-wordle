@@ -44,6 +44,52 @@ body.calm-mode #mouth-visual {
     animation: none !important;
 }
 
+body.presentation-mode {
+    background: #f7f9fb;
+    color: #0f172a;
+}
+
+body.presentation-mode * {
+    animation: none !important;
+    transition: none !important;
+}
+
+body.presentation-mode .modal {
+    background: #ffffff;
+    border-color: #cbd5e1;
+}
+
+body.presentation-mode .sound-guide-board,
+body.presentation-mode .sound-guide-card {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+}
+
+body.presentation-mode .sound-tile {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+
+body.presentation-mode .sound-tile.selected {
+    border-color: #4338ca !important;
+    box-shadow: 0 0 0 3px rgba(67,56,202,0.18) !important;
+}
+
+body.presentation-mode .articulation-card {
+    background: #ffffff;
+    border-color: #cbd5e1;
+}
+
+body.presentation-mode .more-tools-menu {
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+}
+
+body.presentation-mode #modal-overlay {
+    background: rgba(241, 245, 249, 0.8);
+}
+
 body.hide-ipa .phoneme-ipa {
     display: none;
 }
@@ -88,6 +134,57 @@ h1 {
     gap: 8px; 
     align-items: center;
     flex-wrap: wrap;
+}
+
+.more-tools-wrapper {
+    position: relative;
+}
+
+.more-tools-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+    min-width: 180px;
+    padding: 6px;
+    display: grid;
+    gap: 4px;
+    z-index: 1400;
+}
+
+.more-tools-menu.hidden {
+    display: none;
+}
+
+.more-tools-item {
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    font-weight: 600;
+    color: #111827;
+}
+
+.more-tools-item:hover {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+
+.more-tools-toggle {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.more-tools-toggle input {
+    width: 16px;
+    height: 16px;
 }
 
 .text-btn { 
@@ -422,18 +519,7 @@ option:checked {
 
 /* Warm-up panel */
 .warmup-panel {
-    width: auto;
-    max-width: 520px;
-    margin: 6px auto 10px;
-    padding: 8px 12px;
-    background: #ffffff;
-    border: 1px dashed #e2e8f0;
-    border-radius: 10px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    align-items: center;
-    flex-wrap: wrap;
+    display: none;
 }
 
 .warmup-title {
@@ -2671,14 +2757,14 @@ button:active:not(:disabled) {
 .phoneme-modal {
     max-width: 1180px;
     width: 96vw;
-    padding: 14px;
+    padding: 12px;
 }
 
 .sound-guide-subtitle {
     text-align: center;
-    color: #6b7280;
-    margin: 4px 0 12px;
-    font-size: 0.95rem;
+    color: #475569;
+    margin: 4px 0 10px;
+    font-size: 0.92rem;
 }
 
 .sound-guide-layout {
@@ -2694,11 +2780,11 @@ button:active:not(:disabled) {
 .sound-guide-card {
     position: sticky;
     top: 8px;
-    background: linear-gradient(135deg, #f9fafb 0%, #eef2ff 100%);
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
     border-radius: 18px;
     padding: 12px;
     border: 1px solid rgba(148, 163, 184, 0.35);
-    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
 }
 
 .sound-guide-board {
@@ -2706,9 +2792,9 @@ button:active:not(:disabled) {
     overflow: auto;
     padding: 10px;
     border-radius: 18px;
-    background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
-    border: 1px solid rgba(226, 232, 240, 0.9);
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.05);
     scrollbar-width: none;
 }
 
@@ -2834,8 +2920,8 @@ button:active:not(:disabled) {
 }
 
 .sound-tile {
-    border: 1px solid #d1d5db;
-    background: #ffffff;
+    border: 1px solid #d9e2ec;
+    background: #f9fbff;
     border-radius: 8px;
     padding: 6px 6px;
     font-weight: 700;
@@ -2846,8 +2932,8 @@ button:active:not(:disabled) {
 }
 
 .sound-tile:hover {
-    border-color: #667eea;
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+    border-color: #475569;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.1);
     transform: translateY(-1px);
 }
 
@@ -3084,7 +3170,7 @@ button:active:not(:disabled) {
     background: #f9fafb;
     border-radius: 14px;
     border: 1px solid #e5e7eb;
-    padding: 12px;
+    padding: 10px 12px;
     text-align: left;
     color: #1f2937;
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
@@ -3095,6 +3181,20 @@ button:active:not(:disabled) {
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+}
+
+.articulation-collapse {
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475569;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.articulation-collapse:hover {
+    background: #e2e8f0;
 }
 
 .articulation-ipa {
@@ -3108,8 +3208,8 @@ button:active:not(:disabled) {
 
 .articulation-card-body {
     display: grid;
-    grid-template-columns: minmax(220px, 260px) 1fr;
-    gap: 12px;
+    grid-template-columns: minmax(200px, 230px) 1fr;
+    gap: 10px;
     align-items: center;
 }
 

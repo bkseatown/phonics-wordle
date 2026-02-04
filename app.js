@@ -55,6 +55,7 @@ const DEFAULT_SETTINGS = {
         sfx: false,
         style: 'playful'
     },
+    presentationMode: false,
     gameMode: {
         teamMode: false,
         timerEnabled: false,
@@ -559,6 +560,7 @@ function applySettings() {
     document.body.classList.toggle('hide-ipa', !appSettings.showIPA);
     document.body.classList.toggle('hide-examples', !appSettings.showExamples);
     document.body.classList.toggle('hide-mouth-cues', !appSettings.showMouthCues);
+    document.body.classList.toggle('presentation-mode', !!appSettings.presentationMode);
     updateFunHudVisibility();
 
     const calmToggle = document.getElementById('toggle-calm-mode');
@@ -571,6 +573,8 @@ function applySettings() {
     if (examplesToggle) examplesToggle.checked = appSettings.showExamples;
     const cuesToggle = document.getElementById('toggle-mouth-cues');
     if (cuesToggle) cuesToggle.checked = appSettings.showMouthCues;
+    const presentationToggle = document.getElementById('toggle-presentation-mode');
+    if (presentationToggle) presentationToggle.checked = !!appSettings.presentationMode;
 
     const speechRateInput = document.getElementById('speech-rate');
     if (speechRateInput) {
@@ -657,6 +661,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initComprehensionLink();
     initFluencyLink();
     initAdventureMode();
+    ensureMoreToolsMenu();
     initClassroomDock();
     if (typeof initAssessmentFlow === 'function') {
         initAssessmentFlow();
@@ -5053,7 +5058,10 @@ function ensureArticulationCard(phoneme) {
     card.innerHTML = `
         <div class="articulation-card-header">
             <span class="articulation-title">Articulation Card</span>
-            ${soundLabel ? `<span class="articulation-ipa">${soundLabel}</span>` : ''}
+            <div class="articulation-actions">
+                ${soundLabel ? `<span class="articulation-ipa">${soundLabel}</span>` : ''}
+                <button type="button" class="articulation-collapse" id="collapse-articulation">Collapse</button>
+            </div>
         </div>
         <div class="articulation-card-body">
             <div class="articulation-visual">
@@ -5072,6 +5080,11 @@ function ensureArticulationCard(phoneme) {
             </div>
         </div>
     `;
+
+    const collapseBtn = document.getElementById('collapse-articulation');
+    if (collapseBtn) {
+        collapseBtn.onclick = () => clearSoundSelection();
+    }
 }
 
 function selectSound(sound, phoneme, labelOverride = null, tile = null) {
@@ -5126,20 +5139,15 @@ function selectSound(sound, phoneme, labelOverride = null, tile = null) {
 
     const hearSoundBtn = document.getElementById('hear-phoneme-sound');
     if (hearSoundBtn) {
-        hearSoundBtn.title = 'Plays the target sound.';
+        hearSoundBtn.remove();
     }
 
     ensureArticulationCard(phoneme);
 
     if (displayPanel && sound) {
-        let soundRecorder = displayPanel.querySelector('.practice-recorder-group');
-        if (!soundRecorder) {
-            soundRecorder = document.createElement('div');
-            soundRecorder.className = 'practice-recorder-group';
-            displayPanel.appendChild(soundRecorder);
-        }
-        soundRecorder.innerHTML = '';
-        ensurePracticeRecorder(soundRecorder, `sound:${sound}`, 'Record Sound');
+        // Remove phoneme practice recorder for articulation card
+        const existingSoundRecorder = displayPanel.querySelector('.practice-recorder-group');
+        if (existingSoundRecorder) existingSoundRecorder.remove();
     }
 }
 
@@ -5773,6 +5781,52 @@ function ensureClassroomDock() {
 
     initClassroomTimerControls(dock);
     return dock;
+}
+
+function ensureMoreToolsMenu() {
+    const headerActions = document.querySelector('.header-actions');
+    if (!headerActions || document.getElementById('more-tools-btn')) return;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'more-tools-wrapper';
+    wrapper.innerHTML = `
+        <button type="button" id="more-tools-btn" class="link-btn">More ▾</button>
+        <div id="more-tools-menu" class="more-tools-menu hidden">
+            <button type="button" id="menu-warmup" class="more-tools-item">Sounds Warm‑Up</button>
+            <label class="more-tools-item more-tools-toggle">
+                <input type="checkbox" id="toggle-presentation-mode" />
+                Presentation mode
+            </label>
+        </div>
+    `;
+    headerActions.appendChild(wrapper);
+
+    const btn = wrapper.querySelector('#more-tools-btn');
+    const menu = wrapper.querySelector('#more-tools-menu');
+    const warmup = wrapper.querySelector('#menu-warmup');
+    const presToggle = wrapper.querySelector('#toggle-presentation-mode');
+
+    const closeMenu = () => menu.classList.add('hidden');
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menu.classList.toggle('hidden');
+    });
+    document.addEventListener('click', (e) => {
+        if (!wrapper.contains(e.target)) closeMenu();
+    });
+
+    if (warmup) warmup.onclick = () => {
+        closeMenu();
+        openPhonemeGuide();
+    };
+
+    if (presToggle) {
+        presToggle.checked = !!appSettings.presentationMode;
+        presToggle.onchange = () => {
+            appSettings.presentationMode = presToggle.checked;
+            saveSettings();
+            applySettings();
+        };
+    }
 }
 
 function toggleClassroomDock(forceOpen = null) {
