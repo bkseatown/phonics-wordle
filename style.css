@@ -75,6 +75,48 @@ body.calm-mode #mouth-visual {
     animation: none !important;
 }
 
+/* ---------- Sound Lab Only (pop-out / new tab) ---------- */
+body.soundlab-only {
+    height: 100dvh;
+    overflow: hidden;
+}
+
+body.soundlab-only #modal-overlay,
+body.soundlab-only #game-canvas,
+body.soundlab-only .controls,
+body.soundlab-only #toast-container,
+body.soundlab-only #banner-container,
+body.soundlab-only #fun-hud,
+body.soundlab-only #welcome-modal,
+body.soundlab-only #teacher-modal,
+body.soundlab-only #recording-studio-modal,
+body.soundlab-only #progress-modal,
+body.soundlab-only #decodable-modal,
+body.soundlab-only #help-modal,
+body.soundlab-only #bonus-modal,
+body.soundlab-only #modal {
+    display: none !important;
+}
+
+body.soundlab-only header {
+    padding-bottom: 0;
+}
+
+body.soundlab-only #phoneme-modal {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    margin: 16px auto;
+    height: calc(100dvh - 32px);
+    max-height: calc(100dvh - 32px);
+    resize: none;
+}
+
+body.soundlab-only #phoneme-modal .modal-content {
+    height: 100%;
+}
+
 /* ---------- Home / Learning Hub ---------- */
 body.home-page {
     height: auto;
@@ -301,6 +343,8 @@ body.home-page {
 
 
 body.force-light {
+    --color-text: #0f172a;
+    --color-neutral: #d7e0ee;
     background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%) !important;
     color: #0f172a !important;
 }
@@ -316,6 +360,16 @@ body.force-light .controls label,
 body.force-light .controls select,
 body.force-light .controls option {
     color: #1f2937 !important;
+}
+
+body.force-light .cloze-subtitle,
+body.force-light .comp-subtitle,
+body.force-light .fluency-subtitle,
+body.force-light .writing-subtitle,
+body.force-light .planit-subtitle,
+body.force-light .sound-guide-subtitle,
+body.force-light .howto-subtitle {
+    color: #334155 !important;
 }
 
 body.force-light .controls select,
@@ -1350,10 +1404,10 @@ main {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    max-width: min(1180px, 96vw);
-    width: min(1180px, 96vw);
-    max-height: 92vh;
-    height: min(86vh, 860px);
+    max-width: min(1180px, calc(100vw - 32px));
+    width: min(1180px, calc(100vw - 32px));
+    max-height: calc(100dvh - 32px);
+    height: min(860px, calc(100dvh - 32px));
     overflow: hidden;
     resize: both;
     min-width: 320px;
@@ -1365,8 +1419,17 @@ main {
 #phoneme-modal .modal-content {
     max-width: none;
     height: 100%;
-    overflow: auto;
+    overflow: hidden;
     padding: 16px 16px 18px;
+    display: flex;
+    flex-direction: column;
+}
+
+#phoneme-modal .sound-guide-layout {
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
 }
 
 #phoneme-modal.phoneme-narrow .sound-guide-layout {
@@ -3316,6 +3379,19 @@ button:active:not(:disabled) {
     font-size: 0.92rem;
 }
 
+.sound-guide-top-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin: 0 0 10px;
+}
+
+.sound-guide-top-actions .secondary-btn {
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+}
+
 .sound-guide-layout {
     display: grid;
     grid-template-columns: minmax(230px, 300px) 1fr;
@@ -3373,7 +3449,26 @@ button:active:not(:disabled) {
 #phoneme-modal .sound-guide-card,
 #phoneme-modal .sound-guide-board {
     max-height: none;
-    overflow: visible;
+    height: 100%;
+    overflow: auto;
+}
+
+#phoneme-modal .sound-guide-card {
+    position: relative;
+    top: 0;
+}
+
+#phoneme-modal.phoneme-narrow .sound-guide-layout {
+    grid-template-rows: auto 1fr;
+}
+
+#phoneme-modal.phoneme-narrow .sound-guide-layout.no-card {
+    grid-template-rows: 1fr;
+}
+
+#phoneme-modal.phoneme-narrow .sound-guide-card {
+    height: auto;
+    max-height: 44vh;
 }
 
 #hear-phoneme-sound {
@@ -3492,25 +3587,30 @@ button:active:not(:disabled) {
 
 .sound-row,
 .alphabet-board {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(42px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: stretch;
     gap: 6px;
 }
 
 .alphabet-board.small {
-    grid-template-columns: repeat(auto-fit, minmax(56px, 1fr));
+    gap: 8px;
 }
 
 .sound-tile {
     border: 1px solid #d9e2ec;
     background: #f9fbff;
     border-radius: 8px;
-    padding: 6px 6px;
+    padding: 7px 10px;
     font-weight: 700;
     font-size: 0.9rem;
     text-align: center;
     cursor: pointer;
     transition: all 0.15s ease;
+    flex: 0 0 auto;
+    min-width: 44px;
+    white-space: nowrap;
 }
 
 .sound-tile:hover {

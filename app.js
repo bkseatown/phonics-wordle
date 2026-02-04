@@ -718,6 +718,37 @@ document.addEventListener("DOMContentLoaded", () => {
         toggleClassroomDock(true);
         setClassroomDockTab(dockParam);
     }
+
+    const hash = (window.location.hash || '').toLowerCase();
+    if (hash === '#sound-lab' || hash === '#soundlab') {
+        openPhonemeGuide();
+        // Clean the hash so refreshing doesn't re-open Sound Lab unexpectedly.
+        if (history && typeof history.replaceState === 'function') {
+            history.replaceState(null, document.title, window.location.pathname + window.location.search);
+        }
+    }
+
+    const soundLabParam = new URLSearchParams(window.location.search).get('soundlab');
+    if (soundLabParam) {
+        document.body.classList.add('soundlab-only');
+        openPhonemeGuide();
+
+        // In "Sound Lab only" mode, the close button should exit cleanly.
+        const closeBtn = document.querySelector('#phoneme-modal .close-phoneme');
+        if (closeBtn && closeBtn.dataset.soundlabBound !== 'true') {
+            closeBtn.dataset.soundlabBound = 'true';
+            closeBtn.addEventListener('click', (event) => {
+                if (!document.body.classList.contains('soundlab-only')) return;
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                // Works when opened via window.open(); fallback navigates back.
+                window.close();
+                setTimeout(() => {
+                    if (!window.closed) window.location.href = 'word-quest.html';
+                }, 60);
+            }, true);
+        }
+    }
 });
 
 function enableOverlayCloseForAllModals() {
@@ -6010,7 +6041,10 @@ function initPhonemeModalResilience() {
 }
 
 function openPhonemeGuide(preselectSound = null) {
-    modalOverlay.classList.remove('hidden');
+    const soundLabOnly = document.body.classList.contains('soundlab-only');
+    if (modalOverlay) {
+        modalOverlay.classList.toggle('hidden', soundLabOnly);
+    }
     const phonemeModal = document.getElementById('phoneme-modal');
     if (!phonemeModal) {
         console.error("phoneme-modal element not found!");
@@ -6020,6 +6054,7 @@ function openPhonemeGuide(preselectSound = null) {
     clearSoundSelection();
     phonemeModal.classList.remove('hidden');
     setWarmupOpen(true);
+    bindSoundLabPopoutButton();
     if (preselectSound) {
         prefetchPhonemeClips([preselectSound]);
     } else {
@@ -6035,6 +6070,23 @@ function openPhonemeGuide(preselectSound = null) {
     } catch (e) {
         console.error("Error populating phoneme grid:", e);
     }
+}
+
+function bindSoundLabPopoutButton() {
+    const btn = document.getElementById('sound-lab-popout');
+    if (!btn || btn.dataset.bound === 'true') return;
+    btn.dataset.bound = 'true';
+
+    const isSoundLabOnly = document.body.classList.contains('soundlab-only');
+    btn.textContent = isSoundLabOnly ? 'Back to Word Quest' : 'Open in new tab';
+
+    btn.addEventListener('click', () => {
+        if (document.body.classList.contains('soundlab-only')) {
+            window.location.href = 'word-quest.html';
+        } else {
+            window.open('word-quest.html?soundlab=1', '_blank');
+        }
+    });
 }
 
 
