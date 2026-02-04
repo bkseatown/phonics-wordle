@@ -630,6 +630,8 @@ function applySoundWallSectionVisibility() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    document.body.classList.add('force-light');
+    document.documentElement.classList.add('force-light');
     loadSettings();
 
     // Initialize DOM elements
@@ -664,6 +666,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initFluencyLink();
     initAdventureMode();
     ensureMoreToolsMenu();
+    organizeHeaderActions();
     initClassroomDock();
     if (typeof initAssessmentFlow === 'function') {
         initAssessmentFlow();
@@ -689,6 +692,19 @@ document.addEventListener("DOMContentLoaded", () => {
         positionFunHud();
         updateFitScreenMode();
     });
+
+    if (modalOverlay) {
+        const observer = new MutationObserver(() => updateFunHudVisibility());
+        observer.observe(modalOverlay, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    const dockParam = new URLSearchParams(window.location.search).get('dock');
+    if (dockParam) {
+        document.body.classList.add('dock-only');
+        ensureClassroomDock();
+        toggleClassroomDock(true);
+        setClassroomDockTab(dockParam);
+    }
 });
 
 function enableOverlayCloseForAllModals() {
@@ -5731,7 +5747,11 @@ function ensureClassroomDock() {
                 <h3>Classroom Dock</h3>
                 <p>Keep slides and timers handy while you play.</p>
             </div>
-            <button class="dock-close" aria-label="Close">✕</button>
+            <div class="dock-actions">
+                <button class="dock-popout" id="dock-popout" type="button">Open in new tab</button>
+                <button class="dock-fullscreen" id="dock-fullscreen" type="button">Full screen</button>
+                <button class="dock-close" aria-label="Close">✕</button>
+            </div>
         </div>
         <div class="classroom-dock-tabs">
             <button class="dock-tab active" data-tab="slides">Slides</button>
@@ -5770,7 +5790,15 @@ function ensureClassroomDock() {
     `;
     document.body.appendChild(dock);
 
-    dock.querySelector('.dock-close')?.addEventListener('click', () => toggleClassroomDock(false));
+    dock.querySelector('.dock-close')?.addEventListener('click', () => {
+        if (document.body.classList.contains('dock-only')) {
+            window.close();
+        } else {
+            toggleClassroomDock(false);
+        }
+    });
+    dock.querySelector('#dock-popout')?.addEventListener('click', openClassroomDockInNewTab);
+    dock.querySelector('#dock-fullscreen')?.addEventListener('click', toggleClassroomDockFullscreen);
     dock.querySelectorAll('.dock-tab').forEach(btn => {
         btn.addEventListener('click', () => {
             setClassroomDockTab(btn.dataset.tab || 'slides');
@@ -5837,6 +5865,66 @@ function ensureMoreToolsMenu() {
     }
 }
 
+function organizeHeaderActions() {
+    const headerActions = document.querySelector('.header-actions');
+    if (!headerActions || headerActions.dataset.organized === 'true') return;
+
+    const moreWrapper = headerActions.querySelector('.more-tools-wrapper');
+    const howtoBtn = headerActions.querySelector('#howto-btn');
+
+    const findById = (id) => headerActions.querySelector(`#${id}`);
+    const findByText = (text) => Array.from(headerActions.querySelectorAll('a,button'))
+        .find(el => (el.textContent || '').toLowerCase().includes(text));
+
+    const classroomBtn = findById('classroom-btn');
+    const adventureBtn = findById('adventure-btn');
+    const teacherBtn = findById('teacher-btn');
+    const newWordBtn = findById('new-word-btn') || findByText('new word');
+    const clozeBtn = findById('cloze-btn') || findByText('cloze');
+    const compBtn = findById('comprehension-btn') || findByText('comprehension');
+    const fluencyBtn = findById('fluency-btn') || findByText('fluency');
+    const madlibsBtn = findById('madlibs-btn') || findByText('mad libs');
+
+    const groupPrimary = document.createElement('div');
+    groupPrimary.className = 'nav-group nav-group-primary';
+    const groupModes = document.createElement('div');
+    groupModes.className = 'nav-group nav-group-modes';
+    const groupTools = document.createElement('div');
+    groupTools.className = 'nav-group nav-group-tools';
+
+    const existing = Array.from(headerActions.children);
+    const used = new Set();
+
+    const add = (el, group) => {
+        if (!el || used.has(el)) return;
+        used.add(el);
+        group.appendChild(el);
+    };
+
+    add(classroomBtn, groupPrimary);
+    add(adventureBtn, groupPrimary);
+    add(teacherBtn, groupPrimary);
+
+    add(newWordBtn, groupModes);
+    add(clozeBtn, groupModes);
+    add(compBtn, groupModes);
+    add(fluencyBtn, groupModes);
+    add(madlibsBtn, groupModes);
+
+    if (moreWrapper) add(moreWrapper, groupTools);
+    if (howtoBtn) add(howtoBtn, groupTools);
+
+    existing.forEach(el => {
+        if (!used.has(el)) groupTools.appendChild(el);
+    });
+
+    headerActions.innerHTML = '';
+    if (groupPrimary.children.length) headerActions.appendChild(groupPrimary);
+    if (groupModes.children.length) headerActions.appendChild(groupModes);
+    if (groupTools.children.length) headerActions.appendChild(groupTools);
+    headerActions.dataset.organized = 'true';
+}
+
 function toggleClassroomDock(forceOpen = null) {
     const dock = ensureClassroomDock();
     if (!dock) return;
@@ -5844,6 +5932,32 @@ function toggleClassroomDock(forceOpen = null) {
     dock.classList.toggle('hidden', !willOpen);
     appSettings.classroom.dockOpen = willOpen;
     saveSettings();
+}
+
+function getActiveDockTab() {
+    const dock = document.getElementById('classroom-dock');
+    if (!dock) return 'slides';
+    const active = dock.querySelector('.dock-tab.active');
+    return active?.dataset.tab || 'slides';
+}
+
+function openClassroomDockInNewTab() {
+    const tab = getActiveDockTab();
+    const url = new URL(window.location.href);
+    url.searchParams.set('dock', tab);
+    window.open(url.toString(), '_blank', 'noopener');
+}
+
+function toggleClassroomDockFullscreen() {
+    const dock = document.getElementById('classroom-dock');
+    if (!dock) return;
+    if (document.fullscreenElement) {
+        document.exitFullscreen();
+        return;
+    }
+    if (dock.requestFullscreen) {
+        dock.requestFullscreen();
+    }
 }
 
 function setClassroomDockTab(tab) {

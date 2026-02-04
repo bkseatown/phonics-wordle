@@ -209,6 +209,21 @@ h1 {
     row-gap: 8px;
 }
 
+.nav-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.nav-group-modes {
+    flex: 1;
+}
+
+.nav-group-tools {
+    margin-left: auto;
+}
+
 @media (max-width: 900px) {
     .link-btn,
     #teacher-btn {
@@ -218,6 +233,15 @@ h1 {
 
     #howto-btn {
         padding: 6px 8px;
+    }
+
+    .nav-group {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .nav-group-tools {
+        margin-left: 0;
     }
 }
 
