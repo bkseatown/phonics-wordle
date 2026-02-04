@@ -85,6 +85,12 @@ const coinsEl = document.getElementById('fluency-coins');
 const streakEl = document.getElementById('fluency-streak');
 const scoreBtn = document.getElementById('fluency-check');
 
+function applyLightTheme() {
+    document.body.classList.add('force-light');
+    document.documentElement.classList.add('force-light');
+    document.documentElement.style.colorScheme = 'light';
+}
+
 const STATE_KEY = 'fluency_progress';
 let progress = { coins: 0, streak: 0 };
 let timerId = null;
@@ -200,6 +206,7 @@ function scoreFluency() {
 }
 
 function init() {
+    applyLightTheme();
     loadProgress();
     updateHud();
     buildFilters();

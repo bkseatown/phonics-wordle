@@ -666,8 +666,8 @@ document.addEventListener("DOMContentLoaded", () => {
     initFluencyLink();
     initAdventureMode();
     ensureMoreToolsMenu();
-    organizeHeaderActions();
     initClassroomDock();
+    organizeHeaderActions();
     if (typeof initAssessmentFlow === 'function') {
         initAssessmentFlow();
     }
@@ -863,7 +863,7 @@ function positionFunHud() {
     const bottoms = [rect.bottom];
     if (actions) bottoms.push(actions.getBoundingClientRect().bottom);
     if (controls) bottoms.push(controls.getBoundingClientRect().bottom);
-    if (warmup) bottoms.push(warmup.getBoundingClientRect().bottom);
+    if (warmup && warmup.offsetParent) bottoms.push(warmup.getBoundingClientRect().bottom);
     const top = Math.max(12, ...bottoms.map(val => val + 8));
     hud.style.top = `${top}px`;
     hud.style.right = window.innerWidth < 720 ? '8px' : '16px';
@@ -1443,6 +1443,12 @@ function initControls() {
 }
 
 function initWarmupButtons() {
+    const warmupPanel = document.querySelector('.warmup-panel');
+    if (warmupPanel) {
+        warmupPanel.classList.add('hidden');
+        warmupPanel.setAttribute('aria-hidden', 'true');
+    }
+
     const phonemeBtn = document.getElementById('phoneme-btn');
     if (phonemeBtn) {
         phonemeBtn.onclick = () => openPhonemeGuide();
@@ -4299,7 +4305,7 @@ function populatePhonemeGrid(preselectSound = null) {
     }
 
     const subtitle = document.querySelector('.sound-guide-subtitle');
-    if (subtitle) subtitle.textContent = 'Tap a tile to hear the sound and see a quick tip.';
+    if (subtitle) subtitle.textContent = 'Tap a tile to see a quick tip and example.';
 
     if (!soundGuideBuilt) {
         buildVowelRow();
@@ -5077,14 +5083,15 @@ function ensureArticulationCard(phoneme) {
     const letterBadge = (soundKey || '').toString().toUpperCase();
 
     const exampleLine = example ? `<div class="articulation-example">Example: <strong>${example}</strong></div>` : '';
-    const pictureLine = `<div class="articulation-picture-label">Letter cue</div>`;
+    const soundBadge = soundLabel || (soundKey ? `/${soundKey}/` : '');
+    const pictureLine = `<div class="articulation-picture-label">Phoneme</div>`;
 
     card.innerHTML = `
         <div class="articulation-card-header">
             <span class="articulation-title">Articulation Card</span>
             <div class="articulation-actions">
                 ${soundLabel ? `<span class="articulation-ipa">${soundLabel}</span>` : ''}
-                <button type="button" class="articulation-collapse" id="collapse-articulation">Collapse</button>
+                <button type="button" class="articulation-collapse" id="collapse-articulation">Collapse card</button>
             </div>
         </div>
         <div class="articulation-card-body">
@@ -5094,7 +5101,7 @@ function ensureArticulationCard(phoneme) {
                     <div class="articulation-picture-label">Target letter</div>
                 </div>
                 <div class="articulation-visual-block">
-                    <div class="articulation-visual-wrap articulation-icon">/</div>
+                    <div class="articulation-visual-wrap articulation-icon">${soundBadge || '•'}</div>
                     ${pictureLine}
                 </div>
             </div>
@@ -5229,7 +5236,6 @@ function showLetterSounds(letter) {
 function initArticulationAudioControls() {
     const hearLetterBtn = document.getElementById('hear-letter-name');
     const hearWordBtn = document.getElementById('hear-example-word');
-    const hearSoundBtn = document.getElementById('hear-phoneme-sound');
     
     if (hearLetterBtn) {
         hearLetterBtn.onclick = () => {
@@ -5244,14 +5250,6 @@ function initArticulationAudioControls() {
         hearWordBtn.onclick = () => {
             if (currentSelectedSound) {
                 speakText(currentSelectedSound.phoneme.example || '');
-            }
-        };
-    }
-    
-    if (hearSoundBtn) {
-        hearSoundBtn.onclick = () => {
-            if (currentSelectedSound) {
-                speakPhonemeSound(currentSelectedSound.phoneme, currentSelectedSound.sound);
             }
         };
     }
@@ -5273,13 +5271,6 @@ function initArticulationAudioControls() {
             btn.onclick = () => {
                 if (currentSelectedSound) {
                     speakText(currentSelectedSound.phoneme.example || '');
-                }
-            };
-        } else if (label.includes('sound')) {
-            btn.dataset.bound = 'true';
-            btn.onclick = () => {
-                if (currentSelectedSound) {
-                    speakPhonemeSound(currentSelectedSound.phoneme, currentSelectedSound.sound);
                 }
             };
         }
@@ -5887,10 +5878,13 @@ function organizeHeaderActions() {
 
     const groupPrimary = document.createElement('div');
     groupPrimary.className = 'nav-group nav-group-primary';
+    groupPrimary.dataset.label = 'Setup';
     const groupModes = document.createElement('div');
     groupModes.className = 'nav-group nav-group-modes';
+    groupModes.dataset.label = 'Modes';
     const groupTools = document.createElement('div');
     groupTools.className = 'nav-group nav-group-tools';
+    groupTools.dataset.label = 'Tools';
 
     const existing = Array.from(headerActions.children);
     const used = new Set();
@@ -5902,10 +5896,10 @@ function organizeHeaderActions() {
     };
 
     add(classroomBtn, groupPrimary);
-    add(adventureBtn, groupPrimary);
     add(teacherBtn, groupPrimary);
 
     add(newWordBtn, groupModes);
+    add(adventureBtn, groupModes);
     add(clozeBtn, groupModes);
     add(compBtn, groupModes);
     add(fluencyBtn, groupModes);

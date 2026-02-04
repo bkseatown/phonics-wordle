@@ -141,6 +141,12 @@ const ui = {
     challenge: document.getElementById('cloze-challenge')
 };
 
+function applyLightTheme() {
+    document.body.classList.add('force-light');
+    document.documentElement.classList.add('force-light');
+    document.documentElement.style.colorScheme = 'light';
+}
+
 function loadSettings() {
     const saved = localStorage.getItem(SETTINGS_KEY);
     if (!saved) return;
@@ -358,6 +364,7 @@ function shuffleArray(array) {
 }
 
 function init() {
+    applyLightTheme();
     loadSettings();
     buildSelect();
     ui.select.value = String(state.currentIndex);

@@ -178,7 +178,7 @@ body.hide-mouth-cues #mouth-description {
 /* HEADER - Integrated seamless design */
 header {
     width: 100%; 
-    max-width: 900px; 
+    max-width: 1100px; 
     padding: 14px 16px 8px;
     background: transparent;
     border: none;
@@ -214,6 +214,21 @@ h1 {
     gap: 8px;
     align-items: center;
     flex-wrap: wrap;
+    max-width: 100%;
+    padding: 4px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.65);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.nav-group::before {
+    content: attr(data-label);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-left: 6px;
 }
 
 .nav-group-modes {
@@ -222,6 +237,25 @@ h1 {
 
 .nav-group-tools {
     margin-left: auto;
+}
+
+.nav-group + .nav-group {
+    margin-left: 8px;
+}
+
+.nav-group .link-btn,
+.nav-group #teacher-btn,
+.nav-group #howto-btn {
+    border: none;
+    background: transparent;
+    box-shadow: none;
+}
+
+.nav-group .link-btn:hover,
+.nav-group #teacher-btn:hover,
+.nav-group #howto-btn:hover {
+    background: rgba(226, 232, 240, 0.9);
+    border-color: transparent;
 }
 
 @media (max-width: 900px) {
@@ -238,6 +272,13 @@ h1 {
     .nav-group {
         width: 100%;
         justify-content: flex-start;
+        padding: 0;
+        background: transparent;
+        border: none;
+    }
+
+    .nav-group::before {
+        display: none;
     }
 
     .nav-group-tools {
@@ -2881,9 +2922,14 @@ button:active:not(:disabled) {
     grid-template-columns: minmax(230px, 300px) 1fr;
     gap: 12px;
     align-items: start;
+    min-height: 0;
 }
 .sound-guide-layout.no-card {
     grid-template-columns: 1fr;
+}
+
+.sound-guide-layout.no-card .sound-guide-card {
+    display: none;
 }
 
 @media (max-width: 980px) {
@@ -2908,6 +2954,9 @@ button:active:not(:disabled) {
     padding: 12px;
     border: 1px solid rgba(148, 163, 184, 0.35);
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+    max-height: 72vh;
+    overflow: auto;
+    min-height: 0;
 }
 
 .sound-guide-board {
@@ -2919,6 +2968,7 @@ button:active:not(:disabled) {
     border: 1px solid #e2e8f0;
     box-shadow: 0 6px 14px rgba(15, 23, 42, 0.05);
     scrollbar-width: none;
+    min-height: 0;
 }
 
 #hear-phoneme-sound {
@@ -3104,13 +3154,13 @@ button:active:not(:disabled) {
 }
 
 .sound-letter {
-    font-size: 2.2rem;
+    font-size: 2rem;
     font-weight: 700;
     color: #0f172a;
 }
 
 .sound-name {
-    font-size: 1.1rem;
+    font-size: 1rem;
     color: #475569;
 }
 
@@ -3123,7 +3173,7 @@ button:active:not(:disabled) {
     position: relative;
     z-index: 1;
     display: grid;
-    gap: 12px;
+    gap: 10px;
     align-items: center;
 }
 
@@ -3134,7 +3184,7 @@ button:active:not(:disabled) {
 .sound-cue {
     background: #f8fafc;
     border-radius: 10px;
-    padding: 10px;
+    padding: 8px;
     text-align: left;
     border: 1px solid #e2e8f0;
 }
@@ -3310,6 +3360,12 @@ button:active:not(:disabled) {
     gap: 8px;
 }
 
+.articulation-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .articulation-collapse {
     border: 1px solid #e2e8f0;
     background: #f8fafc;
@@ -3355,26 +3411,32 @@ button:active:not(:disabled) {
 }
 
 .articulation-visual-wrap {
-    width: 94px;
-    height: 94px;
-    border-radius: 18px;
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
+    width: 86px;
+    height: 86px;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+    border: 1px solid #dbe3ee;
     display: grid;
     place-items: center;
-    box-shadow: inset 0 0 0 2px #f8fafc;
+    box-shadow: inset 0 0 0 1px #f8fafc;
 }
 
 .articulation-letter,
 .articulation-icon {
-    font-weight: 700;
-    font-size: 1.25rem;
+    font-weight: 800;
+    font-size: 1.35rem;
     color: #0f172a;
 }
 
 .articulation-icon {
     font-size: 1.1rem;
-    color: #475569;
+    color: #334155;
+    letter-spacing: 0.04em;
+    font-style: italic;
+}
+
+.articulation-letter {
+    font-family: var(--font-heading);
 }
 
 .sound-clipart {
@@ -3409,23 +3471,23 @@ button:active:not(:disabled) {
     position: relative;
     z-index: 1;
     display: grid;
-    grid-template-columns: repeat(3, minmax(80px, 1fr));
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
     gap: 8px;
-    margin-top: 12px;
+    margin-top: 8px;
 }
 
 .sound-card-actions button {
-    padding: 8px 6px;
+    padding: 8px 10px;
     border-radius: 8px;
-    border: none;
-    background: rgba(255,255,255,0.2);
-    color: white;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #1f2937;
     font-weight: 600;
     cursor: pointer;
 }
 
 .sound-card-actions button:hover {
-    background: rgba(255,255,255,0.3);
+    background: #e2e8f0;
 }
 
 /* ---------- Classroom Dock ---------- */
@@ -3456,6 +3518,28 @@ button:active:not(:disabled) {
     gap: 12px;
 }
 
+.dock-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.dock-actions button {
+    border: 1px solid rgba(148, 163, 184, 0.6);
+    background: #f8fafc;
+    color: #1f2937;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.dock-actions button:hover {
+    background: #e2e8f0;
+}
+
 .classroom-dock-header h3 {
     margin: 0;
     font-size: 1.1rem;
@@ -3474,6 +3558,47 @@ button:active:not(:disabled) {
     font-size: 1.4rem;
     color: #64748b;
     cursor: pointer;
+}
+
+.dock-actions .dock-close {
+    padding: 0 4px;
+    border: none;
+    background: transparent;
+    font-size: 1.2rem;
+}
+
+.classroom-dock:fullscreen {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+    padding: 20px;
+    overflow: auto;
+}
+
+body.dock-only {
+    background: linear-gradient(180deg, #f8fafc 0%, #e8eef8 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+body.dock-only header,
+body.dock-only main,
+body.dock-only .fun-hud,
+body.dock-only #modal-overlay {
+    display: none !important;
+}
+
+body.dock-only .classroom-dock {
+    position: static;
+    width: min(960px, 96vw);
+    max-height: 92vh;
+    right: auto;
+    left: auto;
+    top: auto;
+    bottom: auto;
 }
 
 .classroom-dock-tabs {
@@ -4992,12 +5117,12 @@ body.cloze-page {
 
 /* Audio button hover effects */
 .selected-sound button:hover {
-    background: rgba(255,255,255,0.3) !important;
-    transform: scale(1.05);
+    background: #e2e8f0 !important;
+    transform: translateY(-1px);
 }
 
 .selected-sound button:active {
-    transform: scale(0.95);
+    transform: translateY(0);
 }
 
 .translated-text {
@@ -5141,6 +5266,37 @@ body.fit-screen #game-board {
 
 body.fit-screen #keyboard {
     gap: 4px;
+}
+
+body.fit-screen .phoneme-modal {
+    max-height: 94vh;
+}
+
+body.fit-screen .sound-guide-layout {
+    gap: 8px;
+}
+
+body.fit-screen .sound-guide-card,
+body.fit-screen .sound-guide-board {
+    max-height: 68vh;
+    padding: 8px;
+}
+
+body.fit-screen .sound-guide-card {
+    overflow: auto;
+}
+
+body.fit-screen .sound-guide-section {
+    margin-bottom: 8px;
+}
+
+body.fit-screen .sound-guide-section h3 {
+    font-size: 0.9rem;
+}
+
+body.fit-screen .sound-tile {
+    padding: 5px 4px;
+    font-size: 0.82rem;
 }
 
 body.fit-screen .comp-panel {
@@ -6354,4 +6510,109 @@ body.fluency-page {
     .madlibs-output {
         min-height: 96px;
     }
+}
+
+/* ==========================================================================
+   Force Light Theme Override (for projectors & light-mode consistency)
+   ========================================================================== */
+
+body.force-light {
+    background: linear-gradient(180deg, #fdfdff 0%, #e8eef8 100%) !important;
+    color: #0f172a !important;
+    color-scheme: light;
+}
+
+body.force-light header,
+body.force-light h1,
+body.force-light h2,
+body.force-light h3 {
+    color: #0f172a !important;
+}
+
+body.force-light #modal-overlay {
+    background: rgba(15, 23, 42, 0.18) !important;
+}
+
+body.force-light .modal,
+body.force-light #teacher-modal,
+body.force-light .classroom-dock,
+body.force-light .cloze-panel,
+body.force-light .comp-panel,
+body.force-light .fluency-panel,
+body.force-light .madlibs-panel,
+body.force-light .sound-guide-card,
+body.force-light .sound-guide-board,
+body.force-light .selected-sound,
+body.force-light .articulation-card,
+body.force-light .fun-hud {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #e2e8f0 !important;
+}
+
+body.force-light .fun-hud-mini-btn {
+    background: #f8fafc !important;
+    border-color: #dbe3ee !important;
+    color: #1f2937 !important;
+}
+
+body.force-light select,
+body.force-light input,
+body.force-light textarea {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+}
+
+body.force-light .dock-tab,
+body.force-light .dock-upload,
+body.force-light .dock-file-viewer,
+body.force-light .dock-timer-set select,
+body.force-light .dock-timer-display,
+body.force-light .dock-file-name,
+body.force-light .dock-hint,
+body.force-light .dock-timer-set {
+    color: #0f172a !important;
+}
+
+body.force-light .dock-tab {
+    background: #f8fafc !important;
+    border-color: #dbe3ee !important;
+}
+
+body.force-light .dock-tab.active {
+    background: #4f46e5 !important;
+    color: #ffffff !important;
+}
+
+body.force-light #teacher-modal .teacher-tools,
+body.force-light #teacher-modal.teacher-clean .teacher-block,
+body.force-light #teacher-modal.teacher-clean .teacher-section,
+body.force-light .teacher-pack-row {
+    background: #f8fafc !important;
+    border-color: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+body.force-light .cloze-story,
+body.force-light .cloze-passage,
+body.force-light .comp-passage,
+body.force-light .fluency-passage,
+body.force-light .comp-choice,
+body.force-light .comp-question,
+body.force-light .madlibs-output,
+body.force-light .madlibs-field,
+body.force-light .translation-display,
+body.force-light .adventure-card,
+body.force-light .adventure-team-settings {
+    background: #ffffff !important;
+    border-color: #e2e8f0 !important;
+    color: #0f172a !important;
+}
+
+body.force-light .cloze-hud,
+body.force-light .comp-hud,
+body.force-light .fluency-hud {
+    background: rgba(99, 102, 241, 0.12) !important;
+    color: #0f172a !important;
 }

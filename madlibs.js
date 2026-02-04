@@ -166,6 +166,12 @@ const templateInput = document.getElementById('madlibs-template-input');
 const fieldsContainer = document.getElementById('madlibs-fields');
 const output = document.getElementById('madlibs-output');
 
+function applyLightTheme() {
+    document.body.classList.add('force-light');
+    document.documentElement.classList.add('force-light');
+    document.documentElement.style.colorScheme = 'light';
+}
+
 function initClozeNav() {
     const header = document.querySelector('.madlibs-header');
     if (!header || document.getElementById('madlibs-cloze-link')) return;
@@ -441,6 +447,7 @@ function wireEvents() {
     });
 }
 
+applyLightTheme();
 initTemplates();
 applyTemplate(currentTemplate);
 wireEvents();

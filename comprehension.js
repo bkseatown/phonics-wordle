@@ -331,6 +331,12 @@ const resetBtn = document.getElementById('comp-reset');
 const coinsEl = document.getElementById('comp-coins');
 const streakEl = document.getElementById('comp-streak');
 
+function applyLightTheme() {
+    document.body.classList.add('force-light');
+    document.documentElement.classList.add('force-light');
+    document.documentElement.style.colorScheme = 'light';
+}
+
 const STATE_KEY = 'comp_progress';
 let progress = { coins: 0, streak: 0 };
 let currentSet = null;
@@ -426,6 +432,7 @@ function checkAnswers() {
 }
 
 function init() {
+    applyLightTheme();
     loadProgress();
     updateHud();
     buildFilters();
