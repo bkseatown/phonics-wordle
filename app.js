@@ -561,6 +561,8 @@ function applySettings() {
     document.body.classList.toggle('hide-examples', !appSettings.showExamples);
     document.body.classList.toggle('hide-mouth-cues', !appSettings.showMouthCues);
     document.body.classList.toggle('presentation-mode', !!appSettings.presentationMode);
+    document.body.classList.add('force-light');
+    document.documentElement.style.colorScheme = 'light';
     updateFunHudVisibility();
 
     const calmToggle = document.getElementById('toggle-calm-mode');
@@ -823,7 +825,8 @@ function formatTeamShortLabel(name = '', fallback = '') {
 function updateFunHudVisibility() {
     const hud = ensureFunHud();
     const enabled = !!appSettings.funHud?.enabled;
-    const shouldShow = enabled && !funHudSuspended;
+    const overlayOpen = modalOverlay && !modalOverlay.classList.contains('hidden');
+    const shouldShow = enabled && !funHudSuspended && !overlayOpen;
     hud.classList.toggle('hidden', !shouldShow);
     document.body.classList.toggle('fun-mode', enabled);
     document.body.classList.toggle('fun-studio', enabled && appSettings.funHud?.style === 'studio');
@@ -839,10 +842,15 @@ function positionFunHud() {
     if (!hud || !header) return;
     const rect = header.getBoundingClientRect();
     const actions = header.querySelector('.header-actions');
-    const actionsBottom = actions ? actions.getBoundingClientRect().bottom : rect.bottom;
-    const top = Math.max(12, rect.bottom + 8, actionsBottom + 8);
+    const controls = document.querySelector('.controls');
+    const warmup = document.querySelector('.warmup-panel');
+    const bottoms = [rect.bottom];
+    if (actions) bottoms.push(actions.getBoundingClientRect().bottom);
+    if (controls) bottoms.push(controls.getBoundingClientRect().bottom);
+    if (warmup) bottoms.push(warmup.getBoundingClientRect().bottom);
+    const top = Math.max(12, ...bottoms.map(val => val + 8));
     hud.style.top = `${top}px`;
-    hud.style.right = '16px';
+    hud.style.right = window.innerWidth < 720 ? '8px' : '16px';
 }
 
 function updateFitScreenMode() {
@@ -3538,6 +3546,7 @@ function closeModal() {
 
     document.body.classList.remove('adventure-open');
     setWarmupOpen(false);
+    updateFunHudVisibility();
 }
 
 function showBanner(msg) {
@@ -4918,7 +4927,6 @@ function formatMouthCue(phoneme) {
 
 function formatMouthDescription(phoneme) {
     if (!phoneme) return '';
-    if (phoneme.sound) return `Sound: ${phoneme.sound}`;
     if (phoneme.example) return `Example: ${phoneme.example}`;
     return phoneme.description || phoneme.cue || '';
 }
