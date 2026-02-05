@@ -569,13 +569,10 @@ function loadSettings() {
             localStorage.setItem('bonus_frequency_migrated', 'true');
         }
 
-        const hasActiveModes = !!appSettings.gameMode?.teamMode
-            || !!appSettings.gameMode?.timerEnabled
-            || !!appSettings.funHud?.challenge;
-        // Treat "game mode active" as a derived state: it should only appear when a teacher
-        // enables Team / Timer / Challenge (hearts). This prevents stray HUD pills from
-        // showing up during normal Word Quest play.
-        appSettings.gameMode.active = hasActiveModes;
+        // Game Modes (Team / Timer / Challenge) are session-based.
+        // Keep toggles saved, but do not auto-start (or show the HUD) just because toggles are on.
+        // Activation happens only when the teacher presses “Start” in the Game Modes modal.
+        appSettings.gameMode.active = false;
 
     } catch (e) {
         console.warn('Could not parse settings, using defaults.', e);
@@ -996,6 +993,7 @@ function updateFitScreenMode() {
 
 function applyFunHudOutcome(win) {
     if (!appSettings.funHud?.enabled) return;
+    if (!appSettings.gameMode?.active) return;
     const maxHearts = appSettings.funHud?.maxHearts ?? 3;
     let hearts = appSettings.funHud?.hearts ?? maxHearts;
     if (appSettings.funHud?.challenge) {
@@ -3027,7 +3025,9 @@ function submitGuess() {
         showToast("Finish the word first."); // CLEAN TOAST
         return;
     }
-    const guessTeam = appSettings.gameMode?.teamMode ? getActiveTeamKey() : 'A';
+    const gameModeRunning = !!appSettings.gameMode?.active;
+    const teamModeRunning = gameModeRunning && !!appSettings.gameMode?.teamMode;
+    const guessTeam = teamModeRunning ? getActiveTeamKey() : 'A';
     lastGuessTeam = guessTeam;
 
     const result = evaluate(currentGuess, currentWord);
@@ -3045,7 +3045,7 @@ function submitGuess() {
         setTimeout(() => showEndModal(false), 1500);
     } else {
         currentGuess = "";
-        if (appSettings.gameMode?.teamMode) {
+        if (teamModeRunning) {
             toggleActiveTeam();
             renderFunHud();
         }
@@ -3451,7 +3451,8 @@ function showEndModal(win) {
 
     setupModalAudioControls(def, sentence);
 
-    if (win && appSettings.funHud?.enabled) {
+    const gameModeRunning = !!appSettings.gameMode?.active;
+    if (win && appSettings.funHud?.enabled && gameModeRunning) {
         if (appSettings.gameMode?.teamMode) {
             if (lastGuessTeam === 'B') {
                 appSettings.gameMode.teamBCoins = (appSettings.gameMode.teamBCoins || 0) + 1;
@@ -7022,7 +7023,8 @@ function formatTime(seconds = 0) {
 
 function resetLightningTimer() {
     stopLightningTimer();
-    if (!appSettings.gameMode?.timerEnabled) {
+    const gameModeRunning = !!appSettings.gameMode?.active;
+    if (!gameModeRunning || !appSettings.gameMode?.timerEnabled) {
         lightningRemaining = 0;
         renderFunHud();
         return;
@@ -7034,7 +7036,8 @@ function resetLightningTimer() {
 
 function startLightningTimer() {
     stopLightningTimer();
-    if (!appSettings.gameMode?.timerEnabled) return;
+    const gameModeRunning = !!appSettings.gameMode?.active;
+    if (!gameModeRunning || !appSettings.gameMode?.timerEnabled) return;
     if (!lightningRemaining) {
         lightningRemaining = appSettings.gameMode.timerSeconds || 60;
     }

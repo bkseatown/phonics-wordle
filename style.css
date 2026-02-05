@@ -3,7 +3,8 @@
 :root {
     --color-correct: #22c55e;
     --color-present: #fbbf24;
-    --color-absent: #94a3b8;
+    /* Darker absent improves projector contrast + avoids "white on white" look. */
+    --color-absent: #475569;
     --color-neutral: #d7e0ee;
     --color-text: #0f172a;
     --color-vowel-soft: #e0f2fe;
@@ -1287,7 +1288,7 @@ main {
 .tile.correct { 
     background-color: var(--color-correct); 
     border-color: var(--color-correct); 
-    color: white;
+    color: #0b1220;
     box-shadow: 0 4px 8px rgba(46, 204, 113, 0.4),
                 0 2px 4px rgba(0,0,0,0.1),
                 inset 0 -2px 0 rgba(0,0,0,0.2);
@@ -1296,7 +1297,7 @@ main {
 .tile.present { 
     background-color: var(--color-present); 
     border-color: var(--color-present); 
-    color: white;
+    color: #0b1220;
     box-shadow: 0 4px 8px rgba(241, 196, 15, 0.4),
                 0 2px 4px rgba(0,0,0,0.1),
                 inset 0 -2px 0 rgba(0,0,0,0.2);
@@ -7918,7 +7919,7 @@ body.force-light .fun-hud {
 body.force-light .tile.correct {
     background: #22c55e !important;
     border-color: #16a34a !important;
-    color: #ffffff !important;
+    color: #0b1220 !important;
 }
 
 body.force-light .tile.present {
@@ -7928,9 +7929,9 @@ body.force-light .tile.present {
 }
 
 body.force-light .tile.absent {
-    background: #94a3b8 !important;
-    border-color: #64748b !important;
-    color: #ffffff !important;
+    background: var(--color-absent) !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
 }
 
 body.force-light .wordle-help .tile.ex.green {
@@ -7964,10 +7965,10 @@ body.force-light .key.present {
 }
 
 body.force-light .key.absent {
-    background: #94a3b8 !important;
-    border-color: #64748b !important;
+    background: linear-gradient(180deg, #64748b 0%, #475569 100%) !important;
+    border-color: #334155 !important;
     color: #f8fafc !important;
-    box-shadow: 0 3px 0 0 #64748b, 0 4px 10px rgba(15, 23, 42, 0.12) !important;
+    box-shadow: 0 3px 0 0 #334155, 0 4px 10px rgba(15, 23, 42, 0.14) !important;
 }
 
 body.force-light .key.vowel {

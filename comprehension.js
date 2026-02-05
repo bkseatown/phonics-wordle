@@ -471,8 +471,9 @@ function isPlatformGameModeActive() {
         if (!raw) return false;
         const parsed = JSON.parse(raw);
         const enabled = !!parsed?.funHud?.enabled;
+        const active = !!parsed?.gameMode?.active;
         const hasModes = !!parsed?.gameMode?.teamMode || !!parsed?.gameMode?.timerEnabled || !!parsed?.funHud?.challenge;
-        return enabled && hasModes;
+        return enabled && active && hasModes;
     } catch (e) {
         return false;
     }
