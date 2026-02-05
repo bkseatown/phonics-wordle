@@ -28,6 +28,8 @@ let assessmentState = null;
 let enhancedVoicePrefetched = false;
 let warmupPrefetchDone = false;
 let fitScreenActive = false;
+let fitScreenTightActive = false;
+let fitScreenRaf = null;
 let pronunciationRecognition = null;
 let pronunciationActive = false;
 let pronunciationTimeout = null;
@@ -941,11 +943,55 @@ function positionFunHud() {
 }
 
 function updateFitScreenMode() {
-    const shouldFit = window.innerHeight < 900;
-    if (fitScreenActive === shouldFit) return;
-    fitScreenActive = shouldFit;
-    document.body.classList.toggle('fit-screen', shouldFit);
-    positionFunHud();
+    const canvas = document.getElementById('game-canvas');
+    const keyboardEl = document.getElementById('keyboard');
+    const quickRow = document.querySelector('.quick-row');
+
+    // Base heuristic: most laptop/projector setups need a tighter layout below ~960px.
+    const needsFitByHeight = window.innerHeight < 960;
+
+    let needsFitByLayout = false;
+    if (canvas) {
+        // If canvas content is clipped (overflow hidden), scrollHeight will exceed clientHeight.
+        needsFitByLayout = needsFitByLayout || (canvas.scrollHeight > canvas.clientHeight + 2);
+    }
+    if (keyboardEl) {
+        const kbRect = keyboardEl.getBoundingClientRect();
+        needsFitByLayout = needsFitByLayout || (kbRect.bottom > window.innerHeight - 8);
+    }
+    if (keyboardEl && quickRow) {
+        const kbRect = keyboardEl.getBoundingClientRect();
+        const qRect = quickRow.getBoundingClientRect();
+        // Prevent the keyboard from visually colliding with the audio row.
+        needsFitByLayout = needsFitByLayout || (kbRect.top < qRect.bottom + 6);
+    }
+
+    const shouldFit = needsFitByHeight || needsFitByLayout;
+
+    if (fitScreenActive !== shouldFit) {
+        fitScreenActive = shouldFit;
+        document.body.classList.toggle('fit-screen', shouldFit);
+    }
+
+    // Compute "tight" mode after the DOM has applied the fit-screen class.
+    if (fitScreenRaf) cancelAnimationFrame(fitScreenRaf);
+    fitScreenRaf = requestAnimationFrame(() => {
+        fitScreenRaf = null;
+        const canvasNow = document.getElementById('game-canvas');
+        const keyboardNow = document.getElementById('keyboard');
+        const stillClipped = canvasNow ? (canvasNow.scrollHeight > canvasNow.clientHeight + 12) : false;
+        const stillOffscreen = keyboardNow
+            ? (keyboardNow.getBoundingClientRect().bottom > window.innerHeight - 6)
+            : false;
+        const shouldTight = shouldFit && (window.innerHeight < 860 || stillClipped || stillOffscreen);
+
+        if (fitScreenTightActive !== shouldTight) {
+            fitScreenTightActive = shouldTight;
+            document.body.classList.toggle('fit-screen-tight', shouldTight);
+        }
+
+        positionFunHud();
+    });
 }
 
 function applyFunHudOutcome(win) {

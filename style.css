@@ -8137,6 +8137,104 @@ body.force-light.word-quest-page .key {
 }
 
 /* ==========================================================================
+   Word Quest — Fit-To-Screen (prevents keyboard overlap at 100% zoom)
+   ========================================================================== */
+
+body.word-quest-page.fit-screen header {
+    padding: 10px 12px 4px;
+}
+
+body.word-quest-page.fit-screen .header-top {
+    margin-bottom: 6px;
+}
+
+body.word-quest-page.fit-screen .header-actions .link-btn {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+}
+
+body.word-quest-page.fit-screen .controls {
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+body.word-quest-page.fit-screen #game-canvas {
+    margin: 8px 12px 12px;
+    padding: 12px 12px 12px;
+    gap: clamp(10px, 1.2vh, 14px);
+}
+
+body.word-quest-page.fit-screen #game-board {
+    padding: 12px;
+    gap: 7px;
+}
+
+body.word-quest-page.fit-screen .tile {
+    width: min(66px, 11vw, 7.8vh);
+    height: min(66px, 11vw, 7.8vh);
+    font-size: min(2.2rem, 5vw, 4.4vh);
+}
+
+body.word-quest-page.fit-screen .quick-row {
+    margin-bottom: 8px;
+}
+
+body.word-quest-page.fit-screen .audio-play-btn {
+    padding: 8px 14px;
+    font-size: 0.9rem;
+    border-radius: 10px;
+}
+
+body.word-quest-page.fit-screen #keyboard {
+    padding: 8px 8px 10px;
+    gap: 5px;
+    margin-bottom: 4px;
+}
+
+body.word-quest-page.fit-screen .key {
+    height: min(50px, 8.6vw, 6.4vh);
+    font-size: min(1.05rem, 3.2vw, 2.9vh);
+    max-width: 56px;
+}
+
+body.word-quest-page.fit-screen-tight #game-canvas {
+    margin: 6px 10px 10px;
+    padding: 10px 10px 10px;
+    gap: clamp(8px, 1vh, 12px);
+}
+
+body.word-quest-page.fit-screen-tight #game-board {
+    padding: 10px;
+    gap: 6px;
+}
+
+body.word-quest-page.fit-screen-tight .tile {
+    width: min(60px, 10.5vw, 7.1vh);
+    height: min(60px, 10.5vw, 7.1vh);
+    font-size: min(2rem, 4.6vw, 4vh);
+}
+
+body.word-quest-page.fit-screen-tight .quick-row {
+    margin-bottom: 6px;
+}
+
+body.word-quest-page.fit-screen-tight .audio-play-btn {
+    padding: 7px 12px;
+    font-size: 0.85rem;
+}
+
+body.word-quest-page.fit-screen-tight #keyboard {
+    padding: 7px 7px 9px;
+    gap: 4px;
+}
+
+body.word-quest-page.fit-screen-tight .key {
+    height: min(46px, 7.8vw, 5.8vh);
+    font-size: min(0.98rem, 3vw, 2.6vh);
+    max-width: 52px;
+}
+
+/* ==========================================================================
    Bundle 1 — Age-Based UI Looks (K–2 / 3–5 / 6–12)
    Notes:
    - These are purely presentational (same activities + content).
