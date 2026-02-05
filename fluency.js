@@ -582,6 +582,26 @@ function scoreFluency() {
     }
     saveProgress();
     updateHud();
+
+    try {
+        const reached = goal ? orf >= goal : null;
+        window.DECODE_PLATFORM?.logActivity?.({
+            activity: 'fluency',
+            label: 'Speed Sprint',
+            event: goal ? (reached ? `Goal met: ${orf.toFixed(1)} WCPM` : `Scored: ${orf.toFixed(1)} WCPM`) : `Scored: ${orf.toFixed(1)} WCPM`,
+            detail: {
+                passageId: currentPassage?.id,
+                title: currentPassage?.title,
+                gradeBand: currentPassage?.gradeBand,
+                lexileBand: currentPassage?.lexileBand,
+                focus: currentPassage?.focus,
+                goal: goal || null,
+                orf: Number(orf.toFixed(1)),
+                words,
+                errors
+            }
+        });
+    } catch (e) {}
 }
 
 function init() {

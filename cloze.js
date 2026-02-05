@@ -352,6 +352,28 @@ function checkStory() {
         }
     });
     updateScore();
+
+    try {
+        const set = CLOZE_SETS[state.currentIndex];
+        const answers = set.answers || [];
+        const correctCount = blanks.filter(blank => {
+            const index = Number(blank.dataset.index);
+            const answer = answers[index];
+            return answer && blank.dataset.filled && blank.dataset.filled.toLowerCase() === answer.toLowerCase();
+        }).length;
+        window.DECODE_PLATFORM?.logActivity?.({
+            activity: 'cloze',
+            label: 'Story Fill',
+            event: correctCount === answers.length ? 'Level complete' : `Checked ${correctCount}/${answers.length}`,
+            detail: {
+                setId: set.id,
+                title: set.title,
+                correct: correctCount,
+                total: answers.length,
+                challenge: !!state.challenge
+            }
+        });
+    } catch (e) {}
 }
 
 function shuffleArray(array) {

@@ -429,6 +429,21 @@ function checkAnswers() {
     }
     saveProgress();
     updateHud();
+
+    try {
+        window.DECODE_PLATFORM?.logActivity?.({
+            activity: 'comprehension',
+            label: 'Read & Think',
+            event: correct === total ? 'Quest complete' : `Score ${correct}/${total}`,
+            detail: {
+                gradeBand: currentSet.gradeBand,
+                lexileBand: currentSet.lexileBand,
+                title: currentSet.title,
+                correct,
+                total
+            }
+        });
+    } catch (e) {}
 }
 
 function init() {

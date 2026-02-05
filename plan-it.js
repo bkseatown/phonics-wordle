@@ -187,6 +187,17 @@ function checkPlan() {
   const missing = currentScenario.tasks.filter(t => !selections[t.id]);
   if (missing.length) {
     feedbackEl.textContent = `Pick start times for: ${missing.map(t => t.label).join(', ')}.`;
+    try {
+      window.DECODE_PLATFORM?.logActivity?.({
+        activity: 'plan-it',
+        label: 'Plan-It',
+        event: 'Check incomplete',
+        detail: {
+          scenarioId: currentScenario.id,
+          missingCount: missing.length
+        }
+      });
+    } catch (e) {}
     return;
   }
 
@@ -220,6 +231,19 @@ function checkPlan() {
   } else {
     feedbackEl.textContent = '✅ Nice plan! Everything fits with no overlaps.';
   }
+
+  try {
+    window.DECODE_PLATFORM?.logActivity?.({
+      activity: 'plan-it',
+      label: 'Plan-It',
+      event: problems.length ? `Checked (${problems.length} issue${problems.length === 1 ? '' : 's'})` : 'Checked (no overlaps)',
+      detail: {
+        scenarioId: currentScenario.id,
+        scenarioTitle: currentScenario.title,
+        issues: problems.length
+      }
+    });
+  } catch (e) {}
 }
 
 function renderTimeline() {
@@ -285,4 +309,3 @@ function init() {
 }
 
 init();
-

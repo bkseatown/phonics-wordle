@@ -228,6 +228,21 @@ function buildParagraph() {
   previewEl.textContent = paragraph || 'Your paragraph will appear here.';
   runChecks(parts);
   saveState();
+
+  try {
+    const wc = paragraph.trim().split(/\s+/).filter(Boolean).length;
+    window.DECODE_PLATFORM?.logActivity?.({
+      activity: 'writing',
+      label: 'Write & Build',
+      event: wc ? `Built paragraph (${wc} words)` : 'Draft updated',
+      detail: {
+        grade: gradeSelect.value,
+        genre: genreSelect.value,
+        promptId: currentPrompt?.id || null,
+        wordCount: wc
+      }
+    });
+  } catch (e) {}
 }
 
 function firstAlpha(text = '') {
@@ -409,4 +424,3 @@ function init() {
 }
 
 init();
-

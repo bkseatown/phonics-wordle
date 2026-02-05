@@ -6,6 +6,7 @@
     <title>Decode the Word — Learning Hub</title>
     <link rel="stylesheet" href="style.css" />
     <script src="platform.js" defer></script>
+    <script src="home.js" defer></script>
   </head>
 
   <body class="home-page force-light look-35">
@@ -61,6 +62,44 @@
             Tip: keep sessions short and consistent. Students should always know what comes next.
           </p>
         </aside>
+      </section>
+
+      <section class="home-card" aria-label="Placement">
+        <div class="home-card-header">
+          <h2>Placement (Quick Screener)</h2>
+          <p class="home-subtitle">
+            Answer a few quick questions and get a recommended starting focus for Word Quest.
+          </p>
+        </div>
+
+        <div class="home-placement-grid">
+          <div id="placement-summary" class="home-placement-summary" aria-live="polite"></div>
+          <div class="home-cta-row" aria-label="Placement actions">
+            <button id="placement-start" class="home-cta primary" type="button">Start placement</button>
+            <a id="placement-open-word-quest" class="home-cta ghost" href="word-quest.html">Open Word Quest</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="home-card" aria-label="Progress">
+        <div class="home-card-header">
+          <h2>Progress (Preview)</h2>
+          <p class="home-subtitle">Local-only summary stored in this browser. Export-friendly reports are next.</p>
+        </div>
+
+        <div class="home-progress-grid">
+          <div class="home-progress-panel" aria-label="Word Quest progress">
+            <div class="home-mini-title">Word Quest</div>
+            <div id="progress-word-quest" class="home-progress-number">—</div>
+            <div id="progress-word-quest-detail" class="muted"></div>
+          </div>
+
+          <div class="home-progress-panel" aria-label="Recent activity">
+            <div class="home-mini-title">Recent Activity</div>
+            <ul id="progress-activity-log" class="home-progress-list" aria-label="Activity log"></ul>
+            <div id="progress-activity-empty" class="muted"></div>
+          </div>
+        </div>
       </section>
 
       <section class="home-card" aria-label="Skill path">
@@ -140,6 +179,71 @@
         </div>
       </section>
     </main>
+
+    <div id="modal-overlay" class="hidden" aria-hidden="true"></div>
+
+    <div id="placement-modal" class="modal hidden placement-modal" role="dialog" aria-modal="true" aria-label="Placement screener">
+      <div class="modal-content">
+        <button id="placement-close" class="close-btn" type="button" aria-label="Close">✕</button>
+        <h2>Quick Placement</h2>
+        <p class="muted">Check what the student can do independently most days.</p>
+
+        <div class="placement-grid" aria-label="Placement form">
+          <div class="placement-field">
+            <label for="placement-grade">Grade band (optional)</label>
+            <select id="placement-grade">
+              <option value="">Choose…</option>
+              <option value="k2">K–2</option>
+              <option value="35">3–5</option>
+              <option value="612">6–12</option>
+            </select>
+          </div>
+
+          <fieldset class="placement-fieldset">
+            <legend>Decoding skills</legend>
+            <label class="placement-check">
+              <input id="skill-letter-sounds" type="checkbox" />
+              <span>Knows most letter sounds (consonants + short vowels)</span>
+            </label>
+            <label class="placement-check">
+              <input id="skill-cvc" type="checkbox" />
+              <span>Reads CVC short-vowel words (cat, ship, man)</span>
+            </label>
+            <label class="placement-check">
+              <input id="skill-digraph" type="checkbox" />
+              <span>Reads digraphs (sh, ch, th)</span>
+            </label>
+            <label class="placement-check">
+              <input id="skill-blends" type="checkbox" />
+              <span>Reads blends (st, bl, cr)</span>
+            </label>
+            <label class="placement-check">
+              <input id="skill-magic-e" type="checkbox" />
+              <span>Reads silent‑e words (make, time)</span>
+            </label>
+            <label class="placement-check">
+              <input id="skill-vowel-team" type="checkbox" />
+              <span>Reads vowel teams (rain, seed, boat)</span>
+            </label>
+            <label class="placement-check">
+              <input id="skill-r-controlled" type="checkbox" />
+              <span>Reads r‑controlled vowels (car, her, fork)</span>
+            </label>
+            <label class="placement-check">
+              <input id="skill-multisyllable" type="checkbox" />
+              <span>Can break multisyllable words into parts</span>
+            </label>
+          </fieldset>
+        </div>
+
+        <div class="placement-actions" aria-label="Placement results">
+          <button id="placement-calc" type="button" class="primary-btn">Get recommendation</button>
+          <a id="placement-go-word-quest" class="secondary-btn hidden" href="word-quest.html">Start Word Quest</a>
+          <button id="placement-clear" type="button" class="secondary-btn">Clear</button>
+        </div>
+
+        <div id="placement-result" class="placement-result hidden" aria-live="polite"></div>
+      </div>
+    </div>
   </body>
 </html>
-

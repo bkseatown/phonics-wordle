@@ -174,7 +174,7 @@ function applyLightTheme() {
 
 function initClozeNav() {
     const header = document.querySelector('.madlibs-header');
-    if (!header || document.getElementById('madlibs-cloze-link')) return;
+    if (!header || header.querySelector('.header-actions') || document.getElementById('madlibs-cloze-link')) return;
     const links = [
         { id: 'madlibs-cloze-link', href: 'cloze.html', label: 'Story Fill' },
         { id: 'madlibs-comp-link', href: 'comprehension.html', label: 'Read & Think' },
@@ -295,6 +295,18 @@ function generateStory() {
 
     output.textContent = story;
     output.classList.remove('empty');
+
+    try {
+        window.DECODE_PLATFORM?.logActivity?.({
+            activity: 'madlibs',
+            label: 'Silly Stories',
+            event: 'Story generated',
+            detail: {
+                templateId: templateSelect?.value || null,
+                placeholders: currentPlaceholders.length
+            }
+        });
+    } catch (e) {}
 }
 
 function getSpeechRate() {

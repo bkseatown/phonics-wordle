@@ -662,6 +662,39 @@ function applySoundWallSectionVisibility() {
     });
 }
 
+function applyWordQuestUrlPreset() {
+    const patternSelect = document.getElementById("pattern-select");
+    const lengthSelect = document.getElementById("length-select");
+    if (!patternSelect || !lengthSelect) return;
+
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const focusParam = (params.get('focus') || '').trim();
+        const lenParam = (params.get('len') || '').trim();
+
+        if (focusParam) {
+            const allowed = Array.from(patternSelect.options).some(opt => opt.value === focusParam);
+            if (allowed) {
+                patternSelect.value = focusParam;
+            }
+        }
+
+        // Always sync after pattern choice (and keep legacy behavior even when no params exist).
+        syncLengthOptionsToPattern(true);
+
+        if (lenParam) {
+            const normalized = lenParam === 'any' ? 'any' : String(parseInt(lenParam, 10));
+            const opt = Array.from(lengthSelect.options).find(o => o.value === normalized && !o.disabled);
+            if (opt) {
+                lengthSelect.value = opt.value;
+                lengthAutoSet = false;
+            }
+        }
+    } catch (e) {
+        syncLengthOptionsToPattern(true);
+    }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     document.body.classList.add('force-light');
     document.documentElement.classList.add('force-light');
@@ -681,7 +714,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
     initDB();
     initControls();
-    syncLengthOptionsToPattern(true);
+    applyWordQuestUrlPreset();
     initWarmupButtons();
     initKeyboard();
     initVoiceLoader(); 
@@ -3416,6 +3449,22 @@ function setupModalAudioControls(definitionText, sentenceText) {
 function showEndModal(win) {
     // Track progress
     trackProgress(currentWord, win, guesses.length);
+    try {
+        const focus = document.getElementById('pattern-select')?.value || 'all';
+        const length = document.getElementById('length-select')?.value || String(CURRENT_WORD_LENGTH || '');
+        window.DECODE_PLATFORM?.logActivity?.({
+            activity: 'word-quest',
+            label: 'Word Quest',
+            event: win ? 'Solved word' : 'Round ended',
+            detail: {
+                won: !!win,
+                guesses: Array.isArray(guesses) ? guesses.length : 0,
+                word: currentWord || '',
+                focus,
+                length
+            }
+        });
+    } catch (e) {}
 
     stopLightningTimer();
     
@@ -6547,6 +6596,7 @@ function organizeHeaderActions() {
     const findByText = (text) => Array.from(headerActions.querySelectorAll('a,button'))
         .find(el => (el.textContent || '').toLowerCase().includes(text));
 
+    const homeBtn = findById('home-btn');
     const classroomBtn = findById('classroom-btn');
     const adventureBtn = findById('adventure-btn');
     const teacherBtn = findById('teacher-btn');
@@ -6568,6 +6618,7 @@ function organizeHeaderActions() {
         ordered.push(el);
     };
 
+    add(homeBtn);
     add(classroomBtn);
     add(teacherBtn);
 
