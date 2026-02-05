@@ -549,11 +549,10 @@ function loadSettings() {
         const hasActiveModes = !!appSettings.gameMode?.teamMode
             || !!appSettings.gameMode?.timerEnabled
             || !!appSettings.funHud?.challenge;
-        if (!hasActiveModes) {
-            appSettings.gameMode.active = false;
-        }
-        // Always start with game HUD hidden until "Start Adventure" is pressed.
-        appSettings.gameMode.active = false;
+        // Treat "game mode active" as a derived state: it should only appear when a teacher
+        // enables Team / Timer / Challenge (hearts). This prevents stray HUD pills from
+        // showing up during normal Word Quest play.
+        appSettings.gameMode.active = hasActiveModes;
 
     } catch (e) {
         console.warn('Could not parse settings, using defaults.', e);
@@ -5644,6 +5643,8 @@ function startPronunciationCheck() {
             }
         }
         handlePronunciationResult(target, transcripts);
+        // Stop immediately after we have a result so the mic icon does not linger.
+        stopPronunciationCheck();
     };
 
     pronunciationRecognition.onerror = () => {
@@ -5655,6 +5656,7 @@ function startPronunciationCheck() {
             'Could not hear that clearly.',
             `Try again: "${target}".`
         ]);
+        stopPronunciationCheck();
     };
 
     pronunciationRecognition.onend = () => {
