@@ -1104,7 +1104,7 @@ async function speak(text, type = "word") {
     }
 
     // 2. Fallback to System Voice
-    const msg = new SpeechSynthesisUtterance(text);
+    const msg = new SpeechSynthesisUtterance(normalizeTextForTTS(text));
     const voices = await getVoicesAsync();
     const preferred = pickBestEnglishVoice(voices);
     if (preferred) {
@@ -2588,6 +2588,9 @@ function startNewGame(customWord = null) {
         tile.id = `tile-${i}`;
         board.appendChild(tile);
     }
+
+    // Highlight the first row immediately so the board feels "ready" even before typing.
+    updateGrid();
     
     console.log(`✓ Game started: word="${currentWord}" (${CURRENT_WORD_LENGTH} letters)`);
     
@@ -2896,13 +2899,13 @@ function updateGrid() {
     for (let i = 0; i < CURRENT_WORD_LENGTH; i++) {
         const t = document.getElementById(`tile-${offset + i}`);
         t.textContent = "";
-        t.className = "tile"; 
+        t.className = "tile row-active"; 
     }
     for (let i = 0; i < currentGuess.length; i++) {
         const t = document.getElementById(`tile-${offset + i}`);
         const char = currentGuess[i];
         t.textContent = isUpperCase ? char.toUpperCase() : char;
-        t.className = "tile active";
+        t.className = "tile active row-active";
     }
 }
 
@@ -2951,6 +2954,8 @@ function submitGuess() {
             toggleActiveTeam();
             renderFunHud();
         }
+        // Prepare and highlight the next row immediately.
+        updateGrid();
     }
 }
 
@@ -5825,10 +5830,19 @@ function playLetterSequence(letter, word, phoneme) {
     }, 1800);
 }
 
+function normalizeTextForTTS(text) {
+    if (!text) return '';
+    let normalized = text.toString();
+    // Some system voices interpret standalone "I" as the roman numeral (one).
+    // Adding an invisible word-break keeps the screen text the same but nudges TTS toward the pronoun.
+    normalized = normalized.replace(/\bI\b/g, 'I\u200B');
+    return normalized;
+}
+
 async function speakText(text, rateType = 'word') {
     if (!text) return;
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
+    const utterance = new SpeechSynthesisUtterance(normalizeTextForTTS(text));
     const voices = await getVoicesAsync();
     const preferred = pickBestEnglishVoice(voices);
     if (preferred) {

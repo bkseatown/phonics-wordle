@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Nunito:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700&family=Nunito:wght@400;600;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap');
 
 :root {
     --color-correct: #22c55e;
@@ -9,7 +9,14 @@
     --color-vowel-soft: #e0f2fe;
     --color-vowel-border: #7dd3fc;
     --font-heading: 'Baloo 2', 'Nunito', sans-serif;
-    --font-body: 'Nunito', sans-serif;
+    --font-body: 'Atkinson Hyperlegible', 'Nunito', system-ui, -apple-system, sans-serif;
+    --font-reading: 'Atkinson Hyperlegible', 'Nunito', system-ui, -apple-system, sans-serif;
+    --text-muted: #334155;
+    --text-subtle: #475569;
+    --text-faint: #64748b;
+    --stage-bg: rgba(255, 255, 255, 0.62);
+    --stage-border: rgba(148, 163, 184, 0.34);
+    --stage-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
     --lab-bg: #f7f9ff;
     --lab-bg-soft: #eef2ff;
     --lab-card: #ffffff;
@@ -20,6 +27,7 @@
     --accent-secondary: #0ea5e9;
     --accent-warm: #f97316;
     --accent-soft: #e0e7ff;
+    --page-max: 1240px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -128,7 +136,7 @@ body.home-page {
 
 .home-main {
     width: 100%;
-    max-width: 1180px;
+    max-width: var(--page-max);
     padding: 0 16px 48px;
     display: grid;
     gap: 18px;
@@ -442,7 +450,7 @@ body.hide-mouth-cues #mouth-description {
 /* HEADER - Integrated seamless design */
 header {
     width: 100%; 
-    max-width: 1180px; 
+    max-width: var(--page-max); 
     padding: 14px 16px 8px;
     background: transparent;
     border: none;
@@ -1358,6 +1366,15 @@ main {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+@media (max-width: 420px) {
+    .key.wide {
+        min-width: 62px;
+        padding: 0 8px;
+        font-size: 0.74rem;
+        letter-spacing: 0.05em;
+    }
 }
 
 .key.vowel { 
@@ -3093,6 +3110,21 @@ button.primary{
   border: 1px solid rgba(0,0,0,0.15);
   padding: 10px;
   font-size: 1rem;
+  font-family: var(--font-reading);
+}
+
+#recording-studio-modal .studio-word,
+#recording-studio-modal .studio-def {
+  font-family: var(--font-reading);
+}
+
+#recording-studio-modal .studio-word {
+  font-size: clamp(1.7rem, 4.5vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  color: #0f172a;
+  text-align: center;
+  margin-bottom: 8px;
 }
 
 @media (max-width: 520px){
@@ -3258,66 +3290,20 @@ main {
 
 
 /* ========================================
-   PROFESSIONAL OVERHAUL - MODERN & CLEAN
+   Typography Normalization (Legibility First)
    ======================================== */
 
-/* Inter font for entire app - clear I vs l */
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-body);
 }
 
-/* Keyboard - clear letters */
-#keyboard button {
-  font-family: 'Inter', sans-serif;
-  font-weight: 600;
-  font-size: 1.1rem;
+#keyboard button,
+.key {
+  font-family: var(--font-body);
 }
 
-/* Game tiles - clear letters */
 .tile {
-  font-family: 'Inter', sans-serif;
-  font-weight: 700;
-  font-size: 2rem;
-}
-
-/* Button hover effects */
-button:hover:not(:disabled) {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-button:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-/* Recording Studio button active states */
-#record-word-btn:not(:disabled):hover,
-#record-sentence-btn:not(:disabled):hover {
-  background: #b91c1c !important;
-}
-
-#play-word-preview:not(:disabled),
-#play-sentence-preview:not(:disabled) {
-  background: #3b82f6 !important;
-  color: white !important;
-  cursor: pointer !important;
-}
-
-#play-word-preview:not(:disabled):hover,
-#play-sentence-preview:not(:disabled):hover {
-  background: #2563eb !important;
-}
-
-#start-studio-btn:hover {
-  background: #1d4ed8 !important;
-}
-
-#next-item-btn:hover {
-  background: #1d4ed8 !important;
-}
-
-#exit-studio-btn:hover {
-  background: #d1d5db !important;
+  font-family: var(--font-reading);
 }
 
 
@@ -3367,7 +3353,7 @@ button:active:not(:disabled) {
    ======================================== */
 
 .phoneme-modal {
-    max-width: 1180px;
+    max-width: var(--page-max);
     width: 96vw;
     padding: 12px;
 }
@@ -4634,6 +4620,27 @@ main {
     text-shadow: 0 0 6px rgba(250, 204, 21, 0.45);
 }
 
+.modal-sentence {
+    font-family: var(--font-reading);
+    color: #334155;
+    font-weight: 650;
+    line-height: 1.5;
+    margin-top: 10px;
+}
+
+.sentence-preview {
+    font-family: var(--font-reading);
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 16px;
+    padding: 10px 14px;
+    color: #1f2937;
+    font-weight: 650;
+    box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+    max-width: min(620px, 92vw);
+    text-align: center;
+}
+
 @keyframes wordFlip {
     0% { opacity: 0; transform: rotateX(80deg) scale(0.85); }
     60% { opacity: 1; transform: rotateX(0deg) scale(1.05); }
@@ -5172,7 +5179,7 @@ body.cloze-page {
 
 .cloze-header {
     width: 100%;
-    max-width: 1180px;
+    max-width: var(--page-max);
     padding: 16px 16px 8px;
     display: flex;
     justify-content: space-between;
@@ -5191,7 +5198,7 @@ body.cloze-page {
 
 .cloze-main {
     width: 100%;
-    max-width: 1180px;
+    max-width: var(--page-max);
     flex: 1;
     display: grid;
     grid-template-columns: minmax(360px, 1.35fr) minmax(320px, 0.95fr);
@@ -5312,6 +5319,7 @@ body.cloze-page {
     padding: 20px 22px;
     line-height: 1.9;
     font-size: 1.08rem;
+    font-family: var(--font-reading);
     letter-spacing: 0.2px;
     flex: 1;
     min-height: 220px;
@@ -5496,7 +5504,7 @@ body.cloze-page {
 
 .madlibs-header {
     width: 100%;
-    max-width: 1180px;
+    max-width: var(--page-max);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -5506,7 +5514,7 @@ body.cloze-page {
 
 .madlibs-main {
     width: 100%;
-    max-width: 1180px;
+    max-width: var(--page-max);
     display: grid;
     grid-template-columns: minmax(320px, 1fr) minmax(360px, 1.2fr);
     gap: 16px;
@@ -5766,24 +5774,24 @@ body.cloze-page {
    Viewport fit (avoid default scroll)
    ========================================================================== */
 
-main {
+body.word-quest-page main {
     flex: 1;
     min-height: 0;
     overflow: hidden;
     height: auto;
 }
 
-#game-canvas {
+body.word-quest-page #game-canvas {
     flex: 1;
     min-height: 0;
     padding-bottom: 10px;
 }
 
-#game-board {
+body.word-quest-page #game-board {
     margin: clamp(8px, 1.4vh, 16px) auto;
 }
 
-#keyboard {
+body.word-quest-page #keyboard {
     margin-bottom: 4px;
 }
 
@@ -5918,14 +5926,11 @@ body.fit-screen .comp-choice {
 }
 
 body.madlibs-page {
-    height: 100dvh;
-    overflow: hidden;
-    background:
-        radial-gradient(circle at 12% 10%, rgba(56, 189, 248, 0.18), transparent 46%),
-        radial-gradient(circle at 88% 8%, rgba(249, 115, 22, 0.16), transparent 44%),
-        radial-gradient(circle at 50% 82%, rgba(99, 102, 241, 0.12), transparent 50%),
-        linear-gradient(180deg, #fbfdff 0%, #eef4ff 55%, #e6eefb 100%);
-    color: #0f172a;
+    height: auto;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-bottom: 28px;
 }
 
 body.madlibs-page::before {
@@ -6085,7 +6090,7 @@ body.comprehension-page {
 
 .comp-header {
     width: 100%;
-    max-width: 1180px;
+    max-width: var(--page-max);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -6101,7 +6106,7 @@ body.comprehension-page {
 
 .comp-main {
     width: 100%;
-    max-width: 1180px;
+    max-width: var(--page-max);
     display: grid;
     grid-template-columns: minmax(360px, 1.35fr) minmax(320px, 0.95fr);
     gap: 16px;
@@ -6143,6 +6148,7 @@ body.comprehension-page {
     border-radius: 12px;
     padding: 14px;
     line-height: 1.6;
+    font-family: var(--font-reading);
     border: 1px solid rgba(226, 232, 240, 0.8);
     min-height: 180px;
 }
@@ -6235,7 +6241,7 @@ body.fluency-page {
 
 .fluency-header {
     width: 100%;
-    max-width: 1180px;
+    max-width: var(--page-max);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -6251,7 +6257,7 @@ body.fluency-page {
 
 .fluency-main {
     width: 100%;
-    max-width: 1180px;
+    max-width: var(--page-max);
     display: grid;
     grid-template-columns: minmax(360px, 1.35fr) minmax(320px, 0.95fr);
     gap: 16px;
@@ -6293,6 +6299,7 @@ body.fluency-page {
     border-radius: 12px;
     padding: 14px;
     line-height: 1.6;
+    font-family: var(--font-reading);
     border: 1px solid rgba(226, 232, 240, 0.8);
     min-height: 180px;
 }
@@ -6440,7 +6447,7 @@ body.writing-page {
 
 .writing-header {
     width: 100%;
-    max-width: 1180px;
+    max-width: var(--page-max);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -6458,7 +6465,7 @@ body.writing-page {
 
 .writing-main {
     width: 100%;
-    max-width: 1180px;
+    max-width: var(--page-max);
     display: grid;
     grid-template-columns: minmax(360px, 1.15fr) minmax(340px, 0.95fr);
     gap: 16px;
@@ -6627,7 +6634,7 @@ body.writing-page {
     border-radius: 12px;
     padding: 10px 12px;
     resize: vertical;
-    font-family: var(--font-body);
+    font-family: var(--font-reading);
     font-size: 0.98rem;
 }
 
@@ -6705,7 +6712,7 @@ body.planit-page {
 
 .planit-header {
     width: 100%;
-    max-width: 1180px;
+    max-width: var(--page-max);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -6723,7 +6730,7 @@ body.planit-page {
 
 .planit-main {
     width: 100%;
-    max-width: 1180px;
+    max-width: var(--page-max);
     display: grid;
     grid-template-columns: minmax(360px, 1.05fr) minmax(340px, 0.95fr);
     gap: 16px;
