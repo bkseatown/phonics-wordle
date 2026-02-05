@@ -338,8 +338,17 @@ function applyLightTheme() {
 }
 
 const STATE_KEY = 'comp_progress';
+const FILTER_KEY = 'comp_filters_v1';
 let progress = { coins: 0, streak: 0 };
 let currentSet = null;
+
+function safeParse(json) {
+    try {
+        return JSON.parse(json);
+    } catch {
+        return null;
+    }
+}
 
 function loadProgress() {
     try {
@@ -362,6 +371,38 @@ function buildFilters() {
     const lexileBands = Array.from(new Set(COMPREHENSION_SETS.map(set => set.lexileBand)));
     gradeSelect.innerHTML = gradeBands.map(band => `<option value="${band}">${band}</option>`).join('');
     lexileSelect.innerHTML = ['All'].concat(lexileBands).map(band => `<option value="${band}">${band}</option>`).join('');
+}
+
+function getDefaultGradeBand() {
+    try {
+        const profile = window.DECODE_PLATFORM?.getProfile?.();
+        return profile?.gradeBand || '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function loadFilters() {
+    const parsed = safeParse(localStorage.getItem(FILTER_KEY) || '');
+    if (parsed?.grade && Array.from(gradeSelect.options).some(o => o.value === parsed.grade)) {
+        gradeSelect.value = parsed.grade;
+    } else {
+        const fallback = getDefaultGradeBand();
+        if (fallback && Array.from(gradeSelect.options).some(o => o.value === fallback)) {
+            gradeSelect.value = fallback;
+        }
+    }
+
+    if (parsed?.lexile && Array.from(lexileSelect.options).some(o => o.value === parsed.lexile)) {
+        lexileSelect.value = parsed.lexile;
+    }
+}
+
+function saveFilters() {
+    localStorage.setItem(FILTER_KEY, JSON.stringify({
+        grade: gradeSelect.value,
+        lexile: lexileSelect.value
+    }));
 }
 
 function pickSet() {
@@ -453,14 +494,17 @@ function init() {
     loadProgress();
     updateHud();
     buildFilters();
+    loadFilters();
     pickSet();
     renderSet();
 
     gradeSelect.addEventListener('change', () => {
+        saveFilters();
         pickSet();
         renderSet();
     });
     lexileSelect.addEventListener('change', () => {
+        saveFilters();
         pickSet();
         renderSet();
     });

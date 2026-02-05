@@ -174,9 +174,19 @@ function getPromptPool() {
   return (WRITING_PROMPTS[grade]?.[genre] || []).slice();
 }
 
+function getDefaultGradeBand() {
+  try {
+    const profile = window.DECODE_PLATFORM?.getProfile?.();
+    return profile?.gradeBand || '';
+  } catch (e) {
+    return '';
+  }
+}
+
 function buildFilters() {
   gradeSelect.innerHTML = listGrades().map(g => `<option value="${g}">${g}</option>`).join('');
-  gradeSelect.value = 'K-2';
+  const preferred = getDefaultGradeBand();
+  gradeSelect.value = (preferred && WRITING_PROMPTS[preferred]) ? preferred : 'K-2';
 
   const genres = listGenresForGrade(gradeSelect.value);
   genreSelect.innerHTML = genres.map(key => `<option value="${key}">${labelGenre(key)}</option>`).join('');

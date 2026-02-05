@@ -110,10 +110,25 @@ const CLOZE_SETS = [
         passage: 'Two classmates asked for a __1__ circle to solve a problem.\n\nWe used __2__ statements, shared __3__ feelings, and wrote a __4__ plan.\n\nEveryone left with __5__ respect and a __6__ promise.',
         answers: ['mediation', 'i', 'honest', 'calm', 'mutual', 'clear'],
         distractors: ['science', 'you', 'wild', 'rushed', 'broken', 'secret']
+    },
+    {
+        id: '912-sel-digital',
+        title: '9-12 SEL: Digital Citizenship',
+        passage: 'In a group chat, a joke about __1__ turned into a rumor.\n\nOne student felt __2__ and stopped coming to lunch.\n\nA classmate chose to __3__ the rumor, send a __4__ message, and ask an adult for __5__.\n\nThe next day, the group agreed on a __6__ rule: think before you post.',
+        answers: ['someone', 'embarrassed', 'correct', 'kind', 'support', 'clear'],
+        distractors: ['homework', 'excited', 'spread', 'random', 'silence', 'secret']
+    },
+    {
+        id: '912-life-interview',
+        title: '9-12 Life: Interview Prep',
+        passage: 'Before a job interview, Jordan practiced __1__ answers and checked the __2__ address.\n\nThey set out early to avoid __3__, then took a deep breath to stay __4__.\n\nAfter the interview, Jordan wrote a short __5__ email and felt __6__ about trying.',
+        answers: ['clear', 'correct', 'traffic', 'calm', 'thank-you', 'proud'],
+        distractors: ['lazy', 'broken', 'glitter', 'rushed', 'complaint', 'worried']
     }
 ];
 
 const SETTINGS_KEY = 'cloze_settings';
+const LAST_SET_KEY = 'cloze_last_set_v1';
 
 const state = {
     currentIndex: 0,
@@ -145,6 +160,46 @@ function applyLightTheme() {
     document.body.classList.add('force-light');
     document.documentElement.classList.add('force-light');
     document.documentElement.style.colorScheme = 'light';
+}
+
+function getDefaultGradeBand() {
+    try {
+        const profile = window.DECODE_PLATFORM?.getProfile?.();
+        return profile?.gradeBand || '';
+    } catch (e) {
+        return '';
+    }
+}
+
+function findPreferredSetIndex(gradeBand) {
+    const band = (gradeBand || '').toString().trim();
+    if (!band) return -1;
+    const prefix = band === 'K-2' ? 'K-2' : band === '3-5' ? '3-5' : band === '6-8' ? '6-8' : band === '9-12' ? '9-12' : '';
+    if (!prefix) return -1;
+    const exact = CLOZE_SETS.findIndex(set => (set.title || '').startsWith(prefix));
+    if (exact !== -1) return exact;
+    if (prefix === '9-12') {
+        const fallback = CLOZE_SETS.findIndex(set => (set.title || '').startsWith('6-8'));
+        return fallback;
+    }
+    return -1;
+}
+
+function loadLastSet() {
+    const id = (localStorage.getItem(LAST_SET_KEY) || '').toString();
+    if (!id) return false;
+    const idx = CLOZE_SETS.findIndex(set => set.id === id);
+    if (idx !== -1) {
+        state.currentIndex = idx;
+        return true;
+    }
+    return false;
+}
+
+function saveLastSet() {
+    const set = CLOZE_SETS[state.currentIndex];
+    if (!set?.id) return;
+    localStorage.setItem(LAST_SET_KEY, set.id);
 }
 
 function loadSettings() {
@@ -390,6 +445,11 @@ function init() {
     applyLightTheme();
     loadSettings();
     applyPlatformGameModeVisibility();
+    const hadLastSet = loadLastSet();
+    if (!hadLastSet && state.currentIndex === 0) {
+        const preferred = findPreferredSetIndex(getDefaultGradeBand());
+        if (preferred !== -1) state.currentIndex = preferred;
+    }
     buildSelect();
     ui.select.value = String(state.currentIndex);
     ui.challenge.checked = state.challenge;
@@ -400,6 +460,7 @@ function init() {
 
     ui.select.addEventListener('change', (event) => {
         state.currentIndex = Number(event.target.value);
+        saveLastSet();
         ui.title.textContent = CLOZE_SETS[state.currentIndex].title;
         resetGame();
     });

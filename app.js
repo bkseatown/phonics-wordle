@@ -57,6 +57,7 @@ const DEFAULT_SETTINGS = {
     speechRate: 0.85,
     voiceDialect: 'en-US',
     autoHear: true,
+    showRevealRecordingTools: false,
     funHud: {
         enabled: true,
         coins: 0,
@@ -711,6 +712,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (welcomeModal) {
         welcomeModal.dataset.overlayClose = 'true';
     }
+
+    // Pre-compactify reveal modal sections (prevents a brief layout flash on first win/loss).
+    prepareTranslationSection();
     
     initDB();
     initControls();
@@ -1650,6 +1654,7 @@ function initTeacherTools() {
     updateVoiceInstallPrompt();
     updateEnhancedVoicePrompt();
     ensureAutoHearToggle();
+    ensureRevealRecordingToolsToggle();
     ensureFunHudControls();
     ensureGameModesRow();
     ensureAssessmentControls();
@@ -2129,6 +2134,27 @@ function ensureAutoHearToggle() {
         Auto-play word, definition, and sentence
     `;
     grid.appendChild(row);
+}
+
+function ensureRevealRecordingToolsToggle() {
+    const grid = document.querySelector('#teacher-modal .teacher-tools-grid');
+    if (!grid) return;
+    if (document.getElementById('toggle-reveal-recorders')) return;
+
+    const row = document.createElement('label');
+    row.className = 'toggle-row';
+    row.innerHTML = `
+        <input type="checkbox" id="toggle-reveal-recorders" />
+        Show teacher recording tools on the reveal screen
+    `;
+    grid.appendChild(row);
+
+    const toggle = row.querySelector('#toggle-reveal-recorders');
+    toggle.checked = !!appSettings.showRevealRecordingTools;
+    toggle.onchange = () => {
+        appSettings.showRevealRecordingTools = toggle.checked;
+        saveSettings();
+    };
 }
 
 function ensureFunHudControls() {
@@ -3277,6 +3303,7 @@ function ensureTranslationElements(modalContent) {
         ? (languageSelect.closest('.translation-selector') || languageSelect.parentElement)
         : null;
     const translationSelector = container.querySelector('.translation-selector') || document.querySelector('.translation-selector') || fallbackSelector;
+    const translationContainer = translationSelector?.querySelector?.('.translation-controls') || translationSelector;
 
     let translationDisplay = document.getElementById('translation-display');
     if (!translationDisplay) {
@@ -3324,8 +3351,8 @@ function ensureTranslationElements(modalContent) {
     }
     if (audioRow && !audioRow.contains(playTranslatedSentence)) audioRow.appendChild(playTranslatedSentence);
 
-    if (translationSelector && !translationSelector.contains(translationDisplay)) {
-        translationSelector.appendChild(translationDisplay);
+    if (translationContainer && !translationContainer.contains(translationDisplay)) {
+        translationContainer.appendChild(translationDisplay);
     } else if (modalContent && !modalContent.contains(translationDisplay)) {
         modalContent.appendChild(translationDisplay);
     }
@@ -3460,13 +3487,45 @@ function setupModalAudioControls(definitionText, sentenceText) {
         safeInsertAfter(modalContent, autoReadRow, actionRow);
     }
 
-    // Practice recorder (local-only)
+    // Teacher tools (local-only recordings)
+    const revealRecorderEnabled = !!appSettings.showRevealRecordingTools;
+    let teacherTools = document.getElementById('reveal-teacher-tools');
+    if (!revealRecorderEnabled) {
+        teacherTools?.remove();
+        document.getElementById('practice-recorder-group')?.remove();
+        return;
+    }
+
+    if (!teacherTools) {
+        teacherTools = document.createElement('div');
+        teacherTools.id = 'reveal-teacher-tools';
+        teacherTools.className = 'reveal-teacher-tools';
+        teacherTools.innerHTML = `
+            <button type="button" class="reveal-teacher-toggle">🎙️ Teacher tools</button>
+            <div class="reveal-teacher-controls">
+                <div class="reveal-teacher-note">Teacher only: record your voice for the word and sentence (saved on this device).</div>
+            </div>
+        `;
+    }
+
+    const toggleBtn = teacherTools.querySelector('.reveal-teacher-toggle');
+    if (toggleBtn && !toggleBtn.dataset.bound) {
+        toggleBtn.dataset.bound = 'true';
+        toggleBtn.addEventListener('click', () => {
+            teacherTools.classList.toggle('is-open');
+        });
+    }
+
+    const controls = teacherTools.querySelector('.reveal-teacher-controls');
+    if (!controls) return;
+
     let recorderGroup = document.getElementById('practice-recorder-group');
     if (!recorderGroup) {
         recorderGroup = document.createElement('div');
         recorderGroup.id = 'practice-recorder-group';
         recorderGroup.className = 'practice-recorder-group';
     }
+
     recorderGroup.innerHTML = '';
     if (currentWord) {
         ensurePracticeRecorder(recorderGroup, `word:${currentWord}`, 'Record Word');
@@ -3474,7 +3533,13 @@ function setupModalAudioControls(definitionText, sentenceText) {
     if (sentenceText) {
         ensurePracticeRecorder(recorderGroup, `sentence:${currentWord}`, 'Record Sentence');
     }
-    safeInsertAfter(modalContent, recorderGroup, autoReadRow);
+
+    if (!controls.contains(recorderGroup)) {
+        controls.appendChild(recorderGroup);
+    }
+
+    const anchor = (translationSelector && translationSelector.parentElement === modalContent) ? translationSelector : autoReadRow;
+    safeInsertAfter(modalContent, teacherTools, anchor);
 }
 
 function showEndModal(win) {

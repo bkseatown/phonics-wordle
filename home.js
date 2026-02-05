@@ -1,6 +1,7 @@
 // Home page enhancements: placement screener + recommended next steps.
 (function () {
   const PLACEMENT_KEY = 'decode_placement_v1';
+  const SETTINGS_KEY = 'decode_settings';
 
   const overlay = document.getElementById('modal-overlay');
   const modal = document.getElementById('placement-modal');
@@ -41,6 +42,48 @@
     } catch {
       return null;
     }
+  }
+
+  function normalizeGradeBand(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (raw === 'k2' || raw.toLowerCase() === 'k-2') return 'K-2';
+    if (raw === '35' || raw === '3-5') return '3-5';
+    if (raw === '68' || raw === '6-8') return '6-8';
+    if (raw === '912' || raw === '9-12') return '9-12';
+    if (raw === '612' || raw === '6-12') return '6-8';
+    return raw;
+  }
+
+  function gradeBandToLook(band) {
+    const normalized = normalizeGradeBand(band);
+    if (normalized === 'K-2') return 'k2';
+    if (normalized === '3-5') return '35';
+    if (normalized === '6-8' || normalized === '9-12') return '612';
+    return '';
+  }
+
+  function applyLookClass(look) {
+    const body = document.body;
+    if (!body) return;
+    body.classList.remove('look-k2', 'look-35', 'look-612');
+    body.classList.add(look === 'k2' ? 'look-k2' : look === '612' ? 'look-612' : 'look-35');
+  }
+
+  function syncProfileAndLook(gradeBand) {
+    const normalized = normalizeGradeBand(gradeBand);
+    if (!normalized) return;
+
+    try {
+      window.DECODE_PLATFORM?.setProfile?.({ gradeBand: normalized });
+    } catch {}
+
+    const look = gradeBandToLook(normalized);
+    if (!look) return;
+
+    const existing = safeParse(localStorage.getItem(SETTINGS_KEY) || '') || {};
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...existing, uiLook: look }));
+    applyLookClass(look);
   }
 
   function getSkillState() {
@@ -206,7 +249,7 @@
   function setFormFromData(data) {
     if (!data) return;
     if (gradeSelect && data.gradeBand !== undefined) {
-      gradeSelect.value = data.gradeBand || '';
+      gradeSelect.value = normalizeGradeBand(data.gradeBand) || '';
     }
     const skills = data.skills || {};
     if (skillEls.letterSounds) skillEls.letterSounds.checked = !!skills.letterSounds;
@@ -258,7 +301,7 @@
   });
 
   calcBtn.addEventListener('click', () => {
-    const gradeBand = String(gradeSelect.value || '');
+    const gradeBand = normalizeGradeBand(gradeSelect.value || '');
     const skills = getSkillState();
     const recommendation = computeRecommendation(skills);
     const payload = {
@@ -269,6 +312,7 @@
       updatedAt: new Date().toISOString()
     };
     store(payload);
+    syncProfileAndLook(gradeBand);
     showResult(recommendation);
     renderSummary(payload);
   });

@@ -223,12 +223,29 @@
         <div id="modal-def" class="modal-def"></div>
         <div id="modal-sentence" class="modal-sentence"></div>
 
-        <div id="modal-action-row" class="modal-action-row">
-          <button id="speak-btn" type="button" class="modal-audio-btn">Hear Word</button>
-          <button id="play-again-btn" type="button" class="primary-btn">Play Again</button>
-        </div>
-      </div>
-    </div>
+	        <div id="modal-action-row" class="modal-action-row">
+	          <button id="speak-btn" type="button" class="modal-audio-btn">Hear Word</button>
+	          <button id="play-again-btn" type="button" class="primary-btn">Play Again</button>
+	        </div>
+
+	        <div class="translation-selector" aria-label="Translate">
+	          <label for="language-select"><strong>Language</strong></label>
+	          <select id="language-select" aria-label="Translation language">
+	            <option value="en">English</option>
+	            <option value="es">Español</option>
+	            <option value="zh">中文</option>
+	            <option value="ms">Bahasa Melayu</option>
+	            <option value="vi">Tiếng Việt</option>
+	            <option value="tl">Tagalog</option>
+	          </select>
+	          <label class="translation-pin">
+	            <input type="checkbox" id="pin-language" />
+	            Lock this language
+	          </label>
+	          <div id="translation-pin-status" class="translation-pin-status hidden" aria-live="polite"></div>
+	        </div>
+	      </div>
+	    </div>
 
     <!-- Sound Lab (required by Tools ▾ → Sound Lab) -->
     <div id="phoneme-modal" class="modal hidden phoneme-modal" role="dialog" aria-modal="true" aria-label="Sound Lab">
