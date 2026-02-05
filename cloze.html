@@ -1,32 +1,33 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Decode the Word — Story Fill</title>
     <link rel="stylesheet" href="style.css" />
+    <script src="platform.js" defer></script>
+    <script src="cloze.js" defer></script>
   </head>
-  <body class="cloze-page force-light">
-    <header class="cloze-header">
-      <div>
-        <h1>Story Fill</h1>
-        <div class="cloze-subtitle">Drag words into the story or tap a word, then tap a blank.</div>
-      </div>
 
-      <div class="header-actions" aria-label="Navigation">
-        <a class="link-btn" href="index.html">Home</a>
+  <body class="cloze-page force-light look-35">
+    <div class="cloze-header">
+      <div>
+        <h1><a href="index.html">Decode the Word</a></h1>
+        <div class="cloze-subtitle">Story Fill: drag words into the blanks, then check your story.</div>
+      </div>
+      <nav class="header-actions" aria-label="Primary">
         <a class="link-btn" href="word-quest.html">Word Quest</a>
-        <a class="link-btn active" href="cloze.html" aria-current="page">Story Fill</a>
+        <a class="link-btn active" aria-current="page" href="cloze.html">Story Fill</a>
         <a class="link-btn" href="comprehension.html">Read &amp; Think</a>
         <a class="link-btn" href="fluency.html">Speed Sprint</a>
         <a class="link-btn" href="madlibs.html">Silly Stories</a>
         <a class="link-btn" href="writing.html">Write &amp; Build</a>
         <a class="link-btn" href="plan-it.html">Plan-It</a>
-      </div>
-    </header>
+      </nav>
+    </div>
 
     <main class="cloze-main">
-      <section class="cloze-panel" aria-label="Story">
+      <section class="cloze-panel cloze-story" aria-label="Story">
         <div class="cloze-panel-header">
           <h2 id="cloze-title">Story</h2>
           <div class="cloze-controls">
@@ -35,33 +36,32 @@
             <button id="cloze-shuffle" class="secondary-btn" type="button">Shuffle</button>
           </div>
         </div>
-        <div id="cloze-passage" class="cloze-passage"></div>
+
+        <div id="cloze-passage" class="cloze-passage" aria-label="Passage"></div>
+        <div id="cloze-message" class="cloze-message" aria-live="polite"></div>
       </section>
 
-      <aside class="cloze-panel" aria-label="Word bank">
-        <div class="cloze-hud" aria-label="Score">
-          <div class="cloze-hud-item">🪙 <span id="cloze-coins">0</span></div>
-          <div class="cloze-hud-item">🔥 <span id="cloze-streak">0</span></div>
-          <div class="cloze-hearts" id="cloze-hearts" aria-label="Hearts"></div>
+      <section class="cloze-panel" aria-label="Word bank">
+        <div class="cloze-panel-header">
+          <h2>Word Bank</h2>
+          <div class="cloze-hud" aria-label="Scoreboard">
+            <span class="cloze-hud-item">🪙 <span id="cloze-coins">0</span></span>
+            <span class="cloze-hud-item">🔥 <span id="cloze-streak">0</span></span>
+            <span class="cloze-hud-item cloze-hearts" id="cloze-hearts" aria-label="Hearts"></span>
+          </div>
         </div>
 
-        <h2>Word Bank</h2>
-        <p class="cloze-subtitle" style="margin-top:-2px;">Drag or tap a word, then tap a blank.</p>
-
-        <div id="cloze-bank" class="cloze-bank-grid"></div>
+        <div id="cloze-bank" class="cloze-bank-grid" aria-label="Word choices"></div>
 
         <div class="cloze-actions">
-          <button id="cloze-check" class="primary-btn" type="button">Check Story</button>
           <label class="cloze-toggle">
             <input id="cloze-challenge" type="checkbox" />
-            Challenge mode (uses hearts)
+            Challenge Mode (hearts)
           </label>
-          <div id="cloze-message" class="cloze-message"></div>
+          <button id="cloze-check" type="button" class="primary-btn">Check Story</button>
         </div>
-      </aside>
+      </section>
     </main>
-
-    <script src="platform.js"></script>
-    <script src="cloze.js"></script>
   </body>
 </html>
+

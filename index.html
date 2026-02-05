@@ -1,168 +1,145 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Decode the Word — Learning Hub</title>
     <link rel="stylesheet" href="style.css" />
+    <script src="platform.js" defer></script>
   </head>
-  <body class="home-page force-light">
+
+  <body class="home-page force-light look-35">
     <header>
       <div class="header-top">
-        <h1 class="brand">
-          <a class="brand-link" href="index.html">Decode the Word</a>
+        <h1>
+          <a href="index.html">Decode the Word</a>
         </h1>
-
-          <div class="header-actions">
-          <div class="nav-group nav-group-modes" aria-label="Activities">
-            <a class="link-btn" href="word-quest.html">Word Quest</a>
-            <a class="link-btn" href="cloze.html">Story Fill</a>
-            <a class="link-btn" href="comprehension.html">Read &amp; Think</a>
-            <a class="link-btn" href="fluency.html">Speed Sprint</a>
-            <a class="link-btn" href="madlibs.html">Silly Stories</a>
-            <a class="link-btn" href="writing.html">Write &amp; Build</a>
-            <a class="link-btn" href="plan-it.html">Plan-It</a>
-          </div>
-        </div>
+        <nav class="header-actions" aria-label="Primary">
+          <a class="link-btn active" aria-current="page" href="index.html">Home</a>
+          <a class="link-btn" href="word-quest.html">Word Quest</a>
+          <a class="link-btn" href="cloze.html">Story Fill</a>
+          <a class="link-btn" href="comprehension.html">Read &amp; Think</a>
+          <a class="link-btn" href="fluency.html">Speed Sprint</a>
+          <a class="link-btn" href="madlibs.html">Silly Stories</a>
+          <a class="link-btn" href="writing.html">Write &amp; Build</a>
+          <a class="link-btn" href="plan-it.html">Plan-It</a>
+        </nav>
       </div>
     </header>
 
     <main class="home-main">
-      <section class="home-hero home-card">
-        <div class="home-hero-copy">
-          <h2>Bright Lab, Storybook Heart</h2>
+      <section class="home-card home-hero" aria-label="Overview">
+        <div>
+          <h2>Learning Pathway</h2>
           <p class="home-lede">
-            A classroom-ready literacy toolkit that keeps practice structured, joyful, and easy to run on a projector.
+            A structured literacy hub with short daily routines, clear skill focus, and teacher-friendly tools.
           </p>
 
-          <div class="home-cta-row">
+          <div class="home-cta-row" aria-label="Quick start">
             <a class="home-cta primary" href="word-quest.html">Start Word Quest</a>
-            <a class="home-cta ghost" href="#daily-path">See the Daily Path</a>
+            <a class="home-cta ghost" href="cloze.html">Story Fill</a>
+            <a class="home-cta ghost" href="comprehension.html">Read &amp; Think</a>
           </div>
 
-          <div class="home-badges" aria-label="Design goals">
-            <span class="home-badge">Structured practice</span>
-            <span class="home-badge">Projector-friendly</span>
-            <span class="home-badge">Local-first</span>
+          <div class="home-badges" aria-label="Alignment badges">
+            <span class="home-badge">SoR-aligned</span>
+            <span class="home-badge">UDL-ready</span>
+            <span class="home-badge">MTSS-friendly</span>
+            <span class="home-badge">Accessible UI</span>
           </div>
         </div>
 
-        <div class="home-hero-panel" aria-label="Quick start">
-          <div class="home-mini-title">Quick Start</div>
+        <aside class="home-hero-panel" aria-label="Suggested routine">
+          <div class="home-mini-title">10–15 minute routine</div>
           <ol class="home-quick-steps">
-            <li>Pick a focus (CVC, digraphs, vowel teams, etc.).</li>
-            <li>Play Word Quest together (whole class or small group).</li>
-            <li>Apply skills in Story Fill, Read &amp; Think, or Speed Sprint.</li>
+            <li>Warm-up: sounds &amp; patterns</li>
+            <li>Practice: decoding / fluency</li>
+            <li>Apply: comprehension / writing</li>
+            <li>Reflect: quick check + next step</li>
           </ol>
-          <div class="home-mini-hint">
-            Tip: Use <strong>Teacher Settings</strong> inside Word Quest to manage audio, assessments, and classroom tools.
-          </div>
-        </div>
+          <p class="home-mini-hint">
+            Tip: keep sessions short and consistent. Students should always know what comes next.
+          </p>
+        </aside>
       </section>
 
-      <section id="daily-path" class="home-card home-path">
+      <section class="home-card" aria-label="Skill path">
         <div class="home-card-header">
-          <h2>Daily Path (10–15 minutes)</h2>
-          <p class="home-subtitle">A predictable routine: warm-up → practice → apply → reflect.</p>
+          <h2>Skill Path (Preview)</h2>
+          <p class="home-subtitle">
+            Start with Word Quest, then choose an “Apply” activity. This hub will evolve into a full pathway map.
+          </p>
         </div>
 
         <div class="home-path-grid">
-          <a class="home-path-step" href="word-quest.html#sound-lab">
-            <div class="home-step-kicker">Warm‑Up</div>
-            <div class="home-step-title">Sound Lab</div>
-            <div class="home-step-desc">Quick sound tiles + tips. Teacher can keep it tucked away until needed.</div>
-          </a>
-
           <a class="home-path-step" href="word-quest.html">
-            <div class="home-step-kicker">Practice</div>
-            <div class="home-step-title">Word Quest</div>
-            <div class="home-step-desc">Decoding with immediate feedback and clean visuals.</div>
+            <div class="home-step-kicker">Step 1</div>
+            <div class="home-step-title">Decode the Word</div>
+            <div class="home-step-desc">Pattern-focused word practice with feedback, audio, and optional game modes.</div>
           </a>
-
-          <a class="home-path-step" href="cloze.html">
-            <div class="home-step-kicker">Apply</div>
-            <div class="home-step-title">Story Fill</div>
-            <div class="home-step-desc">Use vocabulary in context; build meaning while practicing.</div>
-          </a>
-
-          <a class="home-path-step" href="comprehension.html">
-            <div class="home-step-kicker">Think</div>
-            <div class="home-step-title">Read &amp; Think</div>
-            <div class="home-step-desc">Short passages + inference/detail questions by band.</div>
-          </a>
-
           <a class="home-path-step" href="fluency.html">
-            <div class="home-step-kicker">Fluency</div>
+            <div class="home-step-kicker">Step 2</div>
             <div class="home-step-title">Speed Sprint</div>
-            <div class="home-step-desc">Timed reading practice and simple scoring.</div>
+            <div class="home-step-desc">Timed practice to build accuracy, rate, and confidence.</div>
+          </a>
+          <a class="home-path-step" href="comprehension.html">
+            <div class="home-step-kicker">Step 3</div>
+            <div class="home-step-title">Read &amp; Think</div>
+            <div class="home-step-desc">Short passages with questions and quick feedback.</div>
+          </a>
+          <a class="home-path-step" href="writing.html">
+            <div class="home-step-kicker">Step 4</div>
+            <div class="home-step-title">Write &amp; Build</div>
+            <div class="home-step-desc">Plan → draft → revise with scaffolds and sentence starters.</div>
           </a>
         </div>
       </section>
 
-      <section class="home-card home-activities">
+      <section class="home-card" aria-label="Activities">
         <div class="home-card-header">
           <h2>Activities</h2>
-          <p class="home-subtitle">Kid-friendly names with teacher-grade tools under the hood.</p>
+          <p class="home-subtitle">Pick a module. Each stays focused and predictable for students.</p>
         </div>
 
         <div class="home-activity-grid">
           <a class="home-activity" href="word-quest.html">
             <div class="home-activity-title">Word Quest</div>
-            <div class="home-activity-desc">Decode words, hear word/sentence, and track patterns.</div>
-            <div class="home-activity-meta">Foundational skills • decoding</div>
+            <div class="home-activity-desc">Guess the word, hear it spoken, and build pattern awareness.</div>
+            <div class="home-activity-meta">Decoding • Vocabulary • Audio</div>
           </a>
-
           <a class="home-activity" href="cloze.html">
             <div class="home-activity-title">Story Fill</div>
-            <div class="home-activity-desc">Drag or tap words into a story for meaning and grammar practice.</div>
-            <div class="home-activity-meta">Vocabulary • syntax • context</div>
+            <div class="home-activity-desc">Fill the blanks from a word bank to strengthen context and syntax.</div>
+            <div class="home-activity-meta">Syntax • Meaning • SEL prompts</div>
           </a>
-
           <a class="home-activity" href="comprehension.html">
             <div class="home-activity-title">Read &amp; Think</div>
-            <div class="home-activity-desc">Band-based passages with inference and detail questions.</div>
-            <div class="home-activity-meta">Comprehension • discussion</div>
+            <div class="home-activity-desc">Answer questions and explain thinking with scaffolds.</div>
+            <div class="home-activity-meta">Comprehension • Strategy</div>
           </a>
-
           <a class="home-activity" href="fluency.html">
             <div class="home-activity-title">Speed Sprint</div>
-            <div class="home-activity-desc">Short timed reads with quick accuracy scoring.</div>
-            <div class="home-activity-meta">Fluency • accuracy</div>
+            <div class="home-activity-desc">Timed reading practice with simple tracking.</div>
+            <div class="home-activity-meta">Fluency • Accuracy</div>
           </a>
-
           <a class="home-activity" href="madlibs.html">
             <div class="home-activity-title">Silly Stories</div>
-            <div class="home-activity-desc">Playful parts-of-speech writing that stays classroom calm.</div>
-            <div class="home-activity-meta">Grammar • creativity</div>
+            <div class="home-activity-desc">Playful language practice with templates.</div>
+            <div class="home-activity-meta">Grammar • Vocabulary • Fun</div>
           </a>
-
           <a class="home-activity" href="writing.html">
             <div class="home-activity-title">Write &amp; Build</div>
-            <div class="home-activity-desc">A Step Up–style paragraph builder: plan → draft → check.</div>
-            <div class="home-activity-meta">Writing • structure • revision</div>
+            <div class="home-activity-desc">Structured planning and drafting for stronger writing.</div>
+            <div class="home-activity-meta">Writing • Organization</div>
           </a>
-
           <a class="home-activity" href="plan-it.html">
-            <div class="home-activity-title">Plan-It Challenge</div>
-            <div class="home-activity-desc">A calm planning game: organize time, meet constraints, build routines.</div>
-            <div class="home-activity-meta">Executive function • routines</div>
+            <div class="home-activity-title">Plan-It</div>
+            <div class="home-activity-desc">Executive-function scenarios: plan steps and order tasks.</div>
+            <div class="home-activity-meta">SEL • EF • Routines</div>
           </a>
         </div>
       </section>
-
-      <section class="home-card home-footer-card">
-        <h2>Teacher Notes</h2>
-        <p class="home-subtitle">
-          This platform is designed to be simple to run: predictable steps, clear visuals, and features that support small
-          groups, intervention blocks, and whole-class projection.
-        </p>
-        <p class="home-subtitle">
-          Next upgrades in-progress: true-length fluency passages (1–2 min), richer comprehension and writing banks, and
-          more “teacher time-savers” (export/import + quick scoring).
-        </p>
-      </section>
     </main>
-
-    <script src="platform.js"></script>
   </body>
 </html>
+

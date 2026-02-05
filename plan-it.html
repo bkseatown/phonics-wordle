@@ -1,70 +1,69 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Decode the Word — Plan-It Challenge</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Decode the Word — Plan-It</title>
     <link rel="stylesheet" href="style.css" />
+    <script src="platform.js" defer></script>
+    <script src="plan-it.js" defer></script>
   </head>
-  <body class="planit-page force-light">
-    <header class="planit-header">
-      <div>
-        <h1>Plan-It Challenge</h1>
-        <div class="planit-subtitle">A calm planning game: organize time, meet constraints, and build routines.</div>
-      </div>
 
-      <div class="header-actions" aria-label="Navigation">
-        <a class="link-btn" href="index.html">Home</a>
+  <body class="planit-page force-light look-35">
+    <div class="planit-header">
+      <div>
+        <h1><a href="index.html">Decode the Word</a></h1>
+        <div class="planit-subtitle">Plan-It: practice planning steps and choosing start times.</div>
+      </div>
+      <nav class="header-actions" aria-label="Primary">
         <a class="link-btn" href="word-quest.html">Word Quest</a>
         <a class="link-btn" href="cloze.html">Story Fill</a>
         <a class="link-btn" href="comprehension.html">Read &amp; Think</a>
         <a class="link-btn" href="fluency.html">Speed Sprint</a>
         <a class="link-btn" href="madlibs.html">Silly Stories</a>
         <a class="link-btn" href="writing.html">Write &amp; Build</a>
-        <a class="link-btn active" href="plan-it.html" aria-current="page">Plan-It</a>
-      </div>
-    </header>
+        <a class="link-btn active" aria-current="page" href="plan-it.html">Plan-It</a>
+      </nav>
+    </div>
 
     <main class="planit-main">
       <section class="planit-panel" aria-label="Scenario and tasks">
         <div class="planit-panel-header">
           <div>
             <h2>Scenario</h2>
-            <p class="planit-help">Choose start times so everything fits without overlap.</p>
+            <div class="planit-help">Choose a scenario, then pick start times for each task.</div>
           </div>
           <div class="planit-controls">
-            <select id="planit-scenario" aria-label="Choose a scenario"></select>
-            <button id="planit-reset" class="secondary-btn" type="button">Reset</button>
+            <select id="planit-scenario" aria-label="Scenario"></select>
           </div>
         </div>
 
         <div class="planit-card">
-          <div id="planit-scenario-title" class="planit-card-title">Scenario</div>
+          <div id="planit-scenario-title" class="planit-card-title"></div>
           <div id="planit-scenario-text" class="planit-card-text"></div>
           <div id="planit-scenario-tip" class="planit-card-tip"></div>
         </div>
 
         <div id="planit-task-list" class="planit-task-list" aria-label="Tasks"></div>
 
-        <div class="planit-actions">
-          <button id="planit-check" class="primary-btn" type="button">Check Plan</button>
+        <div class="planit-actions" aria-label="Actions">
+          <button id="planit-check" type="button" class="primary-btn">Check Plan</button>
+          <button id="planit-reset" type="button" class="secondary-btn">Reset</button>
           <div id="planit-feedback" class="planit-feedback" aria-live="polite"></div>
         </div>
       </section>
 
-      <aside class="planit-panel" aria-label="Timeline">
+      <section class="planit-panel" aria-label="Timeline">
         <div class="planit-panel-header">
           <div>
             <h2>Timeline</h2>
-            <p class="planit-help">A visual schedule preview.</p>
+            <div class="planit-help">Your choices appear here. Aim for no overlaps.</div>
           </div>
         </div>
 
-        <div class="planit-timeline" id="planit-timeline" aria-label="Schedule timeline"></div>
-      </aside>
+        <div id="planit-timeline" class="planit-timeline" aria-label="Timeline grid"></div>
+      </section>
     </main>
-
-    <script src="platform.js"></script>
-    <script src="plan-it.js"></script>
   </body>
 </html>
+

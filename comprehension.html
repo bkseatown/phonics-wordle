@@ -1,64 +1,63 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Decode the Word — Read &amp; Think</title>
     <link rel="stylesheet" href="style.css" />
+    <script src="platform.js" defer></script>
+    <script src="comprehension.js" defer></script>
   </head>
-  <body class="comprehension-page force-light">
-    <header class="comp-header">
-      <div>
-        <h1>Read &amp; Think</h1>
-        <div class="comp-subtitle">Read the passage, then answer inference and detail questions.</div>
-      </div>
 
-      <div class="header-actions" aria-label="Navigation">
-        <a class="link-btn" href="index.html">Home</a>
+  <body class="comprehension-page force-light look-35">
+    <div class="comp-header">
+      <div>
+        <h1><a href="index.html">Decode the Word</a></h1>
+        <div class="comp-subtitle">Read &amp; Think: short passages with quick questions and feedback.</div>
+      </div>
+      <nav class="header-actions" aria-label="Primary">
         <a class="link-btn" href="word-quest.html">Word Quest</a>
         <a class="link-btn" href="cloze.html">Story Fill</a>
-        <a class="link-btn active" href="comprehension.html" aria-current="page">Read &amp; Think</a>
+        <a class="link-btn active" aria-current="page" href="comprehension.html">Read &amp; Think</a>
         <a class="link-btn" href="fluency.html">Speed Sprint</a>
         <a class="link-btn" href="madlibs.html">Silly Stories</a>
         <a class="link-btn" href="writing.html">Write &amp; Build</a>
         <a class="link-btn" href="plan-it.html">Plan-It</a>
-      </div>
-    </header>
+      </nav>
+    </div>
 
     <main class="comp-main">
-      <section class="comp-panel" aria-label="Passage">
+      <section class="comp-panel" aria-label="Passage and questions">
         <div class="comp-panel-header">
           <div>
-            <h2 id="comp-title">Passage</h2>
-            <div id="comp-meta" class="comp-subtitle"></div>
+            <h2 id="comp-title">Read &amp; Think</h2>
+            <div id="comp-meta" class="muted"></div>
           </div>
           <div class="comp-controls" aria-label="Filters">
             <select id="comp-grade" aria-label="Grade band"></select>
             <select id="comp-lexile" aria-label="Lexile band"></select>
-            <button id="comp-shuffle" class="secondary-btn" type="button">Shuffle</button>
           </div>
         </div>
-        <div id="comp-passage" class="comp-passage"></div>
+
+        <div id="comp-passage" class="comp-passage" aria-label="Passage"></div>
+        <div id="comp-questions-list" aria-label="Questions"></div>
       </section>
 
-      <aside class="comp-panel" aria-label="Questions">
-        <div class="comp-hud" aria-label="Score">
-          <div>🪙 <span id="comp-coins">0</span></div>
-          <div>🔥 <span id="comp-streak">0</span></div>
+      <section class="comp-panel" aria-label="Actions">
+        <div class="comp-hud" aria-label="Scoreboard">
+          <span>🪙 <span id="comp-coins">0</span></span>
+          <span>🔥 <span id="comp-streak">0</span></span>
         </div>
 
-        <div id="comp-questions-list" class="comp-questions"></div>
-
-        <div class="comp-actions">
-          <button id="comp-check" class="primary-btn" type="button">Check Answers</button>
-          <button id="comp-reset" class="secondary-btn" type="button">Reset</button>
+        <div class="comp-actions" style="margin-top: 12px;">
+          <button id="comp-check" type="button" class="primary-btn">Check</button>
+          <button id="comp-reset" type="button" class="secondary-btn">Reset</button>
+          <button id="comp-shuffle" type="button" class="secondary-btn">New Passage</button>
         </div>
 
-        <div id="comp-feedback" class="comp-feedback" aria-live="polite"></div>
-      </aside>
+        <div id="comp-feedback" class="comp-feedback" aria-live="polite" style="margin-top: 12px;"></div>
+      </section>
     </main>
-
-    <script src="platform.js"></script>
-    <script src="comprehension.js"></script>
   </body>
 </html>
+
