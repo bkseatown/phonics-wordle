@@ -980,6 +980,20 @@ function updateFitScreenMode() {
     const canvas = document.getElementById('game-canvas');
     const keyboardEl = document.getElementById('keyboard');
     const quickRow = document.querySelector('.quick-row');
+
+    // Desktop Word Quest uses a fixed large layout; skip auto-fit compression logic.
+    if (window.innerWidth >= 821) {
+        if (fitScreenRaf) {
+            cancelAnimationFrame(fitScreenRaf);
+            fitScreenRaf = null;
+        }
+        fitScreenActive = false;
+        fitScreenTightActive = false;
+        document.body.classList.remove('fit-screen', 'fit-screen-tight');
+        positionFunHud();
+        return;
+    }
+
     const storyTrack = document.getElementById('story-track');
     const storyTrackVisible = !!(
         storyTrack &&

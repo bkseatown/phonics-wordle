@@ -9984,3 +9984,97 @@ body.word-quest-page .quick-response-dock {
         overflow: visible !important;
     }
 }
+
+/* ==========================================================================
+   Word Quest desktop hard-fix (final override)
+   - Keep no-scroll desktop layout
+   - Restore large board + keyboard sizing
+   ========================================================================== */
+@media (min-width: 821px) {
+    body.word-quest-page {
+        overflow: hidden;
+        height: 100dvh;
+        min-height: 100dvh;
+    }
+
+    body.word-quest-page #activity-breadcrumb,
+    body.word-quest-page #global-accessibility-tools,
+    body.word-quest-page .story-track,
+    body.word-quest-page .quick-response-dock {
+        display: none !important;
+    }
+
+    body.word-quest-page main {
+        overflow: hidden !important;
+        justify-content: flex-start;
+        padding-bottom: 0;
+    }
+
+    body.word-quest-page #game-canvas,
+    body.word-quest-page.fit-screen #game-canvas,
+    body.word-quest-page.fit-screen-tight #game-canvas {
+        flex: 0 0 auto !important;
+        height: auto !important;
+        min-height: 0 !important;
+        width: calc(100% - 16px) !important;
+        max-width: 980px !important;
+        margin: 6px auto 8px !important;
+        padding: 12px 12px 10px !important;
+        gap: 10px !important;
+        overflow: hidden !important;
+    }
+
+    body.word-quest-page #game-board,
+    body.word-quest-page.fit-screen #game-board,
+    body.word-quest-page.fit-screen-tight #game-board {
+        margin: 4px auto !important;
+        padding: 11px !important;
+        gap: 6px !important;
+    }
+
+    body.word-quest-page .tile,
+    body.word-quest-page.fit-screen .tile,
+    body.word-quest-page.fit-screen-tight .tile {
+        width: min(68px, 4.8vw, 7.8vh) !important;
+        height: min(68px, 4.8vw, 7.8vh) !important;
+        font-size: min(2.1rem, 3.2vw, 4.2vh) !important;
+    }
+
+    body.word-quest-page .hint-actions {
+        margin: 3px 0 !important;
+        gap: 8px !important;
+    }
+
+    body.word-quest-page .hint-actions .hint-btn {
+        min-height: 34px !important;
+        padding: 6px 12px !important;
+        font-size: 0.84rem !important;
+    }
+
+    body.word-quest-page #keyboard,
+    body.word-quest-page.fit-screen #keyboard,
+    body.word-quest-page.fit-screen-tight #keyboard {
+        margin-bottom: 0 !important;
+        padding: 8px 8px 10px !important;
+        gap: 4px !important;
+        max-width: 650px !important;
+    }
+
+    body.word-quest-page .keyboard-row {
+        gap: 4px !important;
+    }
+
+    body.word-quest-page .key,
+    body.word-quest-page.fit-screen .key,
+    body.word-quest-page.fit-screen-tight .key {
+        height: min(50px, 3.6vw, 5.5vh) !important;
+        font-size: min(1.05rem, 2vw, 2.4vh) !important;
+        max-width: 58px !important;
+    }
+
+    body.word-quest-page .key.wide,
+    body.word-quest-page.fit-screen .key.wide,
+    body.word-quest-page.fit-screen-tight .key.wide {
+        max-width: 90px !important;
+    }
+}
