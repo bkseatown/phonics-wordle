@@ -102,6 +102,10 @@
   };
 
   const STORY_TRACK_ORDER = ['word-quest', 'fluency', 'comprehension', 'writing', 'plan-it'];
+  const STORY_TRACK_ACTIVITIES = new Set(['cloze', 'comprehension', 'fluency', 'madlibs', 'writing', 'plan-it']);
+  const QUICK_RESPONSE_ACTIVITIES = new Set(['cloze', 'comprehension', 'madlibs', 'writing', 'plan-it']);
+  const BREADCRUMB_ACTIVITIES = new Set(['cloze', 'comprehension', 'fluency', 'madlibs', 'writing', 'plan-it', 'teacher-report']);
+  const ACCESSIBILITY_PANEL_ACTIVITIES = new Set(['home']);
 
   const ACCESSIBILITY_DEFAULTS = {
     calmMode: false,
@@ -109,6 +113,7 @@
     showIPA: true,
     showExamples: true,
     showMouthCues: true,
+    lineFocus: false,
     uiLook: '35',
     focusMode: false,
     reducedStimulation: false,
@@ -188,6 +193,7 @@
     merged.reducedStimulation = !!merged.reducedStimulation;
     merged.calmMode = !!merged.calmMode;
     merged.largeText = !!merged.largeText;
+    merged.lineFocus = !!merged.lineFocus;
     return merged;
   }
 
@@ -458,7 +464,6 @@
   if (!body) return;
 
   body.classList.add('force-light');
-  body.classList.add('has-story-track');
   body.dataset.learnerId = getActiveLearnerId();
   document.documentElement.style.colorScheme = 'light';
 
@@ -498,6 +503,7 @@
     body.classList.toggle('hide-mouth-cues', normalized.showMouthCues === false);
     body.classList.toggle('focus-mode', !!normalized.focusMode);
     body.classList.toggle('reduced-stimulation', !!normalized.reducedStimulation);
+    body.classList.toggle('line-focus', !!normalized.lineFocus);
     body.classList.remove('font-atkinson', 'font-opendyslexic');
     body.classList.add(normalized.fontProfile === 'opendyslexic' ? 'font-opendyslexic' : 'font-atkinson');
 
@@ -687,6 +693,22 @@
     return ACTIVITIES.find((activity) => activity.id === activityId) || ACTIVITIES[0];
   }
 
+  function shouldRenderStoryTrack(activityId = getCurrentActivityId()) {
+    return STORY_TRACK_ACTIVITIES.has(activityId);
+  }
+
+  function shouldRenderQuickResponses(activityId = getCurrentActivityId()) {
+    return QUICK_RESPONSE_ACTIVITIES.has(activityId);
+  }
+
+  function shouldRenderBreadcrumb(activityId = getCurrentActivityId()) {
+    return BREADCRUMB_ACTIVITIES.has(activityId);
+  }
+
+  function shouldRenderAccessibilityPanel(activityId = getCurrentActivityId()) {
+    return ACCESSIBILITY_PANEL_ACTIVITIES.has(activityId);
+  }
+
   function getHeaderContainer() {
     return document.querySelector('header')
       || document.querySelector('.cloze-header, .comp-header, .fluency-header, .madlibs-header, .writing-header, .planit-header');
@@ -697,6 +719,13 @@
   }
 
   function renderBreadcrumbTrail() {
+    const activityId = getCurrentActivityId();
+    if (!shouldRenderBreadcrumb(activityId)) {
+      const existing = document.getElementById('activity-breadcrumb');
+      if (existing) existing.remove();
+      return;
+    }
+
     const header = getHeaderContainer();
     if (!header) return;
 
@@ -753,6 +782,15 @@
   }
 
   function renderStoryTrack() {
+    const currentId = getCurrentActivityId();
+    const enabled = shouldRenderStoryTrack(currentId);
+    body.classList.toggle('has-story-track', enabled);
+    if (!enabled) {
+      const existing = document.getElementById('story-track');
+      if (existing) existing.remove();
+      return;
+    }
+
     let track = document.getElementById('story-track');
     if (!track) {
       track = document.createElement('div');
@@ -764,7 +802,6 @@
     }
 
     const completed = getCompletedStorySteps();
-    const currentId = getCurrentActivityId();
     const completedCount = STORY_TRACK_ORDER.filter((id) => completed.has(id)).length;
     const progressValue = Math.round((completedCount / STORY_TRACK_ORDER.length) * 100);
 
@@ -872,6 +909,12 @@
   }
 
   function renderQuickResponseDock() {
+    if (!shouldRenderQuickResponses(getCurrentActivityId())) {
+      const existing = document.getElementById('quick-response-dock');
+      if (existing) existing.remove();
+      return;
+    }
+
     let dock = document.getElementById('quick-response-dock');
     if (!dock) {
       dock = document.createElement('div');
@@ -963,6 +1006,12 @@
   }
 
   function renderAccessibilityPanel() {
+    if (!shouldRenderAccessibilityPanel(getCurrentActivityId())) {
+      const existing = document.getElementById('global-accessibility-tools');
+      if (existing) existing.remove();
+      return;
+    }
+
     const headerTop = getHeaderTopContainer();
     if (!headerTop) return;
 
@@ -978,6 +1027,7 @@
           <label><input type="checkbox" data-setting="reducedStimulation" /> Reduced stimulation</label>
           <label><input type="checkbox" data-setting="calmMode" /> Calm mode</label>
           <label><input type="checkbox" data-setting="largeText" /> Large text</label>
+          <label><input type="checkbox" data-setting="lineFocus" /> Line focus</label>
           <label class="global-accessibility-font-label">Font
             <select data-setting="fontProfile">
               <option value="atkinson">Atkinson Hyperlegible</option>
@@ -1027,6 +1077,7 @@
           largeText: ACCESSIBILITY_DEFAULTS.largeText,
           focusMode: ACCESSIBILITY_DEFAULTS.focusMode,
           reducedStimulation: ACCESSIBILITY_DEFAULTS.reducedStimulation,
+          lineFocus: ACCESSIBILITY_DEFAULTS.lineFocus,
           fontProfile: ACCESSIBILITY_DEFAULTS.fontProfile
         });
         applyFocusModeLayout();

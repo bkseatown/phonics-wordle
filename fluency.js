@@ -325,6 +325,9 @@ let trackerTokens = [];
 let trackerStopIndex = null; // 1-based index of last word read
 let trackerErrors = new Set(); // 1-based indices
 let trackerMode = 'errors'; // 'errors' | 'stop'
+let lineFocusEnabled = false;
+let trackerActiveLine = 1;
+let trackerLineCount = 1;
 
 function normalizeTokenForCount(token) {
     if (!token) return '';
@@ -338,6 +341,78 @@ function tokenizePassage(text) {
         .trim()
         .split(' ')
         .filter(Boolean);
+}
+
+function readLineFocusPreference() {
+    try {
+        const settings = window.DECODE_PLATFORM?.getSettings?.();
+        if (settings && Object.prototype.hasOwnProperty.call(settings, 'lineFocus')) {
+            return !!settings.lineFocus;
+        }
+    } catch (e) {}
+    return false;
+}
+
+function writeLineFocusPreference(enabled) {
+    try {
+        window.DECODE_PLATFORM?.setSettings?.({ lineFocus: !!enabled }, { resize: false });
+    } catch (e) {}
+}
+
+function mapWordLines() {
+    const words = passageEl ? Array.from(passageEl.querySelectorAll('.fluency-word')) : [];
+    if (!words.length) {
+        trackerLineCount = 1;
+        trackerActiveLine = 1;
+        return;
+    }
+
+    let lineNumber = 0;
+    let lastTop = null;
+    words.forEach((wordEl) => {
+        const top = Math.round(wordEl.getBoundingClientRect().top);
+        if (lastTop === null || Math.abs(top - lastTop) > 8) {
+            lineNumber += 1;
+            lastTop = top;
+        }
+        wordEl.dataset.line = String(lineNumber);
+    });
+
+    trackerLineCount = Math.max(1, lineNumber);
+    trackerActiveLine = Math.max(1, Math.min(trackerLineCount, trackerActiveLine));
+}
+
+function applyLineFocusHighlighting() {
+    const words = passageEl ? Array.from(passageEl.querySelectorAll('.fluency-word')) : [];
+    words.forEach((wordEl) => {
+        wordEl.classList.remove('line-active', 'line-dim');
+        if (!lineFocusEnabled) return;
+        const line = Number(wordEl.dataset.line || 0);
+        if (line === trackerActiveLine) {
+            wordEl.classList.add('line-active');
+        } else {
+            wordEl.classList.add('line-dim');
+        }
+    });
+    updateLineFocusControls();
+}
+
+function updateLineFocusControls() {
+    const toggle = document.getElementById('fluency-line-focus-toggle');
+    const prevBtn = document.getElementById('fluency-line-prev');
+    const nextBtn = document.getElementById('fluency-line-next');
+    const label = document.getElementById('fluency-line-focus-label');
+
+    if (toggle) toggle.checked = !!lineFocusEnabled;
+    if (prevBtn) prevBtn.disabled = !lineFocusEnabled || trackerActiveLine <= 1;
+    if (nextBtn) nextBtn.disabled = !lineFocusEnabled || trackerActiveLine >= trackerLineCount;
+    if (label) label.textContent = lineFocusEnabled ? `Line ${trackerActiveLine} / ${trackerLineCount}` : 'Line focus off';
+}
+
+function moveLineFocus(step) {
+    if (!lineFocusEnabled) return;
+    trackerActiveLine = Math.max(1, Math.min(trackerLineCount, trackerActiveLine + step));
+    applyLineFocusHighlighting();
 }
 
 function safeParse(json) {
@@ -380,6 +455,15 @@ function ensureTrackerUI() {
         <div class="fluency-tracker-hint">
             Click a word to mark an error. Press “Set stop word”, then click the last word read.
         </div>
+        <div class="fluency-line-focus-controls">
+            <label class="fluency-line-focus-toggle">
+                <input id="fluency-line-focus-toggle" type="checkbox" />
+                <span>Line focus</span>
+            </label>
+            <button id="fluency-line-prev" class="secondary-btn" type="button">Prev line</button>
+            <button id="fluency-line-next" class="secondary-btn" type="button">Next line</button>
+            <span id="fluency-line-focus-label" class="fluency-line-focus-label">Line focus off</span>
+        </div>
     `;
 
     panel.querySelector('.fluency-panel-header')?.insertAdjacentElement('afterend', tracker);
@@ -393,6 +477,26 @@ function ensureTrackerUI() {
     tracker.querySelector('#fluency-clear-marks')?.addEventListener('click', () => {
         clearTrackerMarks();
     });
+
+    tracker.querySelector('#fluency-line-focus-toggle')?.addEventListener('change', (event) => {
+        lineFocusEnabled = !!event.target?.checked;
+        writeLineFocusPreference(lineFocusEnabled);
+        if (lineFocusEnabled) {
+            mapWordLines();
+            trackerActiveLine = Math.max(1, Math.min(trackerLineCount, trackerActiveLine || 1));
+        }
+        applyLineFocusHighlighting();
+    });
+
+    tracker.querySelector('#fluency-line-prev')?.addEventListener('click', () => {
+        moveLineFocus(-1);
+    });
+
+    tracker.querySelector('#fluency-line-next')?.addEventListener('click', () => {
+        moveLineFocus(1);
+    });
+
+    updateLineFocusControls();
 }
 
 function clearTrackerMarks() {
@@ -403,7 +507,10 @@ function clearTrackerMarks() {
     passageEl?.querySelectorAll('.fluency-word').forEach(wordEl => {
         wordEl.classList.remove('error', 'stop', 'after-stop');
     });
+    trackerActiveLine = 1;
     syncTrackerToInputs();
+    mapWordLines();
+    applyLineFocusHighlighting();
 }
 
 function syncTrackerLabels() {
@@ -444,6 +551,7 @@ function applyStopHighlighting() {
         wordEl.classList.toggle('after-stop', !!trackerStopIndex && idx > trackerStopIndex);
         wordEl.classList.toggle('stop', !!trackerStopIndex && idx === trackerStopIndex);
     });
+    applyLineFocusHighlighting();
 }
 
 function renderTrackablePassage(text) {
@@ -463,6 +571,11 @@ function renderTrackablePassage(text) {
         span.textContent = token;
 
         span.addEventListener('click', () => {
+            const clickedLine = Number(span.dataset.line || 0);
+            if (lineFocusEnabled && clickedLine > 0) {
+                trackerActiveLine = clickedLine;
+            }
+
             if (trackerMode === 'stop') {
                 trackerStopIndex = idx;
                 trackerMode = 'errors';
@@ -481,6 +594,7 @@ function renderTrackablePassage(text) {
                 span.classList.add('error');
             }
             syncTrackerToInputs();
+            applyLineFocusHighlighting();
         });
 
         passageEl.appendChild(span);
@@ -488,6 +602,9 @@ function renderTrackablePassage(text) {
     });
 
     syncTrackerLabels();
+    mapWordLines();
+    trackerActiveLine = 1;
+    applyLineFocusHighlighting();
 }
 
 function loadProgress() {
@@ -650,6 +767,7 @@ function init() {
     applyFriendlyNavLabels();
     applyLightTheme();
     applyPlatformGameModeVisibility();
+    lineFocusEnabled = readLineFocusPreference();
     loadProgress();
     updateHud();
     buildFilters();
@@ -676,6 +794,11 @@ function init() {
     pauseBtn.addEventListener('click', stopTimer);
     resetBtn.addEventListener('click', resetTimer);
     scoreBtn.addEventListener('click', scoreFluency);
+
+    window.addEventListener('resize', () => {
+        mapWordLines();
+        applyLineFocusHighlighting();
+    });
 }
 
 init();
