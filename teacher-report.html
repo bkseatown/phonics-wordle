@@ -75,6 +75,101 @@
         <div id="report-share-status" class="muted"></div>
       </section>
 
+      <section class="report-card" aria-label="Outcome proof">
+        <div class="report-card-header">
+          <div>
+            <h2>Outcome Proof Snapshot</h2>
+            <p class="home-subtitle">Leadership-ready evidence of momentum, intervention fit, and implementation depth.</p>
+          </div>
+        </div>
+        <div id="report-outcomes" class="report-outcomes"></div>
+      </section>
+
+      <section class="report-card" aria-label="Framework alignment">
+        <div class="report-card-header">
+          <div>
+            <h2>Framework Alignment Crosswalk</h2>
+            <p class="home-subtitle">Maps priority gaps to SoR, OG, Wilson, UFLI, Words Their Way, Common Core, PYP/MYP/DP, UK, and WIDA-aligned moves.</p>
+          </div>
+        </div>
+        <div id="report-framework-crosswalk" class="report-crosswalk"></div>
+      </section>
+
+      <section class="report-card" aria-label="Benchmark norms">
+        <div class="report-card-header">
+          <div>
+            <h2>Benchmark Norms (BOY · MOY · EOY)</h2>
+            <p class="home-subtitle">Shows expected range by grade band and whether current learner evidence is on track, watch, or intensive.</p>
+          </div>
+        </div>
+        <div id="report-benchmarks" class="report-benchmarks"></div>
+      </section>
+
+      <section class="report-card" aria-label="Tiered goals">
+        <div class="report-card-header">
+          <div>
+            <h2>Tiered Intervention Goal Drafts</h2>
+            <p class="home-subtitle">Auto-drafts near-term and long-term goals from learner evidence, benchmark expectations, and selected tier.</p>
+          </div>
+          <button id="report-goal-copy" class="secondary-btn" type="button">Copy Goal Draft</button>
+        </div>
+        <div class="report-goal-controls">
+          <label class="report-builder-label">
+            Focus domain
+            <select id="report-goal-domain" aria-label="Goal focus domain">
+              <option value="auto">Auto (top gap)</option>
+              <option value="decoding">Decoding</option>
+              <option value="fluency">Fluency &amp; Prosody</option>
+              <option value="comprehension">Comprehension</option>
+              <option value="written-language">Written Language</option>
+              <option value="executive-function">SEL / Executive Function</option>
+            </select>
+          </label>
+          <label class="report-builder-label">
+            Tier
+            <select id="report-goal-tier" aria-label="Intervention tier">
+              <option value="1">Tier 1 (core + differentiation)</option>
+              <option value="2">Tier 2 (targeted small group)</option>
+              <option value="3">Tier 3 (intensive individualized)</option>
+            </select>
+          </label>
+          <label class="report-builder-label">
+            Goal horizon
+            <select id="report-goal-horizon" aria-label="Goal horizon">
+              <option value="near">Near term (4-6 weeks)</option>
+              <option value="long">Long term (12-16 weeks)</option>
+            </select>
+          </label>
+          <button id="report-goal-generate" class="primary-btn" type="button">Generate Goal Draft</button>
+        </div>
+        <div id="report-goal-output" class="report-goal-output"></div>
+        <div id="report-goal-status" class="muted"></div>
+      </section>
+
+      <section class="report-card" aria-label="Role pathways">
+        <div class="report-card-header">
+          <div>
+            <h2>Role-Based Launch Pathways</h2>
+            <p class="home-subtitle">Pick a team role and launch a focused daily workflow in one click.</p>
+          </div>
+          <button id="report-role-copy" class="secondary-btn" type="button">Copy Pathway</button>
+        </div>
+        <div class="report-role-controls">
+          <label class="report-builder-label" for="report-role-select">
+            Team role
+            <select id="report-role-select" aria-label="Role pathway selector">
+              <option value="learning-support">Learning Support / SPED</option>
+              <option value="eal">EAL</option>
+              <option value="slp">Speech-Language (SLP)</option>
+              <option value="sel-counselor">SEL / School Counselor</option>
+              <option value="leadership">Leadership / Admin</option>
+            </select>
+          </label>
+        </div>
+        <div id="report-role-pathway" class="report-role-pathway"></div>
+        <div id="report-role-status" class="muted"></div>
+      </section>
+
       <section class="report-card" aria-label="One-tap lesson builder">
         <div class="report-card-header">
           <div>

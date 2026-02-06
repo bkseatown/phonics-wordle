@@ -276,6 +276,142 @@
     ]
   };
 
+  const ROLE_PATHWAY_LIBRARY = {
+    'learning-support': {
+      label: 'Learning Support / SPED',
+      fit: 'MTSS · SPED · Intervention',
+      goal: 'Run a tight intervention loop with explicit modeling, guided transfer, and documented next steps.',
+      focusId: 'phonics-decoding',
+      steps: [
+        { activity: 'word-quest', minutes: '8-10', move: 'Target the current placement focus and coach errors immediately.' },
+        { activity: 'cloze', minutes: '6-8', move: 'Transfer the pattern to context and check understanding aloud.' },
+        { activity: 'teacher-report', label: 'Teacher Report Snapshot', anchor: '#report-share-summary', minutes: '2-3', move: 'Capture a shareable summary for MTSS notes and family communication.' }
+      ]
+    },
+    eal: {
+      label: 'EAL',
+      fit: 'Language development · EAL · Classroom support',
+      goal: 'Blend decoding, vocabulary, and context cues with language-friendly routines.',
+      focusId: 'comprehension-evidence',
+      steps: [
+        { activity: 'word-quest', minutes: '6-8', move: 'Preview key vocabulary and decode high-utility words.' },
+        { activity: 'comprehension', minutes: '8-10', move: 'Use text evidence prompts and sentence stems for oral rehearsal.' },
+        { activity: 'cloze', minutes: '4-6', move: 'Close with context clues and quick justification of choices.' }
+      ]
+    },
+    slp: {
+      label: 'Speech-Language (SLP)',
+      fit: 'SLP · Fluency · Phonology',
+      goal: 'Connect sound production, prosody, and language output in short high-repetition sets.',
+      focusId: 'fluency-prosody',
+      steps: [
+        { activity: 'word-quest', minutes: '6-8', move: 'Warm up with targeted phoneme patterns and repeated production.' },
+        { activity: 'fluency', minutes: '8-10', move: 'Practice paced oral reading with phrasing and punctuation cues.' },
+        { activity: 'writing', minutes: '4-6', move: 'Use a short written output to reinforce expressive language transfer.' }
+      ]
+    },
+    'sel-counselor': {
+      label: 'SEL / School Counselor',
+      fit: 'Counselor · SEL · Executive function',
+      goal: 'Use literacy tasks to build regulation, planning stamina, and reflection language.',
+      focusId: 'sel-executive',
+      steps: [
+        { activity: 'plan-it', minutes: '8-10', move: 'Model planning decisions and discuss regulation checkpoints.' },
+        { activity: 'writing', minutes: '6-8', move: 'Translate plans into short action writing with supportive stems.' },
+        { activity: 'comprehension', minutes: '4-6', move: 'End with evidence-based reflection on choices and outcomes.' }
+      ]
+    },
+    leadership: {
+      label: 'Leadership / Admin',
+      fit: 'Principal · HoS · Instructional coaching',
+      goal: 'Demonstrate instructional coherence, measurable impact, and repeatable daily implementation.',
+      focusId: 'comprehension-evidence',
+      steps: [
+        { activity: 'teacher-report', label: 'Literacy Pulse + R/Y/G', anchor: '#report-pulse', minutes: '2-3', move: 'Open the pulse to show intervention priorities and support bands.' },
+        { activity: 'plan-it', minutes: '5-7', move: 'Show cross-skill transfer into executive-function and self-management routines.' },
+        { activity: 'word-quest', minutes: '5-7', move: 'Show focused decoding reps with immediate feedback and learner adjustment.' }
+      ]
+    }
+  };
+
+  const FRAMEWORK_ALIGNMENT = {
+    decoding: [
+      { framework: 'Science of Reading', alignment: 'Explicit phoneme-grapheme mapping, cumulative review, and decodable transfer.' },
+      { framework: 'OG / Wilson / UFLI', alignment: 'Direct sound-symbol instruction, syllable routines, dictation, and corrective feedback.' },
+      { framework: 'Words Their Way', alignment: 'Feature-based spelling pattern analysis and word sorting.' },
+      { framework: 'Corrective Reading / Lexia-style', alignment: 'Mastery checks, scripted correction loops, and frequent retrieval.' },
+      { framework: 'Common Core', alignment: 'RF.2.3, RF.3.3, RF.3.4 and language transfer standards.' },
+      { framework: 'PYP / MYP / DP (SL/HL)', alignment: 'Structured word study and morphology linked to authentic reading and writing tasks.' },
+      { framework: 'UK Curriculum', alignment: 'Phonics and word-reading progression across KS1-KS3 expectations.' },
+      { framework: 'WIDA', alignment: 'Language forms, vocabulary, and discourse supports within literacy instruction.' }
+    ],
+    fluency: [
+      { framework: 'Science of Reading', alignment: 'Build automaticity after decoding accuracy; rate must support meaning.' },
+      { framework: 'OG / Wilson / UFLI', alignment: 'Repeated connected-text practice with phrasing and error correction.' },
+      { framework: 'Corrective Reading / Lexia-style', alignment: 'Timed passages with immediate feedback and progress graphing.' },
+      { framework: 'Common Core', alignment: 'RF.3.4 and grade-level oral reading fluency expectations.' },
+      { framework: 'PYP / MYP / DP (SL/HL)', alignment: 'Fluency as access to comprehension, discussion, and literary analysis.' },
+      { framework: 'UK Curriculum', alignment: 'Accuracy, automaticity, and prosody in curriculum-aligned reading.' },
+      { framework: 'WIDA', alignment: 'Oral language scaffolds and pronunciation-aware rehearsal for multilingual learners.' }
+    ],
+    comprehension: [
+      { framework: 'Science of Reading', alignment: 'Language comprehension integrated with decoding through evidence-based questioning.' },
+      { framework: 'UFLI / Structured Literacy transfer', alignment: 'Apply taught patterns and vocabulary in connected text.' },
+      { framework: 'Common Core', alignment: 'RL/RI text evidence, inferencing, and vocabulary-in-context standards.' },
+      { framework: 'PYP / MYP / DP (SL/HL)', alignment: 'Inquiry, interpretation, and evidence-backed responses across text types.' },
+      { framework: 'UK Curriculum', alignment: 'Retrieval, inference, and explanation in reading comprehension objectives.' },
+      { framework: 'WIDA', alignment: 'Sentence stems and discourse scaffolds to express evidence clearly.' }
+    ],
+    'written-language': [
+      { framework: 'Science of Reading and Writing', alignment: 'Reading-writing reciprocity: spelling, syntax, and composition reinforce each other.' },
+      { framework: 'Words Their Way', alignment: 'Spelling-feature knowledge applied in sentence and paragraph writing.' },
+      { framework: 'Step Up to Writing', alignment: 'Structured planning, color-coding, and clear paragraph organization.' },
+      { framework: 'Common Core', alignment: 'W.3.2, W.3.4, W.3.8 and language conventions.' },
+      { framework: 'PYP / MYP / DP (SL/HL)', alignment: 'Purpose-driven writing for audience, argument, and reflection.' },
+      { framework: 'UK Curriculum', alignment: 'Composition, grammar, and transcription expectations by key stage.' },
+      { framework: 'WIDA', alignment: 'Language objectives paired with content objectives for writing output.' }
+    ],
+    'executive-function': [
+      { framework: 'MTSS / RTI', alignment: 'Tiered supports for planning, self-monitoring, and persistence.' },
+      { framework: 'SEL Frameworks', alignment: 'Goal setting, self-management, and reflection routines embedded in literacy tasks.' },
+      { framework: 'Common Core Speaking & Listening', alignment: 'Collaborative planning and discussion routines (SL standards).' },
+      { framework: 'PYP / MYP', alignment: 'Approaches to learning: self-management and communication skills.' },
+      { framework: 'UK / International pastoral systems', alignment: 'Metacognition, independence, and regulation outcomes.' },
+      { framework: 'WIDA', alignment: 'Language-supported reflection and strategy talk for multilingual learners.' }
+    ]
+  };
+
+  const BENCHMARK_EXPECTATIONS = {
+    'K-2': {
+      decoding: { boy: 0.45, moy: 0.62, eoy: 0.78 },
+      fluency: { boy: 0.34, moy: 0.52, eoy: 0.68 },
+      comprehension: { boy: 0.36, moy: 0.54, eoy: 0.7 },
+      'written-language': { boy: 0.32, moy: 0.5, eoy: 0.66 },
+      'executive-function': { boy: 0.42, moy: 0.58, eoy: 0.72 }
+    },
+    '3-5': {
+      decoding: { boy: 0.52, moy: 0.68, eoy: 0.82 },
+      fluency: { boy: 0.44, moy: 0.62, eoy: 0.78 },
+      comprehension: { boy: 0.46, moy: 0.64, eoy: 0.8 },
+      'written-language': { boy: 0.42, moy: 0.6, eoy: 0.76 },
+      'executive-function': { boy: 0.48, moy: 0.64, eoy: 0.78 }
+    },
+    '6-8': {
+      decoding: { boy: 0.58, moy: 0.72, eoy: 0.84 },
+      fluency: { boy: 0.5, moy: 0.66, eoy: 0.8 },
+      comprehension: { boy: 0.52, moy: 0.68, eoy: 0.82 },
+      'written-language': { boy: 0.48, moy: 0.66, eoy: 0.8 },
+      'executive-function': { boy: 0.5, moy: 0.66, eoy: 0.8 }
+    },
+    '9-12': {
+      decoding: { boy: 0.6, moy: 0.74, eoy: 0.86 },
+      fluency: { boy: 0.54, moy: 0.7, eoy: 0.82 },
+      comprehension: { boy: 0.56, moy: 0.72, eoy: 0.84 },
+      'written-language': { boy: 0.52, moy: 0.7, eoy: 0.84 },
+      'executive-function': { boy: 0.52, moy: 0.68, eoy: 0.82 }
+    }
+  };
+
   const learnerNameEl = document.getElementById('report-learner-name');
   const generatedAtEl = document.getElementById('report-generated-at');
   const metricsEl = document.getElementById('report-metrics');
@@ -297,9 +433,27 @@
   const shareSummaryEl = document.getElementById('report-share-summary');
   const shareCopyBtn = document.getElementById('report-share-copy');
   const shareStatusEl = document.getElementById('report-share-status');
+  const outcomesEl = document.getElementById('report-outcomes');
+  const crosswalkEl = document.getElementById('report-framework-crosswalk');
+  const benchmarksEl = document.getElementById('report-benchmarks');
+  const goalDomainEl = document.getElementById('report-goal-domain');
+  const goalTierEl = document.getElementById('report-goal-tier');
+  const goalHorizonEl = document.getElementById('report-goal-horizon');
+  const goalGenerateBtn = document.getElementById('report-goal-generate');
+  const goalCopyBtn = document.getElementById('report-goal-copy');
+  const goalOutputEl = document.getElementById('report-goal-output');
+  const goalStatusEl = document.getElementById('report-goal-status');
+  const roleSelectEl = document.getElementById('report-role-select');
+  const rolePathwayEl = document.getElementById('report-role-pathway');
+  const roleCopyBtn = document.getElementById('report-role-copy');
+  const roleStatusEl = document.getElementById('report-role-status');
 
   let latestBuilderText = '';
   let latestShareText = '';
+  let latestGoalText = '';
+  let latestRolePathwayText = '';
+  let latestGoalContext = null;
+  let latestRoleContext = null;
 
   function safeParse(json) {
     try {
@@ -461,6 +615,36 @@
       general: 'General literacy'
     };
     return map[domainId] || 'Literacy';
+  }
+
+  function currentSchoolWindow(date = new Date()) {
+    const month = date.getMonth() + 1;
+    if (month >= 8 && month <= 10) return 'boy';
+    if (month >= 11 || month <= 2) return 'moy';
+    return 'eoy';
+  }
+
+  function schoolWindowLabel(windowKey) {
+    if (windowKey === 'boy') return 'Beginning of year';
+    if (windowKey === 'moy') return 'Middle of year';
+    return 'End of year';
+  }
+
+  function benchmarkStatus(current, target) {
+    if (current === null || current === undefined || Number.isNaN(current)) {
+      return { label: 'Need baseline', cls: 'bench-none' };
+    }
+    if (target === null || target === undefined || Number.isNaN(target)) {
+      return { label: 'No target', cls: 'bench-none' };
+    }
+    const delta = current - target;
+    if (delta >= 0.03) {
+      return { label: 'On track', cls: 'bench-good' };
+    }
+    if (delta >= -0.06) {
+      return { label: 'Watch', cls: 'bench-watch' };
+    }
+    return { label: 'Intensive', cls: 'bench-alert' };
   }
 
   function getActivityStats(logs) {
@@ -847,6 +1031,7 @@
       supports,
       topPriority,
       domainPriority,
+      domainStats,
       activityStats,
       recommendedActivities,
       traffic,
@@ -942,6 +1127,427 @@
         </article>
       </div>
     `;
+  }
+
+  function buildOutcomeProofModel(logs, pulse, placementRec, weakestRow) {
+    const scored = logs
+      .map((entry) => ({
+        score: scoreEntry(entry),
+        ts: Number(entry?.ts || 0)
+      }))
+      .filter((row) => typeof row.score === 'number' && !Number.isNaN(row.score))
+      .sort((a, b) => a.ts - b.ts);
+
+    const recent = scored.slice(-8);
+    const prior = scored.slice(Math.max(0, scored.length - 16), Math.max(0, scored.length - 8));
+    const recentAvg = average(recent.map((row) => row.score));
+    const priorAvg = average(prior.map((row) => row.score));
+    const momentumDelta = recentAvg !== null && priorAvg !== null
+      ? recentAvg - priorAvg
+      : null;
+
+    const activities = new Set(
+      logs
+        .map((entry) => String(entry?.activity || ''))
+        .filter((activity) => !!ACTIVITY_LABELS[activity])
+    );
+    const domains = new Set(
+      Array.from(activities).map((activity) => activityDomain(activity))
+    );
+
+    const evidenceCount = logs.length;
+    const readiness = evidenceCount >= 12
+      ? 'High'
+      : evidenceCount >= 6
+        ? 'Building'
+        : 'Early';
+
+    const redCount = pulse?.traffic?.red?.length || 0;
+    const yellowCount = pulse?.traffic?.yellow?.length || 0;
+    const greenCount = pulse?.traffic?.green?.length || 0;
+
+    const focusId = recommendBuilderFocus(placementRec, weakestRow, getDomainStats(logs));
+    const focusProfile = FOCUS_LIBRARY[focusId] || FOCUS_LIBRARY['comprehension-evidence'];
+
+    const implementationLine = evidenceCount
+      ? `${evidenceCount} logged sessions across ${activities.size || 1} activities and ${domains.size || 1} domains.`
+      : 'No logged sessions yet. Start with a 10-minute cycle and refresh this report.';
+
+    const momentumLine = momentumDelta === null
+      ? 'Need at least 16 scored events for trend-to-trend momentum.'
+      : `${momentumDelta >= 0 ? '+' : ''}${Math.round(momentumDelta * 100)} points vs prior window (${formatPercent(priorAvg)} -> ${formatPercent(recentAvg)}).`;
+
+    const tierLine = `R/Y/G spread: ${redCount} red · ${yellowCount} yellow · ${greenCount} green.`;
+    const alignmentLine = `${focusProfile.label} is currently the strongest team-fit focus (${focusProfile.specialistFit}).`;
+
+    const narrative = [
+      `Teacher action: ${pulse?.topPriority || 'Build a 4-week intervention loop from the top gap.'}`,
+      `Learner response: ${momentumLine}`,
+      `System value: ${tierLine} ${alignmentLine}`
+    ];
+
+    return {
+      readiness,
+      implementationLine,
+      momentumLine,
+      tierLine,
+      alignmentLine,
+      narrative
+    };
+  }
+
+  function renderOutcomeProof(logs, pulse, placementRec, weakestRow) {
+    if (!outcomesEl) return;
+    const model = buildOutcomeProofModel(logs, pulse, placementRec, weakestRow);
+    const narrativeItems = model.narrative.map((line) => `<li>${escapeHtml(line)}</li>`).join('');
+
+    outcomesEl.innerHTML = `
+      <div class="report-outcome-grid">
+        <article class="report-outcome-card">
+          <h3>Implementation Strength</h3>
+          <div class="report-outcome-value">${escapeHtml(model.readiness)}</div>
+          <div class="report-outcome-note">${escapeHtml(model.implementationLine)}</div>
+        </article>
+        <article class="report-outcome-card">
+          <h3>Momentum Signal</h3>
+          <div class="report-outcome-value">${escapeHtml(model.momentumLine.split('. ')[0] || model.momentumLine)}</div>
+          <div class="report-outcome-note">${escapeHtml(model.momentumLine)}</div>
+        </article>
+        <article class="report-outcome-card">
+          <h3>Tiered Support Readiness</h3>
+          <div class="report-outcome-value">${escapeHtml(model.tierLine)}</div>
+          <div class="report-outcome-note">${escapeHtml(model.alignmentLine)}</div>
+        </article>
+      </div>
+      <div class="report-outcome-proof">
+        <h3>Leadership Narrative (ready to share)</h3>
+        <ul>${narrativeItems}</ul>
+      </div>
+    `;
+  }
+
+  function getPriorityDomainsForAlignment(pulse) {
+    const rankedGaps = (pulse?.gaps || [])
+      .map((row) => row.domain)
+      .filter((domainId) => !!FRAMEWORK_ALIGNMENT[domainId]);
+    const defaults = ['decoding', 'comprehension', 'fluency', 'written-language'];
+    return Array.from(new Set([...rankedGaps, ...defaults])).slice(0, 4);
+  }
+
+  function renderFrameworkCrosswalk(pulse) {
+    if (!crosswalkEl) return;
+    const domains = getPriorityDomainsForAlignment(pulse);
+    if (!domains.length) {
+      crosswalkEl.innerHTML = '<div class="muted">Not enough data yet. Complete scored sessions to generate framework mapping.</div>';
+      return;
+    }
+
+    const cards = domains.map((domainId) => {
+      const rows = FRAMEWORK_ALIGNMENT[domainId] || [];
+      const current = pulse?.domainStats?.find((row) => row.domain === domainId);
+      const currentText = current?.avg !== null && current?.avg !== undefined
+        ? `${formatPercent(current.avg)} (${current.evidence || 0} samples)`
+        : 'Need more scored samples';
+      const list = rows.map((entry) => `<li><strong>${escapeHtml(entry.framework)}:</strong> ${escapeHtml(entry.alignment)}</li>`).join('');
+      return `
+        <article class="report-crosswalk-card">
+          <h3>${escapeHtml(domainLabel(domainId))}</h3>
+          <div class="report-crosswalk-score"><strong>Current evidence:</strong> ${escapeHtml(currentText)}</div>
+          <ul>${list}</ul>
+        </article>
+      `;
+    }).join('');
+
+    crosswalkEl.innerHTML = `
+      <div class="report-crosswalk-grid">${cards}</div>
+      <div class="report-crosswalk-note">Crosswalk is a planning support view that translates learner data into framework-aligned instructional moves.</div>
+    `;
+  }
+
+  function renderBenchmarks(learner, pulse) {
+    if (!benchmarksEl) return;
+    const gradeBand = normalizeGradeBand(learner?.gradeBand || builderGradeEl?.value || '3-5');
+    const benchmarkMap = BENCHMARK_EXPECTATIONS[gradeBand] || BENCHMARK_EXPECTATIONS['3-5'];
+    const windowKey = currentSchoolWindow(new Date());
+    const rows = Object.keys(benchmarkMap).map((domainId) => {
+      const expected = benchmarkMap[domainId];
+      const current = pulse?.domainStats?.find((row) => row.domain === domainId)?.avg ?? null;
+      const status = benchmarkStatus(current, expected[windowKey]);
+      return `
+        <tr>
+          <td><strong>${escapeHtml(domainLabel(domainId))}</strong></td>
+          <td>${formatPercent(current)}</td>
+          <td>${formatPercent(expected.boy)}</td>
+          <td>${formatPercent(expected.moy)}</td>
+          <td>${formatPercent(expected.eoy)}</td>
+          <td><span class="report-bench-chip ${status.cls}">${escapeHtml(status.label)}</span></td>
+        </tr>
+      `;
+    }).join('');
+
+    benchmarksEl.innerHTML = `
+      <div class="report-bench-meta">
+        <div><strong>Grade band benchmark set:</strong> ${escapeHtml(gradeBand)}</div>
+        <div><strong>Current checkpoint:</strong> ${escapeHtml(schoolWindowLabel(windowKey))}</div>
+      </div>
+      <div class="report-bench-table-wrap">
+        <table class="report-bench-table">
+          <thead>
+            <tr>
+              <th>Domain</th>
+              <th>Current</th>
+              <th>BOY</th>
+              <th>MOY</th>
+              <th>EOY</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div class="report-bench-note">Benchmarks are planning norms on the platform mastery scale and should be calibrated with your school or network expectations.</div>
+    `;
+  }
+
+  function resolveGoalDomain(pulse) {
+    const selected = String(goalDomainEl?.value || 'auto');
+    if (selected !== 'auto') return selected;
+    if (pulse?.gaps?.[0]?.domain) return pulse.gaps[0].domain;
+    const ranked = (pulse?.domainStats || [])
+      .filter((row) => row.avg !== null && row.avg !== undefined)
+      .sort((a, b) => a.avg - b.avg);
+    return ranked[0]?.domain || 'decoding';
+  }
+
+  function computeGoalTarget({ baseline, benchmark, tier, horizon }) {
+    const tierNearGain = tier === '1' ? 0.08 : tier === '2' ? 0.12 : 0.16;
+    const tierLongGain = tier === '1' ? 0.14 : tier === '2' ? 0.2 : 0.24;
+    const expected = benchmark || null;
+    let target = expected;
+    if (baseline !== null && baseline !== undefined && !Number.isNaN(baseline)) {
+      const gain = horizon === 'near' ? tierNearGain : tierLongGain;
+      target = target === null || target === undefined ? baseline + gain : Math.max(target, baseline + gain);
+    }
+    if (target === null || target === undefined || Number.isNaN(target)) return null;
+    return clamp(target, 0.1, 0.98);
+  }
+
+  function tierPlanText(tier) {
+    if (tier === '1') {
+      return 'Tier 1: 4x/week targeted differentiation inside core literacy block, 10-15 minutes each cycle.';
+    }
+    if (tier === '3') {
+      return 'Tier 3: Daily intensive individualized support, 25-35 minutes, with explicit modeling and immediate corrective feedback.';
+    }
+    return 'Tier 2: 4-5x/week small-group intervention, 15-25 minutes, tightly matched to the top gap.';
+  }
+
+  function progressRuleText(tier) {
+    if (tier === '1') {
+      return 'Decision rule: if growth is <5 points after 4 weeks, move to Tier 2 targeted support.';
+    }
+    if (tier === '3') {
+      return 'Decision rule: if growth is <8 points after 4 weeks, redesign plan and increase specialist intensity.';
+    }
+    return 'Decision rule: if growth is <7 points after 4 weeks, increase session frequency or move to Tier 3.';
+  }
+
+  function renderGoalDraft(context = {}) {
+    if (!goalOutputEl) return;
+    const learner = context.learner || null;
+    const pulse = context.pulse || null;
+    const gradeBand = normalizeGradeBand(learner?.gradeBand || builderGradeEl?.value || '3-5');
+    const domainId = resolveGoalDomain(pulse);
+    const domainName = domainLabel(domainId);
+    const tier = String(goalTierEl?.value || '2');
+    const focusHorizon = String(goalHorizonEl?.value || 'near');
+    const benchmarkSet = BENCHMARK_EXPECTATIONS[gradeBand]?.[domainId] || null;
+    const windowKey = currentSchoolWindow(new Date());
+    const baseline = pulse?.domainStats?.find((row) => row.domain === domainId)?.avg ?? null;
+    const nearBenchmark = benchmarkSet
+      ? (windowKey === 'boy' ? benchmarkSet.moy : benchmarkSet.eoy)
+      : null;
+    const longBenchmark = benchmarkSet?.eoy ?? null;
+    const nearTarget = computeGoalTarget({ baseline, benchmark: nearBenchmark, tier, horizon: 'near' });
+    const longTarget = computeGoalTarget({ baseline, benchmark: longBenchmark, tier, horizon: 'long' });
+    const baselineText = baseline !== null && baseline !== undefined && !Number.isNaN(baseline)
+      ? formatPercent(baseline)
+      : 'Collect 3-5 scored sessions for baseline';
+    const nearTargetText = nearTarget !== null ? formatPercent(nearTarget) : 'Set after baseline';
+    const longTargetText = longTarget !== null ? formatPercent(longTarget) : 'Set after baseline';
+    const learnerName = learner?.name || 'Learner';
+    const frameworks = (FRAMEWORK_ALIGNMENT[domainId] || [])
+      .slice(0, 4)
+      .map((item) => item.framework)
+      .join(' · ');
+    const recommendedActivities = (pulse?.recommendedActivities || [])
+      .map((item) => item.label)
+      .slice(0, 3)
+      .join(', ') || 'Word Quest, Read & Think, Write & Build';
+
+    const nearGoal = `Near-term goal (4-6 weeks): ${learnerName} will improve ${domainName.toLowerCase()} from ${baselineText} to ${nearTargetText} on platform mastery indicators, using ${tier === '1' ? 'core differentiation' : tier === '2' ? 'targeted small-group intervention' : 'intensive individualized intervention'}.`;
+    const longGoal = `Long-term goal (12-16 weeks): ${learnerName} will sustain ${longTargetText} or higher in ${domainName.toLowerCase()} with transfer across at least two activity types and consistent progress-monitoring evidence.`;
+    const benchmarkLine = benchmarkSet
+      ? `Benchmark anchors for ${gradeBand}: BOY ${formatPercent(benchmarkSet.boy)} · MOY ${formatPercent(benchmarkSet.moy)} · EOY ${formatPercent(benchmarkSet.eoy)}.`
+      : `Benchmark anchors for ${gradeBand} not configured yet.`;
+    const equityLine = 'Equity guardrail: keep cognitive demand high while adjusting scaffolds (language supports, chunking, accessibility settings, and explicit modeling).';
+    const monitoringLine = `Progress monitoring: check twice weekly using scored tasks in ${recommendedActivities}.`;
+    const tierLine = tierPlanText(tier);
+    const decisionLine = progressRuleText(tier);
+
+    latestGoalText = [
+      `${learnerName} Tiered Goal Draft (${domainName})`,
+      `Grade band: ${gradeBand} | Tier ${tier}`,
+      nearGoal,
+      longGoal,
+      tierLine,
+      monitoringLine,
+      benchmarkLine,
+      decisionLine,
+      equityLine,
+      `Framework alignment: ${frameworks}`
+    ].join('\n');
+
+    goalOutputEl.innerHTML = `
+      <div class="report-goal-card">
+        <h3>${escapeHtml(domainName)} · Tier ${escapeHtml(tier)}</h3>
+        <p>${escapeHtml(nearGoal)}</p>
+        <p>${escapeHtml(longGoal)}</p>
+        <ul>
+          <li>${escapeHtml(tierLine)}</li>
+          <li>${escapeHtml(monitoringLine)}</li>
+          <li>${escapeHtml(benchmarkLine)}</li>
+          <li>${escapeHtml(decisionLine)}</li>
+          <li>${escapeHtml(equityLine)}</li>
+          <li><strong>Framework alignment:</strong> ${escapeHtml(frameworks)}</li>
+        </ul>
+        <div class="report-goal-note">Current focus horizon: ${focusHorizon === 'near' ? 'Near term (4-6 weeks)' : 'Long term (12-16 weeks)'}.</div>
+      </div>
+    `;
+    if (goalStatusEl) goalStatusEl.textContent = '';
+  }
+
+  async function copyGoalDraft() {
+    if (!latestGoalText) {
+      if (goalStatusEl) goalStatusEl.textContent = 'Generate a goal draft first, then copy.';
+      return;
+    }
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(latestGoalText);
+      } else {
+        throw new Error('clipboard-unavailable');
+      }
+      if (goalStatusEl) goalStatusEl.textContent = 'Goal draft copied.';
+    } catch {
+      if (goalStatusEl) goalStatusEl.textContent = 'Clipboard unavailable. Copy directly from the goal card.';
+    }
+  }
+
+  function recommendRolePathwayId(pulse) {
+    const topDomain = pulse?.gaps?.[0]?.domain || '';
+    if (topDomain === 'fluency') return 'slp';
+    if (topDomain === 'executive-function') return 'sel-counselor';
+    if (topDomain === 'comprehension' || topDomain === 'written-language') return 'eal';
+    return 'learning-support';
+  }
+
+  function getRoleStepHref(step, context = {}) {
+    if (!step?.activity) return '#';
+    if (step.activity === 'teacher-report') {
+      return step.anchor || 'teacher-report.html';
+    }
+    return getActivityHref(step.activity, context);
+  }
+
+  function renderRolePathway(context = {}) {
+    if (!rolePathwayEl || !roleSelectEl) return;
+    const learner = context.learner || null;
+    const pulse = context.pulse || null;
+    const placementRec = context.placementRec || null;
+    const weakestRow = context.weakestRow || null;
+    const preferredRoleId = recommendRolePathwayId(pulse);
+
+    if (!roleSelectEl.value || !ROLE_PATHWAY_LIBRARY[roleSelectEl.value]) {
+      roleSelectEl.value = preferredRoleId;
+    }
+
+    const roleId = roleSelectEl.value || preferredRoleId;
+    const pathway = ROLE_PATHWAY_LIBRARY[roleId] || ROLE_PATHWAY_LIBRARY['learning-support'];
+    const gradeBand = normalizeGradeBand(learner?.gradeBand || builderGradeEl?.value || '3-5');
+    const focusProfile = FOCUS_LIBRARY[pathway.focusId] || FOCUS_LIBRARY['comprehension-evidence'];
+    const defaultWordQuest = focusProfile.wordQuestFocusByBand?.[gradeBand] || { focus: 'all', len: 'any' };
+    const wordQuestFocus = placementRec?.focus || defaultWordQuest.focus;
+    const wordQuestLength = placementRec?.length || defaultWordQuest.len;
+    const urgentDomain = pulse?.traffic?.red?.[0] || 'No urgent domain currently flagged.';
+    const topPriority = pulse?.topPriority || 'Run at least 3 scored sessions to produce stronger role-specific recommendations.';
+
+    const baseContext = {
+      wordQuestFocus,
+      wordQuestLength,
+      builderFocus: pathway.focusId,
+      builderGradeBand: gradeBand,
+      builderMinutes: 20
+    };
+
+    const stepLines = [];
+    const stepCards = pathway.steps.map((step, index) => {
+      const label = step.label || ACTIVITY_LABELS[step.activity] || step.activity;
+      const href = getRoleStepHref(step, baseContext);
+      const openLabel = step.activity === 'teacher-report'
+        ? `Open ${label}`
+        : `Open ${ACTIVITY_LABELS[step.activity] || label}`;
+      stepLines.push(`${index + 1}) ${label} (${step.minutes} min)`);
+      stepLines.push(`   ${step.move}`);
+      stepLines.push(`   ${href}`);
+      return `
+        <article class="report-role-step">
+          <div class="report-role-phase">${index + 1}. ${escapeHtml(label)} · ${escapeHtml(step.minutes)} min</div>
+          <div class="report-role-move">${escapeHtml(step.move)}</div>
+          <a class="secondary-btn report-role-link" href="${href}">${escapeHtml(openLabel)}</a>
+        </article>
+      `;
+    }).join('');
+
+    latestRolePathwayText = [
+      `${pathway.label} Launch Pathway`,
+      `Grade band: ${gradeBand}`,
+      `Team fit: ${pathway.fit}`,
+      `Goal: ${pathway.goal}`,
+      `Top priority: ${topPriority}`,
+      `Urgent lane: ${urgentDomain}`,
+      '',
+      ...stepLines
+    ].join('\n');
+
+    rolePathwayEl.innerHTML = `
+      <div class="report-role-summary">
+        <div><strong>${escapeHtml(pathway.label)}</strong> · ${escapeHtml(pathway.fit)}</div>
+        <div>${escapeHtml(pathway.goal)}</div>
+        <div><strong>Current top priority:</strong> ${escapeHtml(topPriority)}</div>
+        <div><strong>Urgent lane from R/Y/G:</strong> ${escapeHtml(urgentDomain)}</div>
+      </div>
+      <div class="report-role-steps">${stepCards}</div>
+      <div class="report-role-note">Suggested routine: keep this loop to 20 minutes daily and refresh the report weekly.</div>
+    `;
+    if (roleStatusEl) roleStatusEl.textContent = '';
+  }
+
+  async function copyRolePathway() {
+    if (!latestRolePathwayText) {
+      if (roleStatusEl) roleStatusEl.textContent = 'Refresh report first to generate a role pathway.';
+      return;
+    }
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(latestRolePathwayText);
+      } else {
+        throw new Error('clipboard-unavailable');
+      }
+      if (roleStatusEl) roleStatusEl.textContent = 'Role pathway copied.';
+    } catch {
+      if (roleStatusEl) roleStatusEl.textContent = 'Clipboard unavailable. Copy directly from the pathway cards.';
+    }
   }
 
   function renderBuilderFocusOptions() {
@@ -1208,6 +1814,9 @@
 
     const pulse = buildPulseModel(logs, placementRec, weakest);
     renderPulse(pulse);
+    renderOutcomeProof(logs, pulse, placementRec, weakest);
+    renderFrameworkCrosswalk(pulse);
+    renderBenchmarks(learner, pulse);
     renderShareSummary(learner, metrics, pulse, weakest, placementRec);
 
     if (builderGradeEl && learner?.gradeBand) {
@@ -1218,6 +1827,25 @@
       builderFocusEl.value = recommendedFocus;
     }
     renderBuilderPlan({ gradeBand: learner?.gradeBand });
+
+    latestGoalContext = {
+      learner,
+      pulse,
+      placementRec,
+      weakestRow: weakest
+    };
+    renderGoalDraft(latestGoalContext);
+
+    latestRoleContext = {
+      learner,
+      pulse,
+      placementRec,
+      weakestRow: weakest
+    };
+    if (roleSelectEl && !roleSelectEl.dataset.manualRole) {
+      roleSelectEl.value = recommendRolePathwayId(pulse);
+    }
+    renderRolePathway(latestRoleContext);
   }
 
   renderBuilderFocusOptions();
@@ -1235,6 +1863,38 @@
   builderGenerateBtn?.addEventListener('click', () => renderBuilderPlan());
   builderCopyBtn?.addEventListener('click', () => {
     copyBuilderPlan();
+  });
+  goalGenerateBtn?.addEventListener('click', () => {
+    if (latestGoalContext) {
+      renderGoalDraft(latestGoalContext);
+    }
+  });
+  goalCopyBtn?.addEventListener('click', () => {
+    copyGoalDraft();
+  });
+  goalDomainEl?.addEventListener('change', () => {
+    if (latestGoalContext) {
+      renderGoalDraft(latestGoalContext);
+    }
+  });
+  goalTierEl?.addEventListener('change', () => {
+    if (latestGoalContext) {
+      renderGoalDraft(latestGoalContext);
+    }
+  });
+  goalHorizonEl?.addEventListener('change', () => {
+    if (latestGoalContext) {
+      renderGoalDraft(latestGoalContext);
+    }
+  });
+  roleSelectEl?.addEventListener('change', () => {
+    roleSelectEl.dataset.manualRole = 'true';
+    if (latestRoleContext) {
+      renderRolePathway(latestRoleContext);
+    }
+  });
+  roleCopyBtn?.addEventListener('click', () => {
+    copyRolePathway();
   });
   builderGradeEl?.addEventListener('change', () => renderBuilderPlan());
   builderFocusEl?.addEventListener('change', () => renderBuilderPlan());

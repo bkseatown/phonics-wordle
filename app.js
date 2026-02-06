@@ -23,6 +23,17 @@ let lengthAutoSet = false;
 let patternLengthCache = null;
 let voicesReadyPromise = null;
 let speechStartTimeout = null;
+let speechSequenceToken = 0;
+let voiceLoaderInitialized = false;
+let voiceDiagnosticsState = {
+    dialect: 'en-US',
+    voiceName: 'Not resolved yet',
+    voiceLang: '—',
+    qualityTier: 'Unknown',
+    fallbackReason: 'Waiting for voice data.',
+    candidateCount: 0,
+    updatedAt: 0
+};
 let modalDismissBound = false;
 let assessmentState = null;
 let enhancedVoicePrefetched = false;
@@ -56,6 +67,8 @@ const DEFAULT_SETTINGS = {
     showMouthCues: true,
     speechRate: 0.85,
     voiceDialect: 'en-US',
+    narrationStyle: 'expressive', // expressive | neutral
+    audienceMode: 'auto', // auto | general | young-eal
     autoHear: true,
     showRevealRecordingTools: false,
     funHud: {
@@ -108,6 +121,30 @@ function getUiLookValue() {
     if (raw === 'k2') return 'k2';
     if (raw === '612') return '612';
     return '35';
+}
+
+function normalizeAudienceMode(value) {
+    const raw = String(value || 'auto').toLowerCase().trim();
+    if (raw === 'general') return 'general';
+    if (raw === 'young-eal' || raw === 'young' || raw === 'eal') return 'young-eal';
+    return 'auto';
+}
+
+function normalizeNarrationStyle(value) {
+    const raw = String(value || '').toLowerCase().trim();
+    if (raw === 'neutral') return 'neutral';
+    return 'expressive';
+}
+
+function normalizeGradeBandForAudience(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    if (raw === 'k2' || raw.toLowerCase() === 'k-2') return 'K-2';
+    if (raw === '35' || raw === '3-5') return '3-5';
+    if (raw === '68' || raw === '6-8') return '6-8';
+    if (raw === '912' || raw === '9-12') return '9-12';
+    if (raw === '612' || raw === '6-12') return '6-8';
+    return raw;
 }
 
 function applyUiLookClass() {
@@ -564,6 +601,9 @@ function loadSettings() {
             }
         };
 
+        appSettings.audienceMode = normalizeAudienceMode(appSettings.audienceMode || DEFAULT_SETTINGS.audienceMode);
+        appSettings.narrationStyle = normalizeNarrationStyle(appSettings.narrationStyle || DEFAULT_SETTINGS.narrationStyle);
+
         const migrated = localStorage.getItem('bonus_frequency_migrated');
         if (!migrated && (!parsed.bonus || ['sometimes', 'often'].includes(parsed.bonus.frequency))) {
             appSettings.bonus.frequency = DEFAULT_SETTINGS.bonus.frequency;
@@ -581,6 +621,8 @@ function loadSettings() {
 }
 
 function saveSettings() {
+    appSettings.audienceMode = normalizeAudienceMode(appSettings.audienceMode || DEFAULT_SETTINGS.audienceMode);
+    appSettings.narrationStyle = normalizeNarrationStyle(appSettings.narrationStyle || DEFAULT_SETTINGS.narrationStyle);
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(appSettings));
 }
 
@@ -589,6 +631,10 @@ function getSpeechRate(type = 'word') {
     if (type === 'phoneme') return Math.max(0.6, base - 0.15);
     if (type === 'sentence') return Math.min(1.0, base + 0.05);
     return base;
+}
+
+function getNarrationStyle() {
+    return normalizeNarrationStyle(appSettings.narrationStyle || DEFAULT_SETTINGS.narrationStyle);
 }
 
 function applySettings() {
@@ -638,12 +684,23 @@ function applySettings() {
         bonusSelect.value = appSettings.bonus?.frequency || 'sometimes';
     }
 
+    const audienceSelect = document.getElementById('audience-mode-select');
+    if (audienceSelect) {
+        audienceSelect.value = normalizeAudienceMode(appSettings.audienceMode || 'auto');
+    }
+
+    const narrationStyleSelect = document.getElementById('narration-style-select');
+    if (narrationStyleSelect) {
+        narrationStyleSelect.value = normalizeNarrationStyle(appSettings.narrationStyle || DEFAULT_SETTINGS.narrationStyle);
+    }
+
     const autoHearToggle = document.getElementById('toggle-auto-hear');
     if (autoHearToggle) {
         autoHearToggle.checked = appSettings.autoHear !== false;
     }
 
     applySoundWallSectionVisibility();
+    renderVoiceDiagnosticsPanel();
 }
 
 function applySoundWallSectionVisibility() {
@@ -1162,7 +1219,11 @@ function initVoiceLoader() {
 
     const load = () => {
         cachedVoices = window.speechSynthesis.getVoices();
+        if (cachedVoices.length) {
+            pickBestEnglishVoice(cachedVoices);
+        }
         populateVoiceList();
+        renderVoiceDiagnosticsPanel();
         updateVoiceInstallPrompt();
         updateEnhancedVoicePrompt();
     };
@@ -1180,18 +1241,24 @@ function initVoiceLoader() {
     };
 
     load();
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+    if (!voiceLoaderInitialized && window.speechSynthesis.onvoiceschanged !== undefined) {
         if (window.speechSynthesis.addEventListener) {
             window.speechSynthesis.addEventListener('voiceschanged', load);
         } else {
             window.speechSynthesis.onvoiceschanged = load;
         }
+        voiceLoaderInitialized = true;
     }
 
-    if(voiceSelect) {
+    if (voiceSelect && !voiceSelect.dataset.bound) {
+        voiceSelect.dataset.bound = 'true';
         voiceSelect.onchange = () => {
             appSettings.voiceDialect = voiceSelect.value || DEFAULT_SETTINGS.voiceDialect;
             saveSettings();
+            if (cachedVoices.length) {
+                pickBestEnglishVoice(cachedVoices);
+            }
+            renderVoiceDiagnosticsPanel();
             updateVoiceInstallPrompt();
             updateEnhancedVoicePrompt();
             prefetchEnhancedVoice();
@@ -1234,19 +1301,185 @@ function getVoicesAsync(timeout = 800) {
     return voicesReadyPromise;
 }
 
-function speakUtterance(utterance) {
+async function getVoicesForSpeech() {
+    let voices = await getVoicesAsync();
+    if (voices.length) return voices;
+    await new Promise(resolve => setTimeout(resolve, 180));
+    voices = await getVoicesAsync(1400);
+    return voices;
+}
+
+function cancelPendingSpeech(invalidateSequence = true) {
     if (!('speechSynthesis' in window)) return;
-    if (speechStartTimeout) clearTimeout(speechStartTimeout);
+    if (speechStartTimeout) {
+        clearTimeout(speechStartTimeout);
+        speechStartTimeout = null;
+    }
+    if (invalidateSequence) {
+        speechSequenceToken += 1;
+    }
     window.speechSynthesis.cancel();
+}
+
+function speakUtterance(utterance, options = {}) {
+    if (!('speechSynthesis' in window)) return;
+    const cancelBefore = options.cancelBefore !== false;
+    if (cancelBefore) {
+        cancelPendingSpeech(true);
+    } else if (speechStartTimeout) {
+        clearTimeout(speechStartTimeout);
+        speechStartTimeout = null;
+    }
+    const sequenceId = speechSequenceToken;
     speechStartTimeout = setTimeout(() => {
+        if (sequenceId !== speechSequenceToken) {
+            speechStartTimeout = null;
+            return;
+        }
         window.speechSynthesis.speak(utterance);
         speechStartTimeout = null;
     }, 40);
 }
 
+function countSpeechWords(text) {
+    const normalized = String(text || '').trim();
+    if (!normalized) return 0;
+    return normalized.split(/\s+/).filter(Boolean).length;
+}
+
+function clampSpeechRate(value) {
+    return Math.max(0.62, Math.min(1.1, value));
+}
+
+function clampSpeechPitch(value) {
+    return Math.max(0.86, Math.min(1.25, value));
+}
+
+function buildSentenceProsodySegments(text, baseRate = 1) {
+    const normalized = normalizeTextForTTS(text);
+    const fragments = normalized.match(/[^.!?;:,]+[.!?;:,]?/g) || [normalized];
+    const total = fragments.length;
+    return fragments
+        .map(fragment => fragment.trim())
+        .filter(Boolean)
+        .map((fragment, index) => {
+            const end = fragment.slice(-1);
+            let rate = baseRate;
+            let pitch = 1.0;
+            let pauseMs = 70;
+
+            if (fragment.length > 70) rate -= 0.08;
+            else if (fragment.length > 40) rate -= 0.05;
+
+            if (end === ',') {
+                rate -= 0.05;
+                pauseMs = 110;
+            } else if (end === ';' || end === ':') {
+                rate -= 0.06;
+                pauseMs = 130;
+            } else if (end === '?') {
+                rate += 0.03;
+                pitch += 0.08;
+                pauseMs = 180;
+            } else if (end === '!') {
+                rate += 0.04;
+                pitch += 0.06;
+                pauseMs = 190;
+            } else if (end === '.') {
+                pauseMs = 170;
+            }
+
+            if (total > 1 && index === total - 1) {
+                rate -= 0.02;
+            }
+
+            return {
+                text: fragment,
+                rate: clampSpeechRate(rate),
+                pitch: clampSpeechPitch(pitch),
+                pauseMs
+            };
+        });
+}
+
+function speakSentenceWithProsody(text, voice, lang, baseRate) {
+    const segments = buildSentenceProsodySegments(text, baseRate);
+    if (!segments.length) return;
+
+    cancelPendingSpeech(true);
+    const sequenceId = speechSequenceToken;
+    let index = 0;
+
+    const playNext = () => {
+        if (sequenceId !== speechSequenceToken) return;
+        if (index >= segments.length) return;
+        const segment = segments[index];
+        const utterance = new SpeechSynthesisUtterance(segment.text);
+        if (voice) {
+            utterance.voice = voice;
+            utterance.lang = voice.lang;
+        } else if (lang) {
+            utterance.lang = lang;
+        }
+        utterance.rate = segment.rate;
+        utterance.pitch = segment.pitch;
+        utterance.onend = () => {
+            if (sequenceId !== speechSequenceToken) return;
+            index += 1;
+            if (index < segments.length) {
+                setTimeout(playNext, segment.pauseMs);
+            }
+        };
+        utterance.onerror = () => {
+            if (sequenceId !== speechSequenceToken) return;
+            index += 1;
+            if (index < segments.length) {
+                setTimeout(playNext, 40);
+            }
+        };
+        window.speechSynthesis.speak(utterance);
+    };
+
+    speechStartTimeout = setTimeout(() => {
+        if (sequenceId !== speechSequenceToken) {
+            speechStartTimeout = null;
+            return;
+        }
+        speechStartTimeout = null;
+        playNext();
+    }, 35);
+}
+
+function speakEnglishText(text, type = 'word', voice = null, fallbackLang = '') {
+    const normalized = normalizeTextForTTS(text);
+    const normalizedType = type === 'sentence' ? 'sentence' : (type === 'phoneme' ? 'phoneme' : 'word');
+    const isSentence = normalizedType === 'sentence';
+    const rate = getSpeechRate(normalizedType);
+    const narrationStyle = getNarrationStyle();
+    const expressive = narrationStyle === 'expressive';
+
+    if (isSentence && expressive && countSpeechWords(normalized) >= 4 && /[.,!?;:]/.test(normalized)) {
+        speakSentenceWithProsody(normalized, voice, fallbackLang, rate);
+        return;
+    }
+
+    const msg = new SpeechSynthesisUtterance(normalized);
+    if (voice) {
+        msg.voice = voice;
+        msg.lang = voice.lang;
+    } else if (fallbackLang) {
+        msg.lang = fallbackLang;
+    }
+    msg.rate = clampSpeechRate(rate);
+    msg.pitch = isSentence
+        ? clampSpeechPitch(expressive ? 1.03 : 1.0)
+        : (normalizedType === 'phoneme' ? 1.02 : 1.0);
+    speakUtterance(msg);
+}
+
 async function speak(text, type = "word") {
     if (!text) return;
-    window.speechSynthesis.cancel(); 
+    cancelPendingSpeech(true);
 
     // 1. Check Studio Recording
     let dbKey = "";
@@ -1282,19 +1515,10 @@ async function speak(text, type = "word") {
     }
 
     // 2. Fallback to System Voice
-    const msg = new SpeechSynthesisUtterance(normalizeTextForTTS(text));
-    const voices = await getVoicesAsync();
+    const voices = await getVoicesForSpeech();
     const preferred = pickBestEnglishVoice(voices);
-    if (preferred) {
-        msg.voice = preferred;
-        msg.lang = preferred.lang;
-    } else {
-        msg.lang = getPreferredEnglishDialect();
-    }
-    msg.rate = getSpeechRate(type === 'sentence' ? 'sentence' : 'word');
-    msg.pitch = 1.0;
-
-    speakUtterance(msg);
+    const fallbackLang = preferred ? preferred.lang : getPreferredEnglishDialect();
+    speakEnglishText(text, type === 'sentence' ? 'sentence' : 'word', preferred, fallbackLang);
 }
 
 function getPreferredEnglishDialect() {
@@ -1308,15 +1532,59 @@ function getPreferredEnglishDialect() {
 }
 
 function pickBestEnglishVoice(voices) {
-    if (!voices || !voices.length) return null;
     const dialect = getPreferredEnglishDialect();
-    let voice = pickBestVoiceForLang(voices, dialect);
+    const pool = Array.isArray(voices) ? voices : [];
+    if (!pool.length) {
+        setVoiceDiagnosticsState({
+            voice: null,
+            reason: `No system voices are currently loaded for ${dialect}.`,
+            dialect,
+            candidateCount: 0
+        });
+        return null;
+    }
+    const storedVoiceUri = getStoredEnglishVoiceUriForDialect(dialect);
+    if (storedVoiceUri) {
+        const remembered = pool.find(v => (v.voiceURI || v.name) === storedVoiceUri);
+        if (remembered && remembered.lang && remembered.lang.toLowerCase().startsWith('en')) {
+            setVoiceDiagnosticsState({
+                voice: remembered,
+                reason: `Using saved preferred voice for ${dialect}.`,
+                dialect,
+                candidateCount: pool.length
+            });
+            return remembered;
+        }
+    }
+
+    let voice = pickBestVoiceForLang(pool, dialect);
+    let reason = `Selected highest quality ${dialect} match from loaded voices.`;
     if (!voice && dialect !== 'en') {
-        voice = pickBestVoiceForLang(voices, 'en');
+        voice = pickBestVoiceForLang(pool, 'en');
+        if (voice) {
+            reason = `No direct ${dialect} match; using best available English voice.`;
+        }
+    }
+    if (voice) {
+        setStoredEnglishVoiceUriForDialect(dialect, voice.voiceURI || voice.name || '');
+        setVoiceDiagnosticsState({
+            voice,
+            reason,
+            dialect,
+            candidateCount: pool.length
+        });
+    } else {
+        setVoiceDiagnosticsState({
+            voice: null,
+            reason: `Loaded voices do not include an English option for ${dialect}.`,
+            dialect,
+            candidateCount: pool.length
+        });
     }
     return voice;
 }
 
+const ENGLISH_VOICE_PREFS_KEY = 'decode_english_voice_prefs_v1';
 const HIGH_QUALITY_VOICE_PATTERNS = [
     /Premium/i,
     /Enhanced/i,
@@ -1333,29 +1601,113 @@ const HIGH_QUALITY_VOICE_PATTERNS = [
     /Kate/i
 ];
 
+const LOW_QUALITY_VOICE_PATTERNS = [
+    /Fred/i,
+    /Zarvox/i,
+    /Whisper/i,
+    /Bubbles/i,
+    /Trinoids/i,
+    /Bad News/i,
+    /Novelty/i,
+    /Robot/i
+];
+
+const DIALECT_NAME_HINTS = {
+    'en-us': [/American/i, /\bUS\b/i, /\bUSA\b/i, /Samantha/i, /Ava/i, /Alex/i, /Allison/i, /Joelle/i],
+    'en-gb': [/British/i, /\bUK\b/i, /England/i, /Daniel/i, /Kate/i, /Serena/i]
+};
+
 function isHighQualityVoice(voice) {
     if (!voice || !voice.name) return false;
     return HIGH_QUALITY_VOICE_PATTERNS.some(pattern => pattern.test(voice.name));
 }
 
+function isLowQualityVoice(voice) {
+    if (!voice || !voice.name) return false;
+    return LOW_QUALITY_VOICE_PATTERNS.some(pattern => pattern.test(voice.name));
+}
+
+function loadEnglishVoicePrefs() {
+    try {
+        const raw = localStorage.getItem(ENGLISH_VOICE_PREFS_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+        return {};
+    }
+}
+
+function saveEnglishVoicePrefs(prefs) {
+    try {
+        localStorage.setItem(ENGLISH_VOICE_PREFS_KEY, JSON.stringify(prefs || {}));
+    } catch {}
+}
+
+function getStoredEnglishVoiceUriForDialect(dialect) {
+    const prefs = loadEnglishVoicePrefs();
+    const key = String(dialect || 'en-us').toLowerCase();
+    return prefs[key] || prefs.en || '';
+}
+
+function setStoredEnglishVoiceUriForDialect(dialect, voiceUri) {
+    if (!voiceUri) return;
+    const prefs = loadEnglishVoicePrefs();
+    const key = String(dialect || 'en-us').toLowerCase();
+    prefs[key] = voiceUri;
+    if (!prefs.en) prefs.en = voiceUri;
+    saveEnglishVoicePrefs(prefs);
+}
+
+function scoreVoiceForTarget(voice, targetLang = 'en') {
+    if (!voice) return Number.NEGATIVE_INFINITY;
+    const lang = String(voice.lang || '').toLowerCase();
+    const target = String(targetLang || 'en').toLowerCase();
+    const targetBase = target.split('-')[0];
+    let score = 0;
+
+    if (lang === target) score += 140;
+    else if (lang.startsWith(`${target}-`)) score += 130;
+    else if (lang.startsWith(targetBase)) score += 94;
+
+    if (voice.default) score += 18;
+    if (voice.localService) score += 6;
+    if (isHighQualityVoice(voice)) score += 64;
+    if (isLowQualityVoice(voice)) score -= 90;
+    if (/Compact|Legacy|Classic|Old/i.test(voice.name || '')) score -= 20;
+    if (/Enhanced|Premium|Natural|Neural/i.test(voice.name || '')) score += 20;
+
+    const hints = DIALECT_NAME_HINTS[target] || [];
+    hints.forEach((pattern) => {
+        if (pattern.test(voice.name || '')) score += 9;
+    });
+
+    return score;
+}
+
 function pickBestVoiceForLang(voices, targetLang, options = {}) {
     if (!voices || !voices.length || !targetLang) return null;
     const normalized = targetLang.toLowerCase();
-    const matches = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith(normalized));
-    if (!matches.length) return null;
+    const baseLang = normalized.split('-')[0];
+    const candidates = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith(baseLang));
+    if (!candidates.length) return null;
 
-    const highQuality = matches.filter(isHighQualityVoice);
-    const pool = options.requireHighQuality ? highQuality : (highQuality.length ? highQuality : matches);
+    const exact = candidates.filter(v => v.lang && v.lang.toLowerCase() === normalized);
+    let pool = exact.length ? exact : candidates;
+    if (options.requireHighQuality) {
+        pool = pool.filter(isHighQualityVoice);
+    }
     if (!pool.length) return null;
 
-    const preferredPatterns = HIGH_QUALITY_VOICE_PATTERNS;
-
-    for (const pattern of preferredPatterns) {
-        const preferred = pool.find(v => pattern.test(v.name));
-        if (preferred) return preferred;
-    }
-
-    return pool[0];
+    return pool
+        .slice()
+        .sort((a, b) => {
+            const scoreDelta = scoreVoiceForTarget(b, normalized) - scoreVoiceForTarget(a, normalized);
+            if (scoreDelta !== 0) return scoreDelta;
+            const nameA = (a.name || '').toLowerCase();
+            const nameB = (b.name || '').toLowerCase();
+            if (nameA !== nameB) return nameA.localeCompare(nameB);
+            return (a.voiceURI || '').localeCompare(b.voiceURI || '');
+        })[0] || null;
 }
 
 function getTranslationVoiceTarget(languageCode) {
@@ -1394,7 +1746,7 @@ function getVoiceInstallHint() {
 }
 
 async function notifyMissingEnglishVoice() {
-    const voices = await getVoicesAsync();
+    const voices = await getVoicesForSpeech();
     const dialect = getPreferredEnglishDialect();
     const hasHighQuality = !!pickBestVoiceForLang(voices, dialect, { requireHighQuality: true }) ||
         (dialect !== 'en' && !!pickBestVoiceForLang(voices, 'en', { requireHighQuality: true }));
@@ -1432,10 +1784,10 @@ function notifyMissingHighQualityVoice() {
 /* Play text in a specific language for translations */
 async function playTextInLanguage(text, languageCode) {
     if (!text) return;
-    window.speechSynthesis.cancel();
+    cancelPendingSpeech(true);
     
     const msg = new SpeechSynthesisUtterance(text);
-    const voices = await getVoicesAsync();
+    const voices = await getVoicesForSpeech();
     const targetLang = getTranslationVoiceTarget(languageCode);
     
     // Find best voice for the language
@@ -1640,6 +1992,10 @@ function initControls() {
         closeModal();
         startNewGame();
     };
+    const bonusContinueBtn = document.getElementById("bonus-continue");
+    if (bonusContinueBtn) {
+        bonusContinueBtn.onclick = closeModal;
+    }
 
     document.querySelectorAll(".close-btn, .close-teacher, .close-studio, #start-playing-btn").forEach(btn => {
         btn.addEventListener("click", closeModal);
@@ -1726,11 +2082,15 @@ function initWarmupButtons() {
 
 function initTeacherTools() {
     compactTeacherLayout();
+    ensureVoicePreferencesControls();
+    ensureVoiceDiagnosticsPanel();
+    initVoiceLoader();
     ensureVoiceQualityHint();
     updateVoiceInstallPrompt();
     updateEnhancedVoicePrompt();
     ensureAutoHearToggle();
     ensureRevealRecordingToolsToggle();
+    ensureBonusControls();
     ensureFunHudControls();
     ensureGameModesRow();
     ensureAssessmentControls();
@@ -1739,6 +2099,20 @@ function initTeacherTools() {
     ensureSettingsTransferRow();
     ensureTeacherTabs();
     ensureUiLookRow();
+    const diagnosticsRefreshBtn = document.getElementById('voice-diagnostics-refresh');
+    if (diagnosticsRefreshBtn && !diagnosticsRefreshBtn.dataset.bound) {
+        diagnosticsRefreshBtn.dataset.bound = 'true';
+        diagnosticsRefreshBtn.addEventListener('click', () => {
+            refreshVoiceDiagnostics('manual refresh');
+        });
+    }
+    const diagnosticsSampleBtn = document.getElementById('voice-diagnostics-sample');
+    if (diagnosticsSampleBtn && !diagnosticsSampleBtn.dataset.bound) {
+        diagnosticsSampleBtn.dataset.bound = 'true';
+        diagnosticsSampleBtn.addEventListener('click', () => {
+            speakText('Great decoding! You spotted the clue, laughed at the joke, and read it with expression.', 'sentence');
+        });
+    }
     const calmToggle = document.getElementById('toggle-calm-mode');
     if (calmToggle) {
         calmToggle.onchange = () => {
@@ -1792,6 +2166,16 @@ function initTeacherTools() {
             const display = document.getElementById('speech-rate-value');
             if (display) display.textContent = `${appSettings.speechRate.toFixed(2)}x`;
             saveSettings();
+            renderVoiceDiagnosticsPanel();
+        };
+    }
+
+    const narrationStyleSelect = document.getElementById('narration-style-select');
+    if (narrationStyleSelect) {
+        narrationStyleSelect.onchange = () => {
+            appSettings.narrationStyle = normalizeNarrationStyle(narrationStyleSelect.value);
+            saveSettings();
+            renderVoiceDiagnosticsPanel();
         };
     }
 
@@ -1819,6 +2203,14 @@ function initTeacherTools() {
         };
     }
 
+    const audienceSelect = document.getElementById('audience-mode-select');
+    if (audienceSelect) {
+        audienceSelect.onchange = () => {
+            appSettings.audienceMode = normalizeAudienceMode(audienceSelect.value);
+            saveSettings();
+        };
+    }
+
     const autoHearToggle = document.getElementById('toggle-auto-hear');
     if (autoHearToggle) {
         autoHearToggle.checked = appSettings.autoHear !== false;
@@ -1827,6 +2219,8 @@ function initTeacherTools() {
             saveSettings();
         };
     }
+
+    refreshVoiceDiagnostics('teacher tools init');
 }
 
 function ensureUiLookRow() {
@@ -1976,6 +2370,9 @@ async function importPlatformSettingsFromFile(file) {
                 ...(parsed.soundWallSections || {})
             }
         };
+
+        merged.audienceMode = normalizeAudienceMode(merged.audienceMode || DEFAULT_SETTINGS.audienceMode);
+        merged.narrationStyle = normalizeNarrationStyle(merged.narrationStyle || DEFAULT_SETTINGS.narrationStyle);
 
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged));
         showToast('Settings imported. Reloading...');
@@ -2129,7 +2526,7 @@ function ensureVoiceInstallPrompt() {
 async function updateVoiceInstallPrompt() {
     const row = ensureVoiceInstallPrompt();
     if (!row) return;
-    const voices = await getVoicesAsync();
+    const voices = await getVoicesForSpeech();
     const dialect = getPreferredEnglishDialect();
     const hasHQ = !!pickBestVoiceForLang(voices, dialect, { requireHighQuality: true }) ||
         (dialect !== 'en' && !!pickBestVoiceForLang(voices, 'en', { requireHighQuality: true }));
@@ -2161,7 +2558,7 @@ function ensureEnhancedVoicePrompt() {
 async function updateEnhancedVoicePrompt() {
     const row = ensureEnhancedVoicePrompt();
     if (!row) return;
-    const voices = await getVoicesAsync();
+    const voices = await getVoicesForSpeech();
     const dialect = getPreferredEnglishDialect();
     const hasHQ = !!pickBestVoiceForLang(voices, dialect, { requireHighQuality: true }) ||
         (dialect !== 'en' && !!pickBestVoiceForLang(voices, 'en', { requireHighQuality: true }));
@@ -2183,10 +2580,8 @@ async function prefetchEnhancedVoice() {
     if (enhancedVoicePrefetched) return;
     if (!('speechSynthesis' in window)) return;
     if (window.speechSynthesis.speaking || window.speechSynthesis.pending) return;
-    const voices = await getVoicesAsync();
-    const dialect = getPreferredEnglishDialect();
-    const preferred = pickBestVoiceForLang(voices, dialect, { requireHighQuality: true }) ||
-        (dialect !== 'en' ? pickBestVoiceForLang(voices, 'en', { requireHighQuality: true }) : null);
+    const voices = await getVoicesForSpeech();
+    const preferred = pickBestEnglishVoice(voices);
     if (!preferred) return;
     enhancedVoicePrefetched = true;
     const utterance = new SpeechSynthesisUtterance(' ');
@@ -2196,6 +2591,32 @@ async function prefetchEnhancedVoice() {
     utterance.pitch = 1.0;
     utterance.volume = 0;
     window.speechSynthesis.speak(utterance);
+}
+
+function ensureBonusControls() {
+    const grid = document.querySelector('#teacher-modal .teacher-tools-grid');
+    if (!grid || document.getElementById('bonus-frequency')) return;
+
+    const row = document.createElement('div');
+    row.className = 'teacher-row';
+    row.innerHTML = `
+        <label for="bonus-frequency"><strong>Reveal fun frequency</strong></label>
+        <select id="bonus-frequency">
+            <option value="off">Off</option>
+            <option value="rare">Rare</option>
+            <option value="sometimes">Sometimes</option>
+            <option value="often">Often</option>
+            <option value="always">Always</option>
+        </select>
+        <label for="audience-mode-select" style="margin-top:8px;"><strong>Language style</strong></label>
+        <select id="audience-mode-select">
+            <option value="auto">Auto (by learner + language)</option>
+            <option value="young-eal">Young / EAL-friendly</option>
+            <option value="general">General</option>
+        </select>
+        <div class="teacher-subtext">Young/EAL mode keeps reveal copy simple and classroom-safe while staying playful.</div>
+    `;
+    grid.appendChild(row);
 }
 
 function ensureAutoHearToggle() {
@@ -2339,6 +2760,146 @@ function initSoundWallFilters() {
 
 function isModalOpen() {
     return !modalOverlay.classList.contains("hidden");
+}
+
+function getVoiceQualityTier(voice) {
+    if (!voice) return 'Unavailable';
+    if (isHighQualityVoice(voice)) return 'High quality';
+    if (isLowQualityVoice(voice)) return 'Basic';
+    return 'Standard';
+}
+
+function setVoiceDiagnosticsState({ voice = null, reason = '', dialect = null, candidateCount = null } = {}) {
+    if (dialect) {
+        voiceDiagnosticsState.dialect = dialect;
+    } else {
+        voiceDiagnosticsState.dialect = getPreferredEnglishDialect();
+    }
+    if (voice) {
+        voiceDiagnosticsState.voiceName = voice.name || voice.voiceURI || 'Unnamed voice';
+        voiceDiagnosticsState.voiceLang = voice.lang || '—';
+        voiceDiagnosticsState.qualityTier = getVoiceQualityTier(voice);
+    } else {
+        voiceDiagnosticsState.voiceName = 'Unavailable';
+        voiceDiagnosticsState.voiceLang = '—';
+        voiceDiagnosticsState.qualityTier = 'Unavailable';
+    }
+    if (reason) {
+        voiceDiagnosticsState.fallbackReason = reason;
+    }
+    if (typeof candidateCount === 'number') {
+        voiceDiagnosticsState.candidateCount = candidateCount;
+    }
+    voiceDiagnosticsState.updatedAt = Date.now();
+    renderVoiceDiagnosticsPanel();
+}
+
+function renderVoiceDiagnosticsPanel() {
+    const nameEl = document.getElementById('voice-diagnostics-name');
+    if (!nameEl) return;
+    const dialectEl = document.getElementById('voice-diagnostics-dialect');
+    const langEl = document.getElementById('voice-diagnostics-lang');
+    const qualityEl = document.getElementById('voice-diagnostics-quality');
+    const reasonEl = document.getElementById('voice-diagnostics-reason');
+    const candidatesEl = document.getElementById('voice-diagnostics-candidates');
+    const styleEl = document.getElementById('voice-diagnostics-style');
+    const updatedEl = document.getElementById('voice-diagnostics-updated');
+
+    nameEl.textContent = voiceDiagnosticsState.voiceName || 'Unavailable';
+    if (dialectEl) dialectEl.textContent = voiceDiagnosticsState.dialect || getPreferredEnglishDialect();
+    if (langEl) langEl.textContent = voiceDiagnosticsState.voiceLang || '—';
+    if (qualityEl) qualityEl.textContent = voiceDiagnosticsState.qualityTier || 'Unknown';
+    if (reasonEl) reasonEl.textContent = voiceDiagnosticsState.fallbackReason || 'No details available.';
+    if (candidatesEl) candidatesEl.textContent = String(voiceDiagnosticsState.candidateCount || 0);
+    if (styleEl) styleEl.textContent = getNarrationStyle() === 'expressive' ? 'Expressive' : 'Neutral';
+    if (updatedEl) {
+        updatedEl.textContent = voiceDiagnosticsState.updatedAt
+            ? new Date(voiceDiagnosticsState.updatedAt).toLocaleTimeString()
+            : '—';
+    }
+}
+
+async function refreshVoiceDiagnostics(source = 'refresh') {
+    if (!('speechSynthesis' in window)) {
+        setVoiceDiagnosticsState({
+            voice: null,
+            reason: 'Speech synthesis is not supported in this browser.',
+            dialect: getPreferredEnglishDialect(),
+            candidateCount: 0
+        });
+        return;
+    }
+    const voices = await getVoicesForSpeech();
+    const preferred = pickBestEnglishVoice(voices);
+    if (!preferred) {
+        setVoiceDiagnosticsState({
+            voice: null,
+            reason: `No English voice available (${source}).`,
+            dialect: getPreferredEnglishDialect(),
+            candidateCount: Array.isArray(voices) ? voices.length : 0
+        });
+    }
+    renderVoiceDiagnosticsPanel();
+    updateVoiceInstallPrompt();
+    updateEnhancedVoicePrompt();
+}
+
+function ensureVoicePreferencesControls() {
+    const grid = document.querySelector('#teacher-modal .teacher-tools-grid');
+    if (!grid || document.getElementById('system-voice-select')) return;
+
+    const row = document.createElement('div');
+    row.className = 'teacher-row teacher-voice-row';
+    row.id = 'teacher-voice-preferences-row';
+    row.innerHTML = `
+        <label for="system-voice-select"><strong>Narration voice</strong></label>
+        <select id="system-voice-select" aria-label="Narration voice dialect">
+            <option value="en-US">American English</option>
+            <option value="en-GB">British English</option>
+        </select>
+        <div class="slider-row">
+            <label for="speech-rate"><strong>Base speech rate</strong></label>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <input id="speech-rate" type="range" min="0.7" max="1.05" step="0.01" />
+                <span id="speech-rate-value">0.85x</span>
+            </div>
+        </div>
+        <label for="narration-style-select"><strong>Narration style</strong></label>
+        <select id="narration-style-select" aria-label="Narration style">
+            <option value="expressive">Expressive (recommended)</option>
+            <option value="neutral">Neutral</option>
+        </select>
+        <div class="teacher-subtext">Expressive style adds punctuation-aware pacing and intonation for sentence reading.</div>
+    `;
+    grid.appendChild(row);
+}
+
+function ensureVoiceDiagnosticsPanel() {
+    const grid = document.querySelector('#teacher-modal .teacher-tools-grid');
+    if (!grid || document.getElementById('voice-diagnostics-panel')) return;
+
+    const row = document.createElement('div');
+    row.className = 'teacher-row voice-diagnostics-row';
+    row.id = 'voice-diagnostics-row';
+    row.innerHTML = `
+        <label><strong>Voice diagnostics</strong></label>
+        <div id="voice-diagnostics-panel" class="voice-diagnostics-panel">
+            <div><strong>Selected voice:</strong> <span id="voice-diagnostics-name">Not resolved yet</span></div>
+            <div><strong>Preferred dialect:</strong> <span id="voice-diagnostics-dialect">en-US</span></div>
+            <div><strong>Voice language:</strong> <span id="voice-diagnostics-lang">—</span></div>
+            <div><strong>Quality tier:</strong> <span id="voice-diagnostics-quality">Unknown</span></div>
+            <div><strong>Candidates loaded:</strong> <span id="voice-diagnostics-candidates">0</span></div>
+            <div><strong>Narration style:</strong> <span id="voice-diagnostics-style">Expressive</span></div>
+            <div><strong>Fallback reason:</strong> <span id="voice-diagnostics-reason">Waiting for voice data.</span></div>
+            <div><strong>Last updated:</strong> <span id="voice-diagnostics-updated">—</span></div>
+        </div>
+        <div class="toggle-row inline voice-diagnostics-actions">
+            <button type="button" id="voice-diagnostics-refresh" class="teacher-secondary-btn">Refresh diagnostics</button>
+            <button type="button" id="voice-diagnostics-sample" class="teacher-secondary-btn">Play sample</button>
+        </div>
+        <div class="teacher-subtext">Use this to verify which system voice is active before class.</div>
+    `;
+    grid.appendChild(row);
 }
 
 /* --- AUTO-ADJUST WORD LENGTH BASED ON PATTERN --- */
@@ -3673,6 +4234,11 @@ function showEndModal(win) {
         def = currentEntry?.def || "";
         sentence = currentEntry?.sentence || "";
     }
+
+    const adaptedCopy = adaptRevealCopyForAudience(def, sentence, currentWord);
+    def = adaptedCopy.definition;
+    sentence = adaptedCopy.sentence;
+    renderAudienceModeNote(adaptedCopy.mode);
     
     document.getElementById("modal-def").textContent = def;
     document.getElementById("modal-sentence").textContent = `"${sentence}"`;
@@ -4368,6 +4934,151 @@ function confetti() {
     }
 }
 
+const YOUNG_AUDIENCE_WORD_REPLACEMENTS = [
+    [/\bguy\b/gi, 'person'],
+    [/\bgross\b/gi, 'messy'],
+    [/\bcrazy\b/gi, 'silly'],
+    [/\bterrible\b/gi, 'not great'],
+    [/\bcrash(?:ed|ing)?\b/gi, 'bumped'],
+    [/\bshriek(?:ed|ing)?\b/gi, 'made a loud sound'],
+    [/\bstupid\b/gi, 'tricky'],
+    [/\bfreak(?:ed|ing)? out\b/gi, 'got startled'],
+    [/\bawkwardly\b/gi, 'carefully']
+];
+
+const YOUNG_AUDIENCE_BLOCKLIST = /\b(kill|killed|dead|blood|drunk|weapon|gun|tax bill)\b/i;
+
+function cleanAudienceText(value) {
+    return String(value || '')
+        .replace(/[“”]/g, '"')
+        .replace(/[‘’]/g, "'")
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function countWords(value) {
+    const text = cleanAudienceText(value);
+    if (!text) return 0;
+    return text.split(/\s+/).filter(Boolean).length;
+}
+
+function truncateWords(value, maxWords) {
+    const text = cleanAudienceText(value);
+    if (!text) return '';
+    const words = text.split(/\s+/).filter(Boolean);
+    if (words.length <= maxWords) return text;
+    const clipped = words.slice(0, maxWords).join(' ').replace(/[,:;]+$/, '');
+    return `${clipped}.`;
+}
+
+function ensureEndingPunctuation(value) {
+    const text = cleanAudienceText(value);
+    if (!text) return '';
+    if (/[.!?]$/.test(text)) return text;
+    return `${text}.`;
+}
+
+function applyYoungAudienceReplacements(value) {
+    let text = cleanAudienceText(value);
+    YOUNG_AUDIENCE_WORD_REPLACEMENTS.forEach(([pattern, replacement]) => {
+        text = text.replace(pattern, replacement);
+    });
+    return text;
+}
+
+function getResolvedAudienceMode() {
+    const explicit = normalizeAudienceMode(appSettings.audienceMode || 'auto');
+    if (explicit !== 'auto') return explicit;
+
+    const profile = window.DECODE_PLATFORM?.getProfile?.() || {};
+    const gradeBand = normalizeGradeBandForAudience(profile.gradeBand || '');
+    const uiLook = getUiLookValue();
+    const translationLockedNonEnglish = !!appSettings.translation?.pinned && appSettings.translation?.lang && appSettings.translation.lang !== 'en';
+    const translationDefaultNonEnglish = !!appSettings.translation?.lang && appSettings.translation.lang !== 'en';
+
+    if (gradeBand === 'K-2' || uiLook === 'k2' || translationLockedNonEnglish || translationDefaultNonEnglish) {
+        return 'young-eal';
+    }
+    return 'general';
+}
+
+function simplifyRevealDefinition(definitionText, word) {
+    let text = applyYoungAudienceReplacements(definitionText);
+    if (!text) {
+        return `"${word}" is a word we can practice in reading and writing.`;
+    }
+
+    const sentenceSplit = text.split(/(?<=[.!?])\s+/);
+    if (sentenceSplit.length > 1) {
+        text = sentenceSplit[0];
+    }
+
+    if (countWords(text) > 16) {
+        text = truncateWords(text, 16);
+    }
+    return ensureEndingPunctuation(text);
+}
+
+function simplifyRevealSentence(sentenceText, word) {
+    let text = applyYoungAudienceReplacements(sentenceText);
+    if (!text || YOUNG_AUDIENCE_BLOCKLIST.test(text)) {
+        return `We used the word "${word}" in a silly class story.`;
+    }
+
+    if (countWords(text) > 18) {
+        text = truncateWords(text, 18);
+    }
+    return ensureEndingPunctuation(text);
+}
+
+function adaptRevealCopyForAudience(definitionText, sentenceText, word) {
+    const mode = getResolvedAudienceMode();
+    if (mode !== 'young-eal') {
+        return {
+            definition: definitionText,
+            sentence: sentenceText,
+            mode
+        };
+    }
+
+    return {
+        definition: simplifyRevealDefinition(definitionText, word),
+        sentence: simplifyRevealSentence(sentenceText, word),
+        mode
+    };
+}
+
+function ensureAudienceModeNote() {
+    if (!gameModal) return null;
+    const modalContent = gameModal.querySelector('.modal-content') || gameModal;
+    if (!modalContent) return null;
+    let note = document.getElementById('audience-mode-note');
+    if (!note) {
+        note = document.createElement('div');
+        note.id = 'audience-mode-note';
+        note.className = 'audience-mode-note hidden';
+        const sentenceEl = modalContent.querySelector('#modal-sentence');
+        if (sentenceEl && sentenceEl.parentElement) {
+            sentenceEl.insertAdjacentElement('afterend', note);
+        } else {
+            modalContent.appendChild(note);
+        }
+    }
+    return note;
+}
+
+function renderAudienceModeNote(mode) {
+    const note = ensureAudienceModeNote();
+    if (!note) return;
+    if (mode === 'young-eal') {
+        note.textContent = 'Young/EAL-friendly language mode is on.';
+        note.classList.remove('hidden');
+    } else {
+        note.textContent = '';
+        note.classList.add('hidden');
+    }
+}
+
 /* ==========================================
    BONUS CONTENT SYSTEM
    ========================================== */
@@ -4430,6 +5141,46 @@ const BONUS_CONTENT = {
     ]
 };
 
+const BONUS_CONTENT_YOUNG = {
+    jokes: [
+        "Why did the pencil win a prize? It had a sharp idea!",
+        "What do you call a happy book? A novel smile!",
+        "Why did the crayon feel proud? It stayed inside the lines!",
+        "What do you call a dancing letter? A letter-step!",
+        "Why did the clock go to class? To stay on time!",
+        "What did one light bulb say to the other? You brighten my day!",
+        "Why did the eraser smile? It fixed a mistake!",
+        "What do you call a careful cat? A purr-fectionist!",
+        "Why did the banana join music class? It had great peel!"
+    ],
+    facts: [
+        "Octopuses have three hearts.",
+        "Butterflies can taste with their feet.",
+        "Dolphins use signature sounds like names.",
+        "Honey can last a very long time.",
+        "Koalas sleep many hours each day.",
+        "Some clouds are heavier than a truck.",
+        "Sea otters hold hands while they sleep.",
+        "A day on Venus is longer than a year there.",
+        "Sharks have been around longer than trees."
+    ],
+    quotes: [
+        "Small steps every day lead to big progress.",
+        "Practice makes progress.",
+        "Curiosity helps us learn new things.",
+        "You can do hard things one step at a time.",
+        "Mistakes help your brain grow.",
+        "Kind words make learning easier.",
+        "Readers become leaders.",
+        "Try, reflect, and try again.",
+        "Your effort matters every day."
+    ]
+};
+
+function getBonusContentPool() {
+    return getResolvedAudienceMode() === 'young-eal' ? BONUS_CONTENT_YOUNG : BONUS_CONTENT;
+}
+
 function shouldShowBonusContent() {
     const frequency = appSettings.bonus?.frequency || 'sometimes';
     if (frequency === 'off') return false;
@@ -4439,21 +5190,27 @@ function shouldShowBonusContent() {
 }
 
 function showBonusContent() {
+    const pool = getBonusContentPool();
+    if (!pool) return;
+
     // Randomly choose joke, fact, or quote
-    const types = ['jokes', 'facts', 'quotes'];
+    const types = ['jokes', 'facts', 'quotes'].filter((type) => Array.isArray(pool[type]) && pool[type].length);
+    if (!types.length) return;
     const lastKey = localStorage.getItem('last_bonus_key');
     let type = types[Math.floor(Math.random() * types.length)];
-    let content = BONUS_CONTENT[type][Math.floor(Math.random() * BONUS_CONTENT[type].length)];
+    let bucket = pool[type];
+    let content = bucket[Math.floor(Math.random() * bucket.length)];
     let guard = 0;
     while (lastKey && `${type}:${content}` === lastKey && guard < 5) {
         type = types[Math.floor(Math.random() * types.length)];
-        content = BONUS_CONTENT[type][Math.floor(Math.random() * BONUS_CONTENT[type].length)];
+        bucket = pool[type];
+        content = bucket[Math.floor(Math.random() * bucket.length)];
         guard += 1;
     }
     localStorage.setItem('last_bonus_key', `${type}:${content}`);
     
     const emoji = type === 'jokes' ? '😄' : type === 'facts' ? '🌟' : '💭';
-    const title = type === 'jokes' ? 'Joke Time!' : type === 'facts' ? 'Fun Fact!' : 'Quote of the Day';
+    const title = type === 'jokes' ? 'Joke Time!' : type === 'facts' ? 'Fun Fact!' : 'Inspiration';
 
     const bonusModal = document.getElementById('bonus-modal');
     if (!bonusModal) return;
@@ -4673,22 +5430,14 @@ function initNewFeatures() {
 }
 
 // Force system voice (ignore recordings)
-function speakWithSystemVoice(text) {
+async function speakWithSystemVoice(text) {
     if (!('speechSynthesis' in window)) return;
-    
-    speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    const voices = cachedVoices.length ? cachedVoices : window.speechSynthesis.getVoices();
+
+    const voices = await getVoicesForSpeech();
     const preferred = pickBestEnglishVoice(voices);
-    if (preferred) {
-        utterance.voice = preferred;
-        utterance.lang = preferred.lang;
-    } else {
-        utterance.lang = getPreferredEnglishDialect();
-    }
-    
-    utterance.rate = getSpeechRate();
-    speakUtterance(utterance);
+    const fallbackLang = preferred ? preferred.lang : getPreferredEnglishDialect();
+    const speechType = countSpeechWords(text) >= 5 || /[.!?]/.test(String(text || '')) ? 'sentence' : 'word';
+    speakEnglishText(text, speechType, preferred, fallbackLang);
 }
 
 // Open decodable texts
@@ -6179,19 +6928,11 @@ function normalizeTextForTTS(text) {
 
 async function speakText(text, rateType = 'word') {
     if (!text) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(normalizeTextForTTS(text));
-    const voices = await getVoicesAsync();
+    const voices = await getVoicesForSpeech();
     const preferred = pickBestEnglishVoice(voices);
-    if (preferred) {
-        utterance.voice = preferred;
-        utterance.lang = preferred.lang;
-    } else {
-        utterance.lang = getPreferredEnglishDialect();
-    }
-    utterance.rate = getSpeechRate(rateType);
-    utterance.pitch = 1.0;
-    speakUtterance(utterance);
+    const fallbackLang = preferred ? preferred.lang : getPreferredEnglishDialect();
+    const type = rateType === 'sentence' ? 'sentence' : (rateType === 'phoneme' ? 'phoneme' : 'word');
+    speakEnglishText(text, type, preferred, fallbackLang);
 }
 
 function speakSpelling(grapheme) {
@@ -7647,7 +8388,7 @@ function playAssessmentPrompt() {
     const word = getAssessmentWord();
     if (!word) return;
     const sentence = buildAssessmentSentence(word);
-    window.speechSynthesis.cancel();
+    cancelPendingSpeech(true);
     speakText(word, 'word');
     const delay1 = estimateSpeechDuration(word, getSpeechRate('word')) + 200;
     setTimeout(() => speakText(sentence, 'sentence'), delay1);
