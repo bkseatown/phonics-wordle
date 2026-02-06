@@ -9405,6 +9405,24 @@ body.has-story-track:not(.word-quest-page) main {
     box-shadow: 0 0 0 2px rgba(95, 158, 160, 0.18);
 }
 
+/* Word Quest needs more vertical room for the on-screen keyboard. */
+body.word-quest-page .story-track {
+    padding: 8px 10px;
+}
+
+body.word-quest-page .story-track-steps {
+    display: none;
+}
+
+body.word-quest-page .quick-response-dock {
+    bottom: calc(max(10px, env(safe-area-inset-bottom, 0px)) + 74px);
+}
+
+body.word-quest-page .activity-breadcrumb {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+}
+
 .quick-response-dock {
     position: fixed;
     right: 14px;

@@ -980,6 +980,11 @@ function updateFitScreenMode() {
     const canvas = document.getElementById('game-canvas');
     const keyboardEl = document.getElementById('keyboard');
     const quickRow = document.querySelector('.quick-row');
+    const storyTrack = document.getElementById('story-track');
+    const storyRect = storyTrack ? storyTrack.getBoundingClientRect() : null;
+    // If the Story Track is fixed at the bottom, treat its top edge as the usable viewport bottom.
+    // Otherwise the keyboard can be "visible" by rect math but still covered by the overlay.
+    const bottomSafeY = storyRect ? Math.max(0, storyRect.top - 6) : (window.innerHeight - 8);
 
     // Base heuristic: most laptop/projector setups need a tighter layout below ~960px.
     const needsFitByHeight = window.innerHeight < 960;
@@ -991,7 +996,7 @@ function updateFitScreenMode() {
     }
     if (keyboardEl) {
         const kbRect = keyboardEl.getBoundingClientRect();
-        needsFitByLayout = needsFitByLayout || (kbRect.bottom > window.innerHeight - 8);
+        needsFitByLayout = needsFitByLayout || (kbRect.bottom > bottomSafeY);
     }
     if (keyboardEl && quickRow) {
         const kbRect = keyboardEl.getBoundingClientRect();
@@ -1014,8 +1019,11 @@ function updateFitScreenMode() {
         const canvasNow = document.getElementById('game-canvas');
         const keyboardNow = document.getElementById('keyboard');
         const stillClipped = canvasNow ? (canvasNow.scrollHeight > canvasNow.clientHeight + 12) : false;
+        const storyNow = document.getElementById('story-track');
+        const storyNowRect = storyNow ? storyNow.getBoundingClientRect() : null;
+        const bottomSafeNowY = storyNowRect ? Math.max(0, storyNowRect.top - 4) : (window.innerHeight - 6);
         const stillOffscreen = keyboardNow
-            ? (keyboardNow.getBoundingClientRect().bottom > window.innerHeight - 6)
+            ? (keyboardNow.getBoundingClientRect().bottom > bottomSafeNowY)
             : false;
         const shouldTight = shouldFit && (window.innerHeight < 860 || stillClipped || stillOffscreen);
 
