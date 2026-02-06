@@ -2792,6 +2792,11 @@ function startNewGame(customWord = null) {
 
     resetLightningTimer();
     renderFunHud();
+
+    // Re-evaluate stage sizing after board and keyboard are rebuilt.
+    requestAnimationFrame(() => {
+        updateFitScreenMode();
+    });
 }
 
 function getWordFromDictionary() {

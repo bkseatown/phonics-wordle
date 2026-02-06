@@ -9741,3 +9741,66 @@ body.reduced-stimulation *::after {
         letter-spacing: 0.02em;
     }
 }
+
+/* ==========================================================================
+   Word Quest layout recovery (applies last)
+   - Prevent clipped keyboard after fixed support overlays were introduced.
+   - Keep support overlays on other activities; Word Quest remains task-first.
+   ========================================================================== */
+body.word-quest-page {
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: auto;
+    min-height: 100dvh;
+}
+
+body.word-quest-page main {
+    flex: 0 1 auto;
+    min-height: auto !important;
+    overflow: visible !important;
+    padding-bottom: 14px;
+}
+
+body.word-quest-page #game-canvas {
+    flex: 0 1 auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    width: calc(100% - 24px);
+    max-width: 760px;
+    margin: 10px 12px 16px;
+    padding: 12px 10px 12px;
+    gap: 10px;
+}
+
+body.word-quest-page #game-board {
+    margin: 6px auto;
+    padding: 10px;
+    gap: 6px;
+}
+
+body.word-quest-page #keyboard {
+    margin-bottom: 0;
+    padding: 8px 8px 10px;
+    gap: 4px;
+}
+
+body.word-quest-page .tile {
+    width: min(60px, 9vw, 7.3vh);
+    height: min(60px, 9vw, 7.3vh);
+    font-size: min(2rem, 4.8vw, 4.1vh);
+}
+
+body.word-quest-page .key {
+    height: min(44px, 7.2vw, 5.7vh);
+    font-size: min(0.98rem, 2.8vw, 2.5vh);
+    max-width: 52px;
+}
+
+body.word-quest-page .key.wide {
+    max-width: 82px;
+}
+
+body.word-quest-page .story-track,
+body.word-quest-page .quick-response-dock {
+    display: none !important;
+}
