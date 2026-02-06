@@ -756,10 +756,12 @@ document.addEventListener("DOMContentLoaded", () => {
     startNewGame();
     checkFirstTimeVisitor();
     positionFunHud();
+    applyWordQuestDesktopScale();
     updateFitScreenMode();
     scheduleEnhancedVoicePrefetch();
     window.addEventListener('resize', () => {
         positionFunHud();
+        applyWordQuestDesktopScale();
         updateFitScreenMode();
     });
 
@@ -976,6 +978,47 @@ function positionFunHud() {
     hud.style.right = window.innerWidth < 720 ? '8px' : '16px';
 }
 
+function applyWordQuestDesktopScale() {
+    const body = document.body;
+    if (!body || !body.classList.contains('word-quest-page')) return;
+
+    if (window.innerWidth < 821) {
+        body.style.removeProperty('--wq-tile-size-desktop');
+        body.style.removeProperty('--wq-key-size-desktop');
+        body.style.removeProperty('--wq-key-wide-size-desktop');
+        body.style.removeProperty('--wq-keyboard-max-desktop');
+        body.style.removeProperty('--wq-canvas-max-desktop');
+        return;
+    }
+
+    const header = document.querySelector('header');
+    const headerHeight = header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 900;
+
+    // Available vertical room for board + hint row + keyboard.
+    const availableHeight = Math.max(560, viewportHeight - headerHeight - 14);
+    // Estimated constant chrome inside the canvas (gaps, paddings, hint row).
+    const staticChrome = 168;
+
+    let tileSize = (availableHeight - staticChrome) / 8.15;
+    tileSize = Math.max(58, Math.min(78, tileSize));
+
+    let keySize = tileSize * 0.73;
+    keySize = Math.max(39, Math.min(56, keySize));
+
+    let wideKeySize = keySize * 1.58;
+    wideKeySize = Math.max(68, Math.min(96, wideKeySize));
+
+    const keyboardMax = Math.round((keySize * 10) + 96);
+    const canvasMax = Math.round(Math.max(860, Math.min(1140, keyboardMax + 320)));
+
+    body.style.setProperty('--wq-tile-size-desktop', `${tileSize.toFixed(1)}px`);
+    body.style.setProperty('--wq-key-size-desktop', `${keySize.toFixed(1)}px`);
+    body.style.setProperty('--wq-key-wide-size-desktop', `${wideKeySize.toFixed(1)}px`);
+    body.style.setProperty('--wq-keyboard-max-desktop', `${keyboardMax}px`);
+    body.style.setProperty('--wq-canvas-max-desktop', `${canvasMax}px`);
+}
+
 function updateFitScreenMode() {
     const canvas = document.getElementById('game-canvas');
     const keyboardEl = document.getElementById('keyboard');
@@ -983,6 +1026,7 @@ function updateFitScreenMode() {
 
     // Desktop Word Quest uses a fixed large layout; skip auto-fit compression logic.
     if (window.innerWidth >= 821) {
+        applyWordQuestDesktopScale();
         if (fitScreenRaf) {
             cancelAnimationFrame(fitScreenRaf);
             fitScreenRaf = null;

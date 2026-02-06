@@ -594,7 +594,8 @@ function resetTimer() {
 }
 
 function updateDuration() {
-    currentDuration = Number(timerSelect.value) || 60;
+    const minutes = Math.max(1, Number(timerSelect.value) || 1);
+    currentDuration = minutes * 60;
     remainingSeconds = currentDuration;
     updateTimerDisplay();
 }

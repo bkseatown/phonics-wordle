@@ -9754,6 +9754,11 @@ body.word-quest-page .quick-response-dock {
 
 @media (min-width: 821px) {
     body.word-quest-page {
+        --wq-tile-size-desktop: 70px;
+        --wq-key-size-desktop: 50px;
+        --wq-key-wide-size-desktop: 84px;
+        --wq-keyboard-max-desktop: 650px;
+        --wq-canvas-max-desktop: 980px;
         overflow: hidden;
         height: 100dvh;
         min-height: 100dvh;
@@ -10017,7 +10022,7 @@ body.word-quest-page .quick-response-dock {
         height: auto !important;
         min-height: 0 !important;
         width: calc(100% - 16px) !important;
-        max-width: 980px !important;
+        max-width: var(--wq-canvas-max-desktop) !important;
         margin: 6px auto 8px !important;
         padding: 12px 12px 10px !important;
         gap: 10px !important;
@@ -10035,9 +10040,9 @@ body.word-quest-page .quick-response-dock {
     body.word-quest-page .tile,
     body.word-quest-page.fit-screen .tile,
     body.word-quest-page.fit-screen-tight .tile {
-        width: min(68px, 4.8vw, 7.8vh) !important;
-        height: min(68px, 4.8vw, 7.8vh) !important;
-        font-size: min(2.1rem, 3.2vw, 4.2vh) !important;
+        width: var(--wq-tile-size-desktop) !important;
+        height: var(--wq-tile-size-desktop) !important;
+        font-size: clamp(1.5rem, calc(var(--wq-tile-size-desktop) * 0.46), 2.4rem) !important;
     }
 
     body.word-quest-page .hint-actions {
@@ -10057,7 +10062,7 @@ body.word-quest-page .quick-response-dock {
         margin-bottom: 0 !important;
         padding: 8px 8px 10px !important;
         gap: 4px !important;
-        max-width: 650px !important;
+        max-width: var(--wq-keyboard-max-desktop) !important;
     }
 
     body.word-quest-page .keyboard-row {
@@ -10067,14 +10072,14 @@ body.word-quest-page .quick-response-dock {
     body.word-quest-page .key,
     body.word-quest-page.fit-screen .key,
     body.word-quest-page.fit-screen-tight .key {
-        height: min(50px, 3.6vw, 5.5vh) !important;
-        font-size: min(1.05rem, 2vw, 2.4vh) !important;
-        max-width: 58px !important;
+        height: var(--wq-key-size-desktop) !important;
+        font-size: clamp(0.82rem, calc(var(--wq-key-size-desktop) * 0.42), 1.2rem) !important;
+        max-width: var(--wq-key-size-desktop) !important;
     }
 
     body.word-quest-page .key.wide,
     body.word-quest-page.fit-screen .key.wide,
     body.word-quest-page.fit-screen-tight .key.wide {
-        max-width: 90px !important;
+        max-width: var(--wq-key-wide-size-desktop) !important;
     }
 }
