@@ -34,6 +34,10 @@ let voiceDiagnosticsState = {
     candidateCount: 0,
     updatedAt: 0
 };
+let sessionEnglishVoice = {
+    dialect: '',
+    voiceUri: ''
+};
 let modalDismissBound = false;
 let assessmentState = null;
 let enhancedVoicePrefetched = false;
@@ -1254,6 +1258,7 @@ function initVoiceLoader() {
         voiceSelect.dataset.bound = 'true';
         voiceSelect.onchange = () => {
             appSettings.voiceDialect = voiceSelect.value || DEFAULT_SETTINGS.voiceDialect;
+            sessionEnglishVoice = { dialect: '', voiceUri: '' };
             saveSettings();
             if (cachedVoices.length) {
                 pickBestEnglishVoice(cachedVoices);
@@ -1535,6 +1540,7 @@ function pickBestEnglishVoice(voices) {
     const dialect = getPreferredEnglishDialect();
     const pool = Array.isArray(voices) ? voices : [];
     if (!pool.length) {
+        sessionEnglishVoice = { dialect: '', voiceUri: '' };
         setVoiceDiagnosticsState({
             voice: null,
             reason: `No system voices are currently loaded for ${dialect}.`,
@@ -1543,10 +1549,28 @@ function pickBestEnglishVoice(voices) {
         });
         return null;
     }
+
+    if (sessionEnglishVoice.dialect === dialect && sessionEnglishVoice.voiceUri) {
+        const locked = pool.find((voice) => (voice.voiceURI || voice.name) === sessionEnglishVoice.voiceUri);
+        if (locked && locked.lang && locked.lang.toLowerCase().startsWith('en')) {
+            setVoiceDiagnosticsState({
+                voice: locked,
+                reason: `Using locked session voice for ${dialect}.`,
+                dialect,
+                candidateCount: pool.length
+            });
+            return locked;
+        }
+    }
+
     const storedVoiceUri = getStoredEnglishVoiceUriForDialect(dialect);
     if (storedVoiceUri) {
         const remembered = pool.find(v => (v.voiceURI || v.name) === storedVoiceUri);
         if (remembered && remembered.lang && remembered.lang.toLowerCase().startsWith('en')) {
+            sessionEnglishVoice = {
+                dialect,
+                voiceUri: remembered.voiceURI || remembered.name || ''
+            };
             setVoiceDiagnosticsState({
                 voice: remembered,
                 reason: `Using saved preferred voice for ${dialect}.`,
@@ -1566,6 +1590,10 @@ function pickBestEnglishVoice(voices) {
         }
     }
     if (voice) {
+        sessionEnglishVoice = {
+            dialect,
+            voiceUri: voice.voiceURI || voice.name || ''
+        };
         setStoredEnglishVoiceUriForDialect(dialect, voice.voiceURI || voice.name || '');
         setVoiceDiagnosticsState({
             voice,
@@ -1574,6 +1602,7 @@ function pickBestEnglishVoice(voices) {
             candidateCount: pool.length
         });
     } else {
+        sessionEnglishVoice = { dialect: '', voiceUri: '' };
         setVoiceDiagnosticsState({
             voice: null,
             reason: `Loaded voices do not include an English option for ${dialect}.`,

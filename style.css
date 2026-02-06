@@ -244,6 +244,44 @@ body.home-page {
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
 }
 
+.home-pathway-chooser {
+    margin-top: 14px;
+    display: grid;
+    gap: 8px;
+}
+
+.home-pathway-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.home-pathway-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(99, 102, 241, 0.28);
+    background: rgba(255, 255, 255, 0.78);
+    color: #1e293b;
+    font-weight: 800;
+    font-size: 0.84rem;
+    text-decoration: none;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+}
+
+.home-pathway-chip:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
+}
+
+.home-pathway-chip.active {
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.95), rgba(14, 165, 233, 0.86));
+    border-color: rgba(79, 70, 229, 0.42);
+    color: #ffffff;
+}
+
 .home-badges {
     display: flex;
     flex-wrap: wrap;
@@ -1306,6 +1344,14 @@ body.report-page {
 }
 
 #report-numeracy-import-status.error {
+    color: #991b1b;
+}
+
+#report-parent-message-status.success {
+    color: #166534;
+}
+
+#report-parent-message-status.error {
     color: #991b1b;
 }
 
@@ -2505,6 +2551,7 @@ main {
     justify-content: center; 
     align-items: center; 
     font-family: var(--font-body); 
+    color: #0f172a;
     touch-action: manipulation;
     box-shadow: 
         0 4px 0 0 rgba(148, 163, 184, 0.55),
@@ -2542,7 +2589,7 @@ main {
 /* Absent/Gray keys - Much more visible with better contrast */
 .key.absent {
     background: linear-gradient(180deg, #4a4a4c 0%, #3a3a3c 100%) !important;
-    color: #888888 !important;
+    color: #e2e8f0 !important;
     opacity: 0.85;
     border: 2px solid #2a2a2c;
     box-shadow: 
@@ -2553,6 +2600,20 @@ main {
 
 .key.absent:hover {
     background: linear-gradient(180deg, #4a4a4c 0%, #3a3a3c 100%) !important;
+}
+
+.key.correct {
+    background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+    border-color: #15803d;
+    color: #ffffff;
+    box-shadow: 0 4px 0 0 #166534, 0 8px 16px rgba(34, 197, 94, 0.32);
+}
+
+.key.present {
+    background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+    border-color: #d97706;
+    color: #1f2937;
+    box-shadow: 0 4px 0 0 #b45309, 0 8px 16px rgba(245, 158, 11, 0.28);
 }
 
 
@@ -9047,6 +9108,43 @@ body.numsense-page {
     flex: 0 0 auto;
 }
 
+.numsense-answer-row {
+    display: grid;
+    grid-template-columns: auto minmax(120px, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.numsense-answer-label {
+    color: #334155;
+    font-size: 0.78rem;
+    font-weight: 850;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.numsense-answer-input {
+    width: 100%;
+    min-height: 42px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.55);
+    background: #ffffff;
+    color: #0f172a;
+    padding: 0 12px;
+    font-size: 0.96rem;
+    font-weight: 700;
+}
+
+.numsense-answer-input:disabled {
+    background: rgba(241, 245, 249, 0.9);
+    color: #64748b;
+}
+
+.numsense-submit {
+    min-height: 42px;
+    white-space: nowrap;
+}
+
 .numsense-actions {
     display: flex;
     flex-wrap: wrap;
@@ -9190,6 +9288,18 @@ body.numsense-page {
         margin: 8px 10px 18px;
         padding: 12px;
         border-radius: 22px;
+    }
+
+    .numsense-answer-row {
+        grid-template-columns: 1fr;
+    }
+
+    .numsense-answer-label {
+        margin-bottom: -2px;
+    }
+
+    .numsense-submit {
+        width: 100%;
     }
 }
 
@@ -10289,6 +10399,13 @@ body.word-quest-page .tile:not(.correct):not(.present):not(.absent) {
 body.word-quest-page .tile.row-active:not(.correct):not(.present):not(.absent) {
     border-color: rgba(79, 70, 229, 0.62);
     background: linear-gradient(180deg, rgba(224, 231, 255, 1) 0%, rgba(255, 255, 255, 0.96) 100%);
+    color: #0f172a;
+    text-shadow: none;
+}
+
+body.word-quest-page .tile.active.row-active:not(.correct):not(.present):not(.absent) {
+    color: #0f172a;
+    text-shadow: none;
 }
 
 body.word-quest-page #keyboard {
@@ -10301,6 +10418,8 @@ body.word-quest-page #keyboard {
 body.word-quest-page .key:not(.correct):not(.present):not(.absent) {
     background: linear-gradient(180deg, #ffffff 0%, #e9eeff 100%);
     border-color: rgba(51, 65, 85, 0.24);
+    color: #0f172a;
+    text-shadow: none;
     box-shadow: 0 4px 0 rgba(148, 163, 184, 0.68), 0 10px 18px rgba(15, 23, 42, 0.14);
 }
 
@@ -10313,6 +10432,11 @@ body.force-light.word-quest-page #game-board {
 body.force-light.word-quest-page .tile:not(.correct):not(.present):not(.absent) {
     background: linear-gradient(180deg, #ffffff 0%, #e7efff 100%) !important;
     border-color: rgba(51, 65, 85, 0.30) !important;
+    color: #0f172a !important;
+    text-shadow: none !important;
+}
+
+body.force-light.word-quest-page .tile.active.row-active:not(.correct):not(.present):not(.absent) {
     color: #0f172a !important;
     text-shadow: none !important;
 }
@@ -11014,7 +11138,7 @@ body.reduced-stimulation *::after {
     body.word-quest-page #keyboard {
         width: 100%;
         max-width: none;
-        margin: 0;
+        margin: 0 0 6px;
         padding: 8px 4px calc(8px + env(safe-area-inset-bottom, 0));
         gap: 4px;
     }
@@ -11079,6 +11203,7 @@ body.reduced-stimulation *::after {
     }
 
     body.word-quest-page #keyboard {
+        margin-bottom: 6px;
         padding: 6px 2px calc(6px + env(safe-area-inset-bottom, 0));
         gap: 3px;
     }
@@ -11221,7 +11346,7 @@ body.word-quest-page .quick-response-dock {
         width: calc(100% - 16px) !important;
         max-width: var(--wq-canvas-max-desktop) !important;
         margin: 6px auto 8px !important;
-        padding: 12px 12px 10px !important;
+        padding: 12px 12px 16px !important;
         gap: 10px !important;
         overflow: hidden !important;
     }
@@ -11256,7 +11381,7 @@ body.word-quest-page .quick-response-dock {
     body.word-quest-page #keyboard,
     body.word-quest-page.fit-screen #keyboard,
     body.word-quest-page.fit-screen-tight #keyboard {
-        margin-bottom: 0 !important;
+        margin-bottom: 8px !important;
         padding: 8px 8px 10px !important;
         gap: 4px !important;
         max-width: var(--wq-keyboard-max-desktop) !important;

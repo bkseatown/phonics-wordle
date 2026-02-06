@@ -163,6 +163,8 @@ const ui = {
   prompt: document.getElementById('numsense-prompt'),
   stem: document.getElementById('numsense-stem'),
   options: document.getElementById('numsense-options'),
+  answerInput: document.getElementById('numsense-answer-input'),
+  submitBtn: document.getElementById('numsense-submit'),
   hintBtn: document.getElementById('numsense-hint'),
   skipBtn: document.getElementById('numsense-skip'),
   hintText: document.getElementById('numsense-hint-text'),
@@ -530,7 +532,7 @@ function generateOperationsQuestion(gradeBand) {
       prompt: `${a} - ${b} = ?`,
       answer,
       distractors: [answer - 1, answer + 1, a - (b - 1)],
-      hint: 'Count backward by b steps.',
+      hint: `Count backward by ${b} steps.`,
       explain: `${a} - ${b} = ${answer}.`,
       tag: 'operations-k2',
       coach: 'Use number-line jumps for subtraction accuracy.'
@@ -970,6 +972,13 @@ function addCoachMove(move) {
 function renderCurrentItem() {
   if (!ui.options || !ui.prompt || !ui.kicker || !ui.stem) return;
   ui.options.innerHTML = '';
+  if (ui.answerInput) {
+    ui.answerInput.value = '';
+    ui.answerInput.disabled = !state.currentItem;
+  }
+  if (ui.submitBtn) {
+    ui.submitBtn.disabled = !state.currentItem;
+  }
   if (!state.currentItem) {
     ui.kicker.textContent = 'Ready';
     ui.prompt.textContent = PAGE_CONFIG.readyPrompt;
@@ -994,16 +1003,102 @@ function renderCurrentItem() {
   });
 }
 
+function normalizeAnswerText(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[−–—]/g, '-')
+    .replace(/[×*]/g, 'x')
+    .replace(/,/g, '')
+    .replace(/[“”"']/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/([0-9])\s*%\s*$/g, '$1%')
+    .replace(/\s*x\s*/g, ' x ')
+    .replace(/\s*\^\s*/g, '^')
+    .trim();
+}
+
+function parseComparableAnswer(value) {
+  const text = normalizeAnswerText(value);
+  if (!text) return { type: 'text', value: '' };
+
+  const sciMatch = text.match(/^(-?\d*\.?\d+)\s*x\s*10\^(-?\d+)$/);
+  if (sciMatch) {
+    const coefficient = Number(sciMatch[1]);
+    const exponent = Number(sciMatch[2]);
+    if (!Number.isNaN(coefficient) && !Number.isNaN(exponent)) {
+      return { type: 'number', value: coefficient * (10 ** exponent) };
+    }
+  }
+
+  const eMatch = text.match(/^(-?\d*\.?\d+)e(-?\d+)$/);
+  if (eMatch) {
+    const coefficient = Number(eMatch[1]);
+    const exponent = Number(eMatch[2]);
+    if (!Number.isNaN(coefficient) && !Number.isNaN(exponent)) {
+      return { type: 'number', value: coefficient * (10 ** exponent) };
+    }
+  }
+
+  if (/^-?\d*\.?\d+%$/.test(text)) {
+    return { type: 'percent', value: Number(text.replace('%', '')) };
+  }
+
+  if (/^-?\d*\.?\d+$/.test(text)) {
+    return { type: 'number', value: Number(text) };
+  }
+
+  return { type: 'text', value: text };
+}
+
+function answersMatch(candidate, answer) {
+  const left = parseComparableAnswer(candidate);
+  const right = parseComparableAnswer(answer);
+  const tolerance = 0.001;
+
+  if (left.type === 'text' && right.type === 'text') {
+    return left.value === right.value;
+  }
+
+  if (right.type === 'number') {
+    if (left.type === 'number') {
+      return Math.abs(left.value - right.value) <= tolerance;
+    }
+    if (left.type === 'percent') {
+      return (
+        Math.abs((left.value / 100) - right.value) <= tolerance ||
+        Math.abs(left.value - right.value) <= tolerance
+      );
+    }
+  }
+
+  if (right.type === 'percent') {
+    if (left.type === 'percent') {
+      return Math.abs(left.value - right.value) <= tolerance;
+    }
+    if (left.type === 'number') {
+      return (
+        Math.abs(left.value - right.value) <= tolerance ||
+        Math.abs(left.value - (right.value / 100)) <= tolerance
+      );
+    }
+  }
+
+  return normalizeAnswerText(candidate) === normalizeAnswerText(answer);
+}
+
 function markOptionFeedback(selected, answer) {
   const buttons = Array.from(ui.options?.querySelectorAll('.numsense-option') || []);
   buttons.forEach((button) => {
     button.disabled = true;
     const value = String(button.dataset.value || '');
-    if (value === String(answer)) button.classList.add('is-correct');
-    if (selected !== 'Skip' && value === String(selected) && value !== String(answer)) {
+    if (answersMatch(value, answer)) button.classList.add('is-correct');
+    if (selected !== 'Skip' && answersMatch(value, selected) && !answersMatch(value, answer)) {
       button.classList.add('is-wrong');
     }
   });
+  if (ui.answerInput) ui.answerInput.disabled = true;
+  if (ui.submitBtn) ui.submitBtn.disabled = true;
 }
 
 function logProbe(item, selected, correct, responseMs) {
@@ -1106,7 +1201,7 @@ function handleAnswer(rawValue) {
   state.locked = true;
   const selected = rawValue === '__skip__' ? 'Skip' : String(rawValue);
   const answer = String(state.currentItem.answer);
-  const correct = selected === answer;
+  const correct = selected !== 'Skip' && answersMatch(selected, answer);
   const responseMs = Math.max(0, Math.round(performance.now() - state.itemStartedAt));
 
   if (correct) {
@@ -1141,6 +1236,16 @@ function handleAnswer(rawValue) {
   window.setTimeout(() => {
     nextPrompt();
   }, correct ? 650 : 950);
+}
+
+function submitTypedAnswer() {
+  if (!state.sessionActive || state.locked || !state.currentItem || !ui.answerInput) return;
+  const typed = String(ui.answerInput.value || '').trim();
+  if (!typed) {
+    setFeedback('Type an answer first, or choose one of the options.', 'neutral');
+    return;
+  }
+  handleAnswer(typed);
 }
 
 function showHint() {
@@ -1219,6 +1324,11 @@ function applyPageModeUi() {
 function handleKeydown(event) {
   if (!state.sessionActive || state.locked) return;
   if (!state.currentItem) return;
+  const target = event.target;
+  if (target instanceof HTMLElement) {
+    const tag = target.tagName.toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+  }
   if (event.key === '1' || event.key === '2' || event.key === '3' || event.key === '4') {
     const index = Number(event.key) - 1;
     const options = state.currentItem.options || [];
@@ -1252,6 +1362,13 @@ function init() {
   ui.start?.addEventListener('click', startSession);
   ui.hintBtn?.addEventListener('click', showHint);
   ui.skipBtn?.addEventListener('click', skipItem);
+  ui.submitBtn?.addEventListener('click', submitTypedAnswer);
+  ui.answerInput?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      submitTypedAnswer();
+    }
+  });
   ui.grade?.addEventListener('change', onSetupChange);
   ui.domain?.addEventListener('change', onSetupChange);
   ui.rounds?.addEventListener('change', onSetupChange);

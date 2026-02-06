@@ -339,6 +339,17 @@
         { activity: 'plan-it', minutes: '5-7', move: 'Show cross-skill transfer into executive-function and self-management routines.' },
         { activity: 'word-quest', minutes: '5-7', move: 'Show focused decoding reps with immediate feedback and learner adjustment.' }
       ]
+    },
+    parent: {
+      label: 'Parent / Caregiver',
+      fit: 'Home-school partnership · Family support',
+      goal: 'Translate school intervention language into family-friendly routines that reinforce conceptual math and structured literacy at home.',
+      focusId: 'comprehension-evidence',
+      steps: [
+        { activity: 'teacher-report', label: 'Parent Partnership Snapshot', anchor: '#report-parent-communication', minutes: '3-4', move: 'Open the parent message and share one literacy + one numeracy focus in plain language.' },
+        { activity: 'teacher-report', label: 'Family-Friendly Data View', anchor: '#report-share-summary', minutes: '2-3', move: 'Show current strengths and next steps without jargon.' },
+        { activity: 'teacher-report', label: 'Home Practice Clip', anchor: '#report-media-library', minutes: '2-3', move: 'Attach a short teacher video/audio clip modeling at-home support.' }
+      ]
     }
   };
 
@@ -367,6 +378,11 @@
       progressLens: 'Track implementation consistency, cycle fidelity, and learner growth against benchmark checkpoints.',
       handoff: 'Use weekly pulse + protocol review in team meetings to decide supports, staffing, and next cycle focus.',
       familyBridge: 'Provide a concise summary of gains, next target, and support plan in family-friendly language.'
+    },
+    parent: {
+      progressLens: 'Focus on home-transfer behaviors: practice consistency, confidence, and use of taught strategies (not just answer accuracy).',
+      handoff: 'Align parent-facing language with classroom goals so home routines reinforce school interventions.',
+      familyBridge: 'Share one structured literacy move and one conceptual math move families can model in 5-10 minutes.'
     }
   };
 
@@ -887,6 +903,7 @@
     'goal-draft': { label: 'Tiered Goal Draft' },
     'literacy-protocol': { label: 'Intervention Protocol' },
     'role-pathway': { label: 'Role Pathway' },
+    'parent-pathway': { label: 'Parent Partnership Pathway' },
     'lesson-builder': { label: 'One-Tap Lesson Builder' }
   };
 
@@ -905,6 +922,47 @@
     name: 'decode_report_media_v1',
     version: 1,
     store: 'clips'
+  };
+
+  const PARENT_MESSAGE_STORE_KEY = 'decode_parent_messages_v1';
+
+  const REPORT_MEDIA_PROMPT_MAP = {
+    'literacy-pulse': {
+      teacher: 'In 60-90 seconds, explain one literacy strength, one gap, and exactly what you will teach next.',
+      student: 'Record what reading strategy helped you most today and one strategy you will try next.'
+    },
+    'numeracy-pulse': {
+      teacher: 'Explain one conceptual math strategy focus and how it connects to class learning.',
+      student: 'Show how you solved one math problem and name the strategy you used.'
+    },
+    'numeracy-packet': {
+      teacher: 'Model the week plan: strategy stage, checkpoint target, and one transfer task.',
+      student: 'Describe today\'s math strategy and where you can use it again.'
+    },
+    'numeracy-import': {
+      teacher: 'Briefly explain what data source was imported and what instruction decision it changes.',
+      student: 'Describe what this progress check tells you about your next goal.'
+    },
+    'goal-draft': {
+      teacher: 'State the near-term goal in family-friendly language and how progress will be checked.',
+      student: 'Say your goal in your own words and one action you will take this week.'
+    },
+    'literacy-protocol': {
+      teacher: 'Walk through the intervention routine: explicit teach, guided practice, and transfer.',
+      student: 'Share how you feel during each step and where you need support.'
+    },
+    'role-pathway': {
+      teacher: 'Summarize role-specific priorities and one actionable handoff for the team.',
+      student: 'Share what support from adults helps you learn best.'
+    },
+    'parent-pathway': {
+      teacher: 'For parents: explain one structured literacy move and one conceptual math move they can do at home in 5-10 minutes.',
+      student: 'Tell your parent one reading strategy and one math strategy you are practicing this week.'
+    },
+    'lesson-builder': {
+      teacher: 'Preview today\'s I do / We do / You do lesson and what success looks like.',
+      student: 'Reflect on which part of today\'s lesson helped you most.'
+    }
   };
 
   const REPORT_MEDIA_MAX_ITEMS = 400;
@@ -981,6 +1039,7 @@
   const reportMediaCategoryEl = document.getElementById('report-media-category');
   const reportMediaLabelEl = document.getElementById('report-media-label');
   const reportMediaTagsEl = document.getElementById('report-media-tags');
+  const reportMediaPromptEl = document.getElementById('report-media-prompt');
   const reportMediaStartBtn = document.getElementById('report-media-start-btn');
   const reportMediaStopBtn = document.getElementById('report-media-stop-btn');
   const reportMediaSaveBtn = document.getElementById('report-media-save-btn');
@@ -999,6 +1058,14 @@
   const rolePathwayEl = document.getElementById('report-role-pathway');
   const roleCopyBtn = document.getElementById('report-role-copy');
   const roleStatusEl = document.getElementById('report-role-status');
+  const parentIntentEl = document.getElementById('report-parent-intent');
+  const parentReadingLevelEl = document.getElementById('report-parent-reading-level');
+  const parentMessageInputEl = document.getElementById('report-parent-message-input');
+  const parentGenerateBtn = document.getElementById('report-parent-generate');
+  const parentSaveBtn = document.getElementById('report-parent-save');
+  const parentCopyBtn = document.getElementById('report-parent-copy');
+  const parentMessageOutputEl = document.getElementById('report-parent-message-output');
+  const parentMessageStatusEl = document.getElementById('report-parent-message-status');
 
   let latestBuilderText = '';
   let latestShareText = '';
@@ -1006,10 +1073,12 @@
   let latestProtocolText = '';
   let latestNumeracyText = '';
   let latestRolePathwayText = '';
+  let latestParentMessageText = '';
   let latestGoalContext = null;
   let latestProtocolContext = null;
   let latestNumeracyContext = null;
   let latestRoleContext = null;
+  let latestParentContext = null;
   let pendingNumeracyImport = null;
   let reportMediaDbPromise = null;
   let reportMediaRecorderState = null;
@@ -4440,6 +4509,21 @@
     return match?.label || 'General';
   }
 
+  function updateReportMediaPrompt() {
+    if (!reportMediaPromptEl) return;
+    const sectionId = String(reportMediaSectionEl?.value || 'literacy-pulse');
+    const owner = String(reportMediaOwnerEl?.value || 'teacher');
+    const sourceType = String(reportMediaSourceEl?.value || 'audio');
+    const sectionPrompts = REPORT_MEDIA_PROMPT_MAP[sectionId] || {};
+    const basePrompt = sectionPrompts[owner] || 'Record one clear teaching point, one next step, and one encouragement statement.';
+    const sourceHint = sourceType === 'screen'
+      ? 'Screen mode tip: open your whiteboard/app first, then select it in the share picker.'
+      : sourceType === 'video'
+        ? 'Video mode tip: keep camera stable and model one example only.'
+        : 'Audio mode tip: keep your message under 90 seconds and use plain language.';
+    reportMediaPromptEl.innerHTML = `<strong>Prompt:</strong> ${escapeHtml(basePrompt)} <br /><strong>Capture tip:</strong> ${escapeHtml(sourceHint)}`;
+  }
+
   function setReportMediaStatus(message, isError = false, isModal = false) {
     if (isModal) {
       if (!reportMediaModalStatusEl) return;
@@ -4810,6 +4894,7 @@
       reportMediaSectionEl.value = sectionId;
     }
     setReportMediaModalOpen(true);
+    updateReportMediaPrompt();
     setReportMediaStatus(`Ready to record for ${reportMediaSectionLabel(reportMediaSectionEl?.value || 'literacy-pulse')}.`, false, true);
   }
 
@@ -4983,12 +5068,272 @@
     }
   }
 
+  function readParentMessageStore() {
+    const parsed = safeParse(localStorage.getItem(PARENT_MESSAGE_STORE_KEY) || '');
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  }
+
+  function writeParentMessageStore(store) {
+    localStorage.setItem(PARENT_MESSAGE_STORE_KEY, JSON.stringify(store || {}));
+  }
+
+  function parentLearnerKey(learner) {
+    return learner?.id || 'global';
+  }
+
+  function getParentMessagesForLearner(learner) {
+    const store = readParentMessageStore();
+    const key = parentLearnerKey(learner);
+    const rows = Array.isArray(store[key]) ? store[key] : [];
+    return rows.slice().sort((a, b) => Number(b.createdAt || 0) - Number(a.createdAt || 0));
+  }
+
+  function getLatestParentMessage(learner) {
+    return getParentMessagesForLearner(learner)[0] || null;
+  }
+
+  function saveParentMessageForLearner(learner, payload) {
+    const store = readParentMessageStore();
+    const key = parentLearnerKey(learner);
+    const rows = Array.isArray(store[key]) ? store[key] : [];
+    const next = {
+      id: `parent_msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      createdAt: Date.now(),
+      learnerId: learner?.id || '',
+      learnerName: learner?.name || '',
+      intent: payload.intent || 'balanced',
+      readingLevel: payload.readingLevel || 'standard',
+      text: String(payload.text || '').trim()
+    };
+    store[key] = [next, ...rows].slice(0, 20);
+    writeParentMessageStore(store);
+    return next;
+  }
+
+  function parentIntentLabel(intentId) {
+    if (intentId === 'literacy') return 'Structured literacy focus';
+    if (intentId === 'numeracy') return 'Conceptual math focus';
+    if (intentId === 'confidence') return 'Confidence and routine focus';
+    return 'Balanced literacy + numeracy';
+  }
+
+  function parentReadingLevelLabel(levelId) {
+    if (levelId === 'plain') return 'Plain language';
+    if (levelId === 'detailed') return 'Detailed';
+    return 'Standard';
+  }
+
+  function generateParentMessage(context = {}) {
+    const learner = context.learner || null;
+    const pulse = context.pulse || null;
+    const numeracyPulse = context.numeracyPulse || null;
+    const intent = String(parentIntentEl?.value || 'balanced');
+    const readingLevel = String(parentReadingLevelEl?.value || 'standard');
+    const learnerName = learner?.name || 'your child';
+    const literacyGap = pulse?.gaps?.[0] || null;
+    const literacyStrength = pulse?.strengths?.[0] || null;
+    const numeracyGap = numeracyPulse?.gaps?.[0] || null;
+    const numeracyStrength = numeracyPulse?.strengths?.[0] || null;
+    const literacyFocus = literacyGap?.label || 'word reading and comprehension transfer';
+    const numeracyFocus = numeracyGap?.label || 'number sense and problem-solving language';
+    const literacyStrengthText = literacyStrength?.label || 'reading engagement and effort';
+    const numeracyStrengthText = numeracyStrength?.label || 'math perseverance and strategy talk';
+
+    const intro = `Hello family, this is a quick update from school on ${learnerName}'s learning focus this cycle.`;
+    const literacyLine = `In literacy, we are focusing on ${literacyFocus.toLowerCase()} using structured routines (explicit model, guided practice, and short transfer checks).`;
+    const numeracyLine = `In math, we are focusing on ${numeracyFocus.toLowerCase()} using conceptual strategy routines rather than memorization-only steps.`;
+    const strengthLine = `${learnerName} is currently showing strengths in ${literacyStrengthText.toLowerCase()} and ${numeracyStrengthText.toLowerCase()}.`;
+    const homeRoutine = 'At home (5-10 minutes): ask your child to explain one reading strategy and one math strategy out loud, then show one example.';
+    const confidenceLine = 'If your child gets stuck, prompt with: “Show me what you know first,” instead of giving the answer immediately.';
+    const close = 'Thank you for partnering with us. We will update you again after the next progress checkpoint.';
+    const literacyTier = pulse?.engine?.tierRecommendation?.tierLabel || 'Tier 2';
+    const numeracyTier = numeracyPulse?.engine?.tierRecommendation?.tierLabel || 'Tier 2';
+    const literacyConfidence = pulse?.engine?.evidence?.confidenceLabel || 'Emerging signal';
+    const numeracyConfidence = numeracyPulse?.engine?.evidence?.confidenceLabel || 'Emerging signal';
+
+    if (readingLevel === 'plain') {
+      const plainIntro = `Hello family. Here is this week’s short learning update for ${learnerName}.`;
+      const plainLiteracy = `Reading focus: ${literacyFocus.toLowerCase()}. We teach, practice together, then your child tries independently.`;
+      const plainNumeracy = `Math focus: ${numeracyFocus.toLowerCase()}. We use strategy talk, drawings, and explanation steps.`;
+      const plainStrength = `Strengths to celebrate: ${literacyStrengthText.toLowerCase()} and ${numeracyStrengthText.toLowerCase()}.`;
+      const plainRoutine = 'Home practice (5-10 minutes): ask your child to explain one reading move and one math move, then model one example together.';
+      const plainClose = 'Thank you for partnering with us.';
+      if (intent === 'literacy') return [plainIntro, plainLiteracy, plainStrength, plainRoutine, plainClose].join('\n\n');
+      if (intent === 'numeracy') return [plainIntro, plainNumeracy, plainStrength, plainRoutine, plainClose].join('\n\n');
+      if (intent === 'confidence') return [plainIntro, plainStrength, plainRoutine, confidenceLine, plainClose].join('\n\n');
+      return [plainIntro, plainLiteracy, plainNumeracy, plainStrength, plainRoutine, plainClose].join('\n\n');
+    }
+
+    if (readingLevel === 'detailed') {
+      const literacyData = `Literacy signal: ${literacyFocus.toLowerCase()} (${formatPercent(literacyGap?.avg)} current mastery estimate, support intensity: ${literacyTier}, confidence: ${literacyConfidence}).`;
+      const numeracyData = `Numeracy signal: ${numeracyFocus.toLowerCase()} (${formatPercent(numeracyGap?.avg)} current mastery estimate, support intensity: ${numeracyTier}, confidence: ${numeracyConfidence}).`;
+      const detailStrength = `Current strengths: ${literacyStrengthText} (${formatPercent(literacyStrength?.avg)}) and ${numeracyStrengthText} (${formatPercent(numeracyStrength?.avg)}).`;
+      const detailClose = 'Please reach out if you want a short home plan aligned to these targets.';
+      if (intent === 'literacy') return [intro, literacyData, detailStrength, homeRoutine, detailClose].join('\n\n');
+      if (intent === 'numeracy') return [intro, numeracyData, detailStrength, homeRoutine, detailClose].join('\n\n');
+      if (intent === 'confidence') return [intro, detailStrength, homeRoutine, confidenceLine, detailClose].join('\n\n');
+      return [intro, literacyData, numeracyData, detailStrength, homeRoutine, detailClose].join('\n\n');
+    }
+
+    if (intent === 'literacy') {
+      return [intro, literacyLine, `Current strength to celebrate: ${literacyStrengthText}.`, homeRoutine, close].join('\n\n');
+    }
+    if (intent === 'numeracy') {
+      return [intro, numeracyLine, `Current strength to celebrate: ${numeracyStrengthText}.`, homeRoutine, close].join('\n\n');
+    }
+    if (intent === 'confidence') {
+      return [intro, strengthLine, homeRoutine, confidenceLine, close].join('\n\n');
+    }
+    return [intro, literacyLine, numeracyLine, strengthLine, homeRoutine, close].join('\n\n');
+  }
+
+  function setParentMessageStatus(message, isError = false) {
+    if (!parentMessageStatusEl) return;
+    parentMessageStatusEl.textContent = message || '';
+    parentMessageStatusEl.classList.toggle('error', !!isError);
+    parentMessageStatusEl.classList.toggle('success', !isError && !!message);
+  }
+
+  function renderParentMessagePanel(context = {}) {
+    if (!parentMessageOutputEl) return;
+    const learner = context.learner || null;
+    const messages = getParentMessagesForLearner(learner);
+    const currentDraft = String(parentMessageInputEl?.value || '').trim();
+    const latestSaved = messages[0] || null;
+    const draft = currentDraft || latestSaved?.text || generateParentMessage(context);
+
+    if (parentMessageInputEl && !currentDraft) {
+      parentMessageInputEl.value = draft;
+    }
+
+    latestParentMessageText = draft;
+
+    const recentItems = messages.slice(0, 5).map((item) => `
+      <li>
+        <strong>${escapeHtml(parentIntentLabel(item.intent))}</strong> · ${escapeHtml(parentReadingLevelLabel(item.readingLevel || 'standard'))} · ${escapeHtml(new Date(Number(item.createdAt || Date.now())).toLocaleString())}
+        <button class="secondary-btn report-parent-load-btn" type="button" data-parent-load="${escapeHtml(item.id)}">Load</button>
+      </li>
+    `).join('');
+
+    parentMessageOutputEl.innerHTML = `
+      <div class="report-builder-summary">
+        <div><strong>Current parent-ready message (${escapeHtml(parentIntentLabel(parentIntentEl?.value || 'balanced'))} · ${escapeHtml(parentReadingLevelLabel(parentReadingLevelEl?.value || 'standard'))}):</strong></div>
+        <div>${escapeHtml(draft).replace(/\n/g, '<br />')}</div>
+      </div>
+      <div class="report-bench-note"><strong>Tip:</strong> Pair this text with a short recording clip in the Parent Partnership section.</div>
+      <div class="report-builder-summary">
+        <div><strong>Saved messages for this learner:</strong></div>
+        <ul class="report-import-skip-summary">${recentItems || '<li>No saved parent messages yet.</li>'}</ul>
+      </div>
+    `;
+  }
+
+  function loadSavedParentMessageById(messageId, learner) {
+    if (!messageId) return;
+    const message = getParentMessagesForLearner(learner).find((row) => row.id === messageId);
+    if (!message) return;
+    if (parentMessageInputEl) parentMessageInputEl.value = message.text || '';
+    if (parentIntentEl) parentIntentEl.value = message.intent || 'balanced';
+    if (parentReadingLevelEl) parentReadingLevelEl.value = message.readingLevel || 'standard';
+    latestParentMessageText = message.text || '';
+    if (latestParentContext) renderParentMessagePanel(latestParentContext);
+    setParentMessageStatus('Loaded saved parent message.');
+  }
+
+  function generateParentMessageDraft() {
+    if (!latestParentContext) {
+      setParentMessageStatus('Refresh the report first to generate a parent message.', true);
+      return;
+    }
+    const draft = generateParentMessage(latestParentContext);
+    if (parentMessageInputEl) parentMessageInputEl.value = draft;
+    latestParentMessageText = draft;
+    renderParentMessagePanel(latestParentContext);
+    setParentMessageStatus('Generated parent message draft.');
+  }
+
+  function saveParentMessageDraft() {
+    if (!latestParentContext) {
+      setParentMessageStatus('Refresh the report first, then save a parent message.', true);
+      return;
+    }
+    const text = String(parentMessageInputEl?.value || '').trim();
+    if (!text) {
+      setParentMessageStatus('Write or generate a message before saving.', true);
+      return;
+    }
+    const saved = saveParentMessageForLearner(latestParentContext.learner, {
+      intent: String(parentIntentEl?.value || 'balanced'),
+      readingLevel: String(parentReadingLevelEl?.value || 'standard'),
+      text
+    });
+    latestParentMessageText = saved.text || text;
+    renderParentMessagePanel(latestParentContext);
+    setParentMessageStatus('Parent message saved.');
+  }
+
+  async function copyParentMessageDraft() {
+    const text = String(parentMessageInputEl?.value || latestParentMessageText || '').trim();
+    if (!text) {
+      setParentMessageStatus('Generate or write a parent message first.', true);
+      return;
+    }
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(text);
+      } else {
+        throw new Error('clipboard-unavailable');
+      }
+      setParentMessageStatus('Parent message copied.');
+    } catch {
+      setParentMessageStatus('Clipboard unavailable. Copy directly from the message card.', true);
+    }
+  }
+
   function recommendRolePathwayId(pulse) {
     const topDomain = pulse?.gaps?.[0]?.domain || '';
     if (topDomain === 'fluency') return 'slp';
     if (topDomain === 'executive-function') return 'sel-counselor';
     if (topDomain === 'comprehension' || topDomain === 'written-language') return 'eal';
     return 'learning-support';
+  }
+
+  function normalizeRoleFromQuery(rawRole) {
+    const raw = String(rawRole || '').trim().toLowerCase();
+    if (!raw) return '';
+    const aliasMap = {
+      sped: 'learning-support',
+      'learning-support': 'learning-support',
+      'learning_support': 'learning-support',
+      ls: 'learning-support',
+      eal: 'eal',
+      ell: 'eal',
+      esl: 'eal',
+      slp: 'slp',
+      speech: 'slp',
+      counselor: 'sel-counselor',
+      counselling: 'sel-counselor',
+      'sel-counselor': 'sel-counselor',
+      leadership: 'leadership',
+      admin: 'leadership',
+      parent: 'parent',
+      caregiver: 'parent',
+      family: 'parent'
+    };
+    return aliasMap[raw] || '';
+  }
+
+  function applyInitialRoleFromQuery() {
+    if (!roleSelectEl) return;
+    const params = new URLSearchParams(window.location.search || '');
+    const roleFromQuery = normalizeRoleFromQuery(params.get('role'));
+    if (!roleFromQuery || !ROLE_PATHWAY_LIBRARY[roleFromQuery]) return;
+    roleSelectEl.value = roleFromQuery;
+    roleSelectEl.dataset.manualRole = 'true';
+    if (protocolRoleEl) {
+      const hasProtocolRole = Array.from(protocolRoleEl.options || []).some((option) => option.value === roleFromQuery);
+      if (hasProtocolRole) protocolRoleEl.value = roleFromQuery;
+    }
   }
 
   function getRoleStepHref(step, context = {}) {
@@ -5020,6 +5365,10 @@
     const wordQuestLength = placementRec?.length || defaultWordQuest.len;
     const urgentDomain = pulse?.traffic?.red?.[0] || 'No urgent domain currently flagged.';
     const topPriority = pulse?.topPriority || 'Run at least 3 scored sessions to produce stronger role-specific recommendations.';
+    const latestParentMessage = getLatestParentMessage(learner);
+    const parentMessagePreview = latestParentMessage?.text
+      ? latestParentMessage.text.slice(0, 220)
+      : '';
 
     const baseContext = {
       wordQuestFocus,
@@ -5055,6 +5404,11 @@
       `Goal: ${pathway.goal}`,
       `Top priority: ${topPriority}`,
       `Urgent lane: ${urgentDomain}`,
+      ...(roleId === 'parent'
+        ? [
+          `Latest parent message: ${parentMessagePreview || 'No saved parent message yet. Open Parent Partnership Pathway to draft one.'}`
+        ]
+        : []),
       '',
       ...stepLines
     ].join('\n');
@@ -5065,6 +5419,9 @@
         <div>${escapeHtml(pathway.goal)}</div>
         <div><strong>Current top priority:</strong> ${escapeHtml(topPriority)}</div>
         <div><strong>Urgent lane from R/Y/G:</strong> ${escapeHtml(urgentDomain)}</div>
+        ${roleId === 'parent'
+          ? `<div><strong>Latest parent message:</strong> ${escapeHtml(parentMessagePreview || 'No saved parent message yet. Use Parent Partnership Pathway to create one.')}</div>`
+          : ''}
       </div>
       <div class="report-role-steps">${stepCards}</div>
       <div class="report-role-note">Suggested routine: keep this loop to 20 minutes daily and refresh the report weekly.</div>
@@ -5418,6 +5775,13 @@
       roleSelectEl.value = recommendRolePathwayId(pulse);
     }
     renderRolePathway(latestRoleContext);
+
+    latestParentContext = {
+      learner,
+      pulse,
+      numeracyPulse
+    };
+    renderParentMessagePanel(latestParentContext);
     renderReportMediaViewsFromCache();
   }
 
@@ -5564,6 +5928,29 @@
   roleCopyBtn?.addEventListener('click', () => {
     copyRolePathway();
   });
+  parentGenerateBtn?.addEventListener('click', () => {
+    generateParentMessageDraft();
+  });
+  parentSaveBtn?.addEventListener('click', () => {
+    saveParentMessageDraft();
+  });
+  parentCopyBtn?.addEventListener('click', () => {
+    copyParentMessageDraft();
+  });
+  parentIntentEl?.addEventListener('change', () => {
+    if (latestParentContext) {
+      generateParentMessageDraft();
+    }
+  });
+  parentReadingLevelEl?.addEventListener('change', () => {
+    if (latestParentContext) {
+      generateParentMessageDraft();
+    }
+  });
+  parentMessageInputEl?.addEventListener('input', () => {
+    latestParentMessageText = String(parentMessageInputEl.value || '').trim();
+    if (latestParentContext) renderParentMessagePanel(latestParentContext);
+  });
   reportMediaOpenBtn?.addEventListener('click', () => {
     openReportMediaModal(reportMediaFilterSectionEl?.value && reportMediaFilterSectionEl.value !== 'all'
       ? reportMediaFilterSectionEl.value
@@ -5590,9 +5977,17 @@
   });
   reportMediaSourceEl?.addEventListener('change', () => {
     setReportMediaStatus(`Capture mode: ${reportMediaSourceEl.value === 'screen' ? 'Screen/whiteboard share' : reportMediaSourceEl.value}.`, false, true);
+    updateReportMediaPrompt();
   });
   reportMediaSectionEl?.addEventListener('change', () => {
     setReportMediaStatus(`Target section: ${reportMediaSectionLabel(reportMediaSectionEl.value)}.`, false, true);
+    updateReportMediaPrompt();
+  });
+  reportMediaOwnerEl?.addEventListener('change', () => {
+    updateReportMediaPrompt();
+  });
+  reportMediaCategoryEl?.addEventListener('change', () => {
+    updateReportMediaPrompt();
   });
   reportMediaSearchEl?.addEventListener('input', () => {
     renderReportMediaViewsFromCache();
@@ -5619,6 +6014,12 @@
     const deleteBtn = target.closest('.report-media-delete-btn');
     if (deleteBtn instanceof HTMLElement && deleteBtn.dataset.mediaDelete) {
       deleteReportMediaClipFromUi(deleteBtn.dataset.mediaDelete);
+      return;
+    }
+
+    const parentLoadBtn = target.closest('.report-parent-load-btn');
+    if (parentLoadBtn instanceof HTMLElement && parentLoadBtn.dataset.parentLoad) {
+      loadSavedParentMessageById(parentLoadBtn.dataset.parentLoad, latestParentContext?.learner || null);
     }
   });
   document.addEventListener('keydown', (event) => {
@@ -5631,6 +6032,8 @@
   builderDurationEl?.addEventListener('change', () => renderBuilderPlan());
 
   renderReportMediaSelects();
+  applyInitialRoleFromQuery();
+  updateReportMediaPrompt();
   syncReportMediaRecorderButtons();
   renderReportMediaViewsFromCache();
   refreshReportMediaViews();

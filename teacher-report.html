@@ -306,6 +306,7 @@
               <option value="slp">Speech-Language (SLP)</option>
               <option value="sel-counselor">SEL / School Counselor</option>
               <option value="leadership">Leadership / Admin</option>
+              <option value="parent">Parent / Caregiver</option>
             </select>
           </label>
           <label class="report-builder-label">
@@ -343,12 +344,54 @@
               <option value="slp">Speech-Language (SLP)</option>
               <option value="sel-counselor">SEL / School Counselor</option>
               <option value="leadership">Leadership / Admin</option>
+              <option value="parent">Parent / Caregiver</option>
             </select>
           </label>
         </div>
         <div id="report-role-pathway" class="report-role-pathway"></div>
         <div class="report-media-slot" data-media-slot="role-pathway"></div>
         <div id="report-role-status" class="muted"></div>
+      </section>
+
+      <section id="report-parent-communication" class="report-card" aria-label="Parent partnership pathway">
+        <div class="report-card-header">
+          <div>
+            <h2>Parent Partnership Pathway</h2>
+            <p class="home-subtitle">Create a family-friendly message that explains structured literacy + conceptual math with one concrete at-home routine.</p>
+          </div>
+          <div class="report-actions">
+            <button class="secondary-btn report-media-open-section-btn" type="button" data-target-section="parent-pathway">Add Recording</button>
+            <button id="report-parent-copy" class="secondary-btn" type="button">Copy Parent Message</button>
+          </div>
+        </div>
+        <div class="report-protocol-controls">
+          <label class="report-builder-label">
+            Message focus
+            <select id="report-parent-intent" aria-label="Parent message focus">
+              <option value="balanced">Balanced literacy + numeracy</option>
+              <option value="literacy">Structured literacy focus</option>
+              <option value="numeracy">Conceptual math focus</option>
+              <option value="confidence">Confidence and routine focus</option>
+            </select>
+          </label>
+          <label class="report-builder-label">
+            Language level
+            <select id="report-parent-reading-level" aria-label="Parent message language level">
+              <option value="plain">Plain language (K-2/EAL family-friendly)</option>
+              <option value="standard">Standard parent update</option>
+              <option value="detailed">Detailed data-rich update</option>
+            </select>
+          </label>
+          <label class="report-builder-label">
+            Parent message draft
+            <textarea id="report-parent-message-input" rows="5" placeholder="Add a custom note for families..."></textarea>
+          </label>
+          <button id="report-parent-generate" class="primary-btn" type="button">Generate Draft</button>
+          <button id="report-parent-save" class="secondary-btn" type="button">Save Message</button>
+        </div>
+        <div id="report-parent-message-output" class="report-protocol-output"></div>
+        <div class="report-media-slot" data-media-slot="parent-pathway"></div>
+        <div id="report-parent-message-status" class="muted"></div>
       </section>
 
       <section class="report-card" aria-label="One-tap lesson builder">
@@ -444,6 +487,7 @@
         <button id="report-media-close-btn" class="close-btn" type="button" aria-label="Close recording studio">×</button>
         <h2>Section Recording Studio</h2>
         <p class="home-subtitle">Record teacher mini-lessons, student reflections, or whiteboard walkthroughs and attach to any report section.</p>
+        <div id="report-media-prompt" class="report-pulse-note"></div>
         <div class="report-protocol-controls">
           <label class="report-builder-label">
             Role
