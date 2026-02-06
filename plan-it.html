@@ -45,6 +45,37 @@
           <div id="planit-scenario-tip" class="planit-card-tip"></div>
         </div>
 
+        <div class="planit-quick-builder" aria-label="One-click lesson builder">
+          <div class="planit-quick-title">One-Click 10/20/30 Lesson Builder</div>
+          <div class="planit-quick-subtitle">Choose target skill + grade band, then generate a fast I do · We do · You do sequence.</div>
+          <div class="planit-quick-controls">
+            <label class="planit-quick-field">
+              Grade band
+              <select id="planit-quick-grade" aria-label="Quick lesson grade band">
+                <option value="K-2">K-2</option>
+                <option value="3-5">3-5</option>
+                <option value="6-8">6-8</option>
+                <option value="9-12">9-12</option>
+              </select>
+            </label>
+            <label class="planit-quick-field">
+              Target skill
+              <select id="planit-quick-focus" aria-label="Quick lesson target skill"></select>
+            </label>
+            <label class="planit-quick-field">
+              Minutes
+              <select id="planit-quick-minutes" aria-label="Quick lesson duration">
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="30">30</option>
+              </select>
+            </label>
+            <button id="planit-quick-generate" type="button" class="primary-btn">Build Lesson</button>
+          </div>
+          <div id="planit-quick-output" class="planit-quick-output"></div>
+          <div id="planit-quick-status" class="muted"></div>
+        </div>
+
         <div id="planit-lesson" class="planit-lesson hidden" aria-label="Mini lesson"></div>
 
         <div id="planit-task-list" class="planit-task-list" aria-label="Tasks"></div>

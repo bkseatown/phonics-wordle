@@ -86,6 +86,12 @@ const scenarioSelect = document.getElementById('planit-scenario');
 const scenarioTitle = document.getElementById('planit-scenario-title');
 const scenarioText = document.getElementById('planit-scenario-text');
 const scenarioTip = document.getElementById('planit-scenario-tip');
+const quickGradeEl = document.getElementById('planit-quick-grade');
+const quickFocusEl = document.getElementById('planit-quick-focus');
+const quickMinutesEl = document.getElementById('planit-quick-minutes');
+const quickGenerateBtn = document.getElementById('planit-quick-generate');
+const quickOutputEl = document.getElementById('planit-quick-output');
+const quickStatusEl = document.getElementById('planit-quick-status');
 const taskList = document.getElementById('planit-task-list');
 const resetBtn = document.getElementById('planit-reset');
 const checkBtn = document.getElementById('planit-check');
@@ -102,6 +108,94 @@ const reflectionSavedEl = document.getElementById('planit-reflection-saved');
 
 const videoInput = document.getElementById('planit-video-url');
 const videoOpenBtn = document.getElementById('planit-video-open');
+
+const QUICK_ACTIVITY_META = {
+  'word-quest': { label: 'Word Quest', href: 'word-quest.html' },
+  cloze: { label: 'Story Fill', href: 'cloze.html' },
+  comprehension: { label: 'Read & Think', href: 'comprehension.html' },
+  fluency: { label: 'Speed Sprint', href: 'fluency.html' },
+  madlibs: { label: 'Silly Stories', href: 'madlibs.html' },
+  writing: { label: 'Write & Build', href: 'writing.html' },
+  'plan-it': { label: 'Plan-It', href: 'plan-it.html' }
+};
+
+const QUICK_FOCUS_LIBRARY = {
+  'phonics-decoding': {
+    label: 'Phonics & Decoding',
+    summary: 'Build accurate word reading with explicit sound-symbol routines.',
+    steps: [
+      { phase: 'I do', activity: 'word-quest', move: 'Model target sound patterns and corrective feedback.' },
+      { phase: 'We do', activity: 'cloze', move: 'Apply patterns in short sentence context together.' },
+      { phase: 'You do with support', activity: 'fluency', move: 'Transfer to connected text with teacher prompts.' }
+    ],
+    wordQuestFocusByBand: {
+      'K-2': { focus: 'cvc', len: '3' },
+      '3-5': { focus: 'ccvc', len: '4' },
+      '6-8': { focus: 'multisyllable', len: 'any' },
+      '9-12': { focus: 'multisyllable', len: 'any' }
+    }
+  },
+  'fluency-prosody': {
+    label: 'Fluency & Prosody',
+    summary: 'Increase accuracy, pacing, and expression while preserving comprehension.',
+    steps: [
+      { phase: 'I do', activity: 'fluency', move: 'Demonstrate phrasing and punctuation-aware reading.' },
+      { phase: 'We do', activity: 'comprehension', move: 'Read and discuss evidence from the same text.' },
+      { phase: 'You do with support', activity: 'writing', move: 'Write a short text response with sentence frames.' }
+    ],
+    wordQuestFocusByBand: {
+      'K-2': { focus: 'digraph', len: '3' },
+      '3-5': { focus: 'r_controlled', len: '5' },
+      '6-8': { focus: 'vowel_team', len: '5' },
+      '9-12': { focus: 'multisyllable', len: 'any' }
+    }
+  },
+  'comprehension-evidence': {
+    label: 'Comprehension & Evidence',
+    summary: 'Strengthen text-based responses with evidence and reasoning.',
+    steps: [
+      { phase: 'I do', activity: 'comprehension', move: 'Model question unpacking and evidence hunting.' },
+      { phase: 'We do', activity: 'cloze', move: 'Justify each answer with context clues.' },
+      { phase: 'You do with support', activity: 'writing', move: 'Write a short evidence statement with feedback.' }
+    ],
+    wordQuestFocusByBand: {
+      'K-2': { focus: 'cvc', len: '3' },
+      '3-5': { focus: 'cvce', len: '4' },
+      '6-8': { focus: 'vowel_team', len: '5' },
+      '9-12': { focus: 'multisyllable', len: 'any' }
+    }
+  },
+  'writing-language': {
+    label: 'Writing & Language',
+    summary: 'Improve sentence quality, structure, and vocabulary choices.',
+    steps: [
+      { phase: 'I do', activity: 'writing', move: 'Model one clear topic sentence and one detail sentence.' },
+      { phase: 'We do', activity: 'madlibs', move: 'Co-build grammar and vocabulary decisions.' },
+      { phase: 'You do with support', activity: 'comprehension', move: 'Respond to prompts using sentence stems.' }
+    ],
+    wordQuestFocusByBand: {
+      'K-2': { focus: 'digraph', len: '3' },
+      '3-5': { focus: 'vowel_team', len: '5' },
+      '6-8': { focus: 'multisyllable', len: 'any' },
+      '9-12': { focus: 'multisyllable', len: 'any' }
+    }
+  },
+  'sel-executive': {
+    label: 'SEL & Executive Function',
+    summary: 'Develop planning, pacing, and self-regulation routines.',
+    steps: [
+      { phase: 'I do', activity: 'plan-it', move: 'Model task sequencing and timing decisions.' },
+      { phase: 'We do', activity: 'writing', move: 'Co-write one realistic daily plan.' },
+      { phase: 'You do with support', activity: 'comprehension', move: 'Reflect with evidence-based check-ins.' }
+    ],
+    wordQuestFocusByBand: {
+      'K-2': { focus: 'cvc', len: '3' },
+      '3-5': { focus: 'ccvc', len: '4' },
+      '6-8': { focus: 'multisyllable', len: 'any' },
+      '9-12': { focus: 'multisyllable', len: 'any' }
+    }
+  }
+};
 
 const STORAGE_KEY = 'planit_progress_v2';
 const VIDEO_KEY = 'planit_video_links_v1';
@@ -124,6 +218,37 @@ function safeParse(json) {
   } catch {
     return null;
   }
+}
+
+function normalizeGradeBand(value) {
+  const band = String(value || '').trim();
+  if (band === 'K-2' || band === '3-5' || band === '6-8' || band === '9-12') return band;
+  return '3-5';
+}
+
+function getMinuteSplit(totalMinutes) {
+  const n = Number(totalMinutes || 20);
+  if (n <= 10) return [3, 4, 3];
+  if (n <= 20) return [5, 8, 7];
+  return [8, 12, 10];
+}
+
+function getQuickActivityHref(activityId, context = {}) {
+  const meta = QUICK_ACTIVITY_META[activityId];
+  if (!meta) return '#';
+  const url = new URL(meta.href, window.location.href);
+  if (activityId === 'word-quest' && context.wordQuestFocus) {
+    url.searchParams.set('focus', context.wordQuestFocus);
+    if (context.wordQuestLength) {
+      url.searchParams.set('len', context.wordQuestLength);
+    }
+  }
+  if (activityId === 'plan-it') {
+    if (context.builderFocus) url.searchParams.set('builderFocus', context.builderFocus);
+    if (context.builderGrade) url.searchParams.set('builderGrade', context.builderGrade);
+    if (context.builderMinutes) url.searchParams.set('builderMinutes', String(context.builderMinutes));
+  }
+  return url.toString();
 }
 
 function toMinutes(timeStr) {
@@ -617,6 +742,104 @@ function syncTeacherVideoControls() {
   videoOpenBtn.disabled = !url;
 }
 
+function renderQuickFocusOptions() {
+  if (!quickFocusEl) return;
+  quickFocusEl.innerHTML = Object.entries(QUICK_FOCUS_LIBRARY)
+    .map(([id, profile]) => `<option value="${id}">${profile.label}</option>`)
+    .join('');
+}
+
+function applyQuickBuilderQueryDefaults() {
+  const params = new URLSearchParams(window.location.search || '');
+  const queryFocus = String(params.get('builderFocus') || '').trim();
+  const queryGradeRaw = String(params.get('builderGrade') || '').trim();
+  const queryGrade = normalizeGradeBand(queryGradeRaw);
+  const queryMinutes = String(params.get('builderMinutes') || '').trim();
+
+  if (quickGradeEl) {
+    const profileBand = normalizeGradeBand(getDefaultGradeBand());
+    quickGradeEl.value = profileBand;
+    if (queryGradeRaw) quickGradeEl.value = queryGrade;
+  }
+
+  if (quickFocusEl && queryFocus && QUICK_FOCUS_LIBRARY[queryFocus]) {
+    quickFocusEl.value = queryFocus;
+  }
+
+  if (quickMinutesEl && ['10', '20', '30'].includes(queryMinutes)) {
+    quickMinutesEl.value = queryMinutes;
+  }
+}
+
+function renderQuickLessonBuilder() {
+  if (!quickOutputEl || !quickFocusEl || !quickGradeEl || !quickMinutesEl) return;
+
+  const focusId = String(quickFocusEl.value || 'comprehension-evidence');
+  const gradeBand = normalizeGradeBand(quickGradeEl.value || getDefaultGradeBand());
+  const minutes = Number(quickMinutesEl.value || 20);
+  const profile = QUICK_FOCUS_LIBRARY[focusId] || QUICK_FOCUS_LIBRARY['comprehension-evidence'];
+  const split = getMinuteSplit(minutes);
+  const wordQuestDefaults = profile.wordQuestFocusByBand?.[gradeBand] || { focus: 'all', len: 'any' };
+
+  const stepCards = profile.steps.map((step, index) => {
+    const activityMeta = QUICK_ACTIVITY_META[step.activity] || { label: step.activity };
+    const href = getQuickActivityHref(step.activity, {
+      wordQuestFocus: wordQuestDefaults.focus,
+      wordQuestLength: wordQuestDefaults.len,
+      builderFocus: focusId,
+      builderGrade: gradeBand,
+      builderMinutes: minutes
+    });
+    return `
+      <article class="planit-quick-step">
+        <div class="planit-quick-phase">${index + 1}. ${step.phase} · ${split[index] || split[split.length - 1]} min</div>
+        <div class="planit-quick-activity">${activityMeta.label}</div>
+        <div class="planit-quick-move">${step.move}</div>
+        <a class="secondary-btn planit-quick-link" href="${href}">Open ${activityMeta.label}</a>
+      </article>
+    `;
+  }).join('');
+
+  const redActivity = QUICK_ACTIVITY_META[profile.steps[0]?.activity]?.label || 'Target activity';
+  const yellowActivity = QUICK_ACTIVITY_META[profile.steps[1]?.activity]?.label || 'Guided activity';
+  const greenActivity = QUICK_ACTIVITY_META[profile.steps[2]?.activity]?.label || 'Independent activity';
+
+  quickOutputEl.innerHTML = `
+    <div class="planit-quick-summary">
+      <strong>${profile.label}</strong> · ${minutes} minutes · ${gradeBand}
+      <div>${profile.summary}</div>
+    </div>
+    <div class="planit-quick-steps">${stepCards}</div>
+    <div class="planit-quick-rag">
+      <section class="planit-rag-lane planit-rag-red">
+        <div class="planit-rag-title">Red (Immediate support)</div>
+        <ul>
+          <li>Start with explicit modeling and tight teacher prompts.</li>
+          <li>Primary lane: ${redActivity}.</li>
+        </ul>
+      </section>
+      <section class="planit-rag-lane planit-rag-yellow">
+        <div class="planit-rag-title">Yellow (Guided practice)</div>
+        <ul>
+          <li>Move to coached reps with fast feedback loops.</li>
+          <li>Primary lane: ${yellowActivity}.</li>
+        </ul>
+      </section>
+      <section class="planit-rag-lane planit-rag-green">
+        <div class="planit-rag-title">Green (Maintain + extend)</div>
+        <ul>
+          <li>Assign independent reps and extension challenges.</li>
+          <li>Primary lane: ${greenActivity}.</li>
+        </ul>
+      </section>
+    </div>
+  `;
+
+  if (quickStatusEl) {
+    quickStatusEl.textContent = `Built ${minutes}-minute lesson for ${gradeBand}.`;
+  }
+}
+
 function loadReflectionMap() {
   const parsed = safeParse(localStorage.getItem(REFLECTION_KEY) || '');
   return parsed && typeof parsed === 'object' ? parsed : {};
@@ -665,6 +888,9 @@ function init() {
 
   buildScenarioList();
   renderScenario();
+  renderQuickFocusOptions();
+  applyQuickBuilderQueryDefaults();
+  renderQuickLessonBuilder();
   renderLesson();
   renderTasks();
   renderTimeline();
@@ -691,6 +917,10 @@ function init() {
   resetBtn.addEventListener('click', resetAll);
   checkBtn.addEventListener('click', checkPlan);
   autoBtn?.addEventListener('click', autoPlan);
+  quickGenerateBtn?.addEventListener('click', renderQuickLessonBuilder);
+  quickGradeEl?.addEventListener('change', renderQuickLessonBuilder);
+  quickFocusEl?.addEventListener('change', renderQuickLessonBuilder);
+  quickMinutesEl?.addEventListener('change', renderQuickLessonBuilder);
 
   reflectionSaveBtn?.addEventListener('click', () => {
     const text = (reflectionInput?.value || '').toString();
@@ -712,4 +942,3 @@ function init() {
 }
 
 init();
-

@@ -667,6 +667,78 @@ body.report-page {
     line-height: 1.35;
 }
 
+.report-pulse-link {
+    color: #1d4ed8;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.report-pulse-link:hover,
+.report-pulse-link:focus-visible {
+    text-decoration: underline;
+}
+
+.report-pulse-subnote {
+    margin-top: 2px;
+    color: #475569;
+    font-size: 0.82rem;
+    line-height: 1.3;
+    font-weight: 600;
+}
+
+.report-rag-grid {
+    display: grid;
+    gap: 8px;
+}
+
+.report-rag-lane {
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(255, 255, 255, 0.85);
+    padding: 8px 10px;
+}
+
+.report-rag-lane ul {
+    margin: 6px 0 0;
+    padding-left: 16px;
+    display: grid;
+    gap: 4px;
+}
+
+.report-rag-title {
+    font-size: 0.8rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.report-rag-red {
+    border-color: rgba(239, 68, 68, 0.4);
+    background: rgba(254, 242, 242, 0.9);
+}
+
+.report-rag-red .report-rag-title {
+    color: #b91c1c;
+}
+
+.report-rag-yellow {
+    border-color: rgba(245, 158, 11, 0.45);
+    background: rgba(255, 251, 235, 0.9);
+}
+
+.report-rag-yellow .report-rag-title {
+    color: #92400e;
+}
+
+.report-rag-green {
+    border-color: rgba(34, 197, 94, 0.45);
+    background: rgba(240, 253, 244, 0.9);
+}
+
+.report-rag-green .report-rag-title {
+    color: #166534;
+}
+
 .report-builder-controls {
     margin-top: 10px;
     display: grid;
@@ -756,6 +828,18 @@ body.report-page {
     font-size: 0.86rem;
     color: #334155;
     font-weight: 650;
+}
+
+.report-share-summary {
+    margin-top: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.84);
+    padding: 12px;
+    color: #1f2937;
+    font-weight: 650;
+    line-height: 1.45;
+    white-space: pre-wrap;
 }
 
 .report-heatmap-wrap {
@@ -856,7 +940,8 @@ body.report-page {
     }
 
     body.report-page .report-builder-controls .primary-btn,
-    body.report-page .report-builder-controls .secondary-btn {
+    body.report-page .report-builder-controls .secondary-btn,
+    body.report-page #report-share-copy {
         display: none !important;
     }
 }
@@ -871,90 +956,6 @@ body.report-page {
     }
 }
 
-
-body.force-light {
-    --color-text: #0f172a;
-    --color-neutral: #d7e0ee;
-    background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%) !important;
-    color: #0f172a !important;
-}
-
-body.force-light header,
-body.force-light h1,
-body.force-light h2,
-body.force-light h3 {
-    color: #0f172a !important;
-}
-
-body.force-light .controls label,
-body.force-light .controls select,
-body.force-light .controls option {
-    color: #1f2937 !important;
-}
-
-body.force-light .cloze-subtitle,
-body.force-light .comp-subtitle,
-body.force-light .fluency-subtitle,
-body.force-light .madlibs-subtitle,
-body.force-light .writing-subtitle,
-body.force-light .planit-subtitle,
-body.force-light .sound-guide-subtitle,
-body.force-light .howto-subtitle {
-    color: #1f2937 !important;
-}
-
-body.force-light .controls select,
-body.force-light #pattern-select,
-body.force-light #length-select {
-    background: #ffffff !important;
-    border-color: #cbd5e1 !important;
-}
-
-body.force-light .tile {
-    background: linear-gradient(180deg, #ffffff 0%, #f1f5ff 100%) !important;
-    border-color: rgba(100, 116, 139, 0.55) !important;
-    color: #0f172a !important;
-    box-shadow:
-        0 12px 26px rgba(15, 23, 42, 0.12),
-        inset 0 1px 0 rgba(255, 255, 255, 0.85),
-        inset 0 -2px 0 rgba(15, 23, 42, 0.06) !important;
-}
-
-body.force-light .key {
-    background: linear-gradient(180deg, #ffffff 0%, #eef2ff 100%) !important;
-    border-color: rgba(100, 116, 139, 0.45) !important;
-    color: #0f172a !important;
-    box-shadow: 0 4px 0 rgba(148, 163, 184, 0.55), 0 10px 18px rgba(15, 23, 42, 0.12) !important;
-    text-shadow: none !important;
-}
-
-body.force-light .modal,
-body.force-light #teacher-modal,
-body.force-light .classroom-dock {
-    background: #ffffff !important;
-    color: #0f172a !important;
-    border-color: #e2e8f0 !important;
-}
-
-body.force-light .fun-hud {
-    background: #ffffff !important;
-    border-color: #cbd5e1 !important;
-    color: #0f172a !important;
-}
-
-body.force-light .sound-guide-board,
-body.force-light .sound-guide-card,
-body.force-light #phoneme-modal,
-body.force-light .selected-sound {
-    background: #ffffff !important;
-    border-color: #e2e8f0 !important;
-    color: #0f172a !important;
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08) !important;
-}
-
-body.force-light #modal-overlay {
-    background: rgba(15, 23, 42, 0.25) !important;
-}
 
 .warmup-panel {
     display: none !important;
@@ -7785,6 +7786,162 @@ body.planit-page {
     line-height: 1.35;
 }
 
+.planit-quick-builder {
+    border-radius: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(255, 255, 255, 0.92);
+    padding: 12px 14px;
+    display: grid;
+    gap: 10px;
+}
+
+.planit-quick-title {
+    font-weight: 900;
+    color: #0f172a;
+}
+
+.planit-quick-subtitle {
+    color: #475569;
+    font-weight: 650;
+    line-height: 1.35;
+}
+
+.planit-quick-controls {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    align-items: end;
+}
+
+.planit-quick-field {
+    display: grid;
+    gap: 6px;
+    font-size: 0.82rem;
+    font-weight: 850;
+    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.planit-quick-field select {
+    padding: 8px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.55);
+    background: #ffffff;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.planit-quick-output {
+    display: grid;
+    gap: 10px;
+}
+
+.planit-quick-summary {
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    background: rgba(248, 250, 252, 0.9);
+    padding: 9px 10px;
+    color: #1f2937;
+    font-weight: 650;
+    line-height: 1.35;
+    display: grid;
+    gap: 4px;
+}
+
+.planit-quick-steps {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.planit-quick-step {
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.34);
+    background: rgba(255, 255, 255, 0.92);
+    padding: 9px 10px;
+    display: grid;
+    gap: 6px;
+}
+
+.planit-quick-phase {
+    font-size: 0.78rem;
+    font-weight: 850;
+    color: #0f172a;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.planit-quick-activity {
+    font-weight: 900;
+    color: #0f172a;
+}
+
+.planit-quick-move {
+    color: #334155;
+    font-size: 0.85rem;
+    line-height: 1.35;
+    font-weight: 650;
+}
+
+.planit-quick-link {
+    justify-self: start;
+}
+
+.planit-quick-rag {
+    display: grid;
+    gap: 8px;
+}
+
+.planit-rag-lane {
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(255, 255, 255, 0.9);
+    padding: 8px 10px;
+}
+
+.planit-rag-lane ul {
+    margin: 6px 0 0;
+    padding-left: 16px;
+    display: grid;
+    gap: 4px;
+}
+
+.planit-rag-title {
+    font-size: 0.8rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.planit-rag-red {
+    border-color: rgba(239, 68, 68, 0.4);
+    background: rgba(254, 242, 242, 0.9);
+}
+
+.planit-rag-red .planit-rag-title {
+    color: #b91c1c;
+}
+
+.planit-rag-yellow {
+    border-color: rgba(245, 158, 11, 0.45);
+    background: rgba(255, 251, 235, 0.9);
+}
+
+.planit-rag-yellow .planit-rag-title {
+    color: #92400e;
+}
+
+.planit-rag-green {
+    border-color: rgba(34, 197, 94, 0.45);
+    background: rgba(240, 253, 244, 0.9);
+}
+
+.planit-rag-green .planit-rag-title {
+    color: #166534;
+}
+
 .planit-task-list {
     display: grid;
     gap: 10px;
@@ -8870,6 +9027,23 @@ body.force-light h1,
 body.force-light h2,
 body.force-light h3 {
     color: #0f172a !important;
+}
+
+body.force-light .controls label,
+body.force-light .controls select,
+body.force-light .controls option {
+    color: #1f2937 !important;
+}
+
+body.force-light .cloze-subtitle,
+body.force-light .comp-subtitle,
+body.force-light .fluency-subtitle,
+body.force-light .madlibs-subtitle,
+body.force-light .writing-subtitle,
+body.force-light .planit-subtitle,
+body.force-light .sound-guide-subtitle,
+body.force-light .howto-subtitle {
+    color: #1f2937 !important;
 }
 
 body.force-light #modal-overlay {

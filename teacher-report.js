@@ -249,6 +249,33 @@
     }
   };
 
+  const DOMAIN_ACTIVITY_PLAYBOOK = {
+    decoding: [
+      { activity: 'word-quest', move: 'Target pattern drills with immediate corrective feedback.' },
+      { activity: 'cloze', move: 'Apply decoding patterns inside sentence context.' }
+    ],
+    fluency: [
+      { activity: 'fluency', move: 'Use repeated readings with explicit pace and phrasing cues.' },
+      { activity: 'comprehension', move: 'Read then answer with evidence to connect rate and meaning.' }
+    ],
+    comprehension: [
+      { activity: 'comprehension', move: 'Practice text-dependent questions and evidence sentences.' },
+      { activity: 'cloze', move: 'Use context clues and justify every blank choice.' }
+    ],
+    'written-language': [
+      { activity: 'writing', move: 'Build sentence-to-paragraph structure with guided frames.' },
+      { activity: 'madlibs', move: 'Rehearse grammar and vocabulary choices in short cycles.' }
+    ],
+    'executive-function': [
+      { activity: 'plan-it', move: 'Model scheduling, timing, and reflection routines.' },
+      { activity: 'writing', move: 'Convert plans into short actionable writing goals.' }
+    ],
+    general: [
+      { activity: 'word-quest', move: 'Use a short decoding warm-up before core tasks.' },
+      { activity: 'comprehension', move: 'Close with one text-evidence check for transfer.' }
+    ]
+  };
+
   const learnerNameEl = document.getElementById('report-learner-name');
   const generatedAtEl = document.getElementById('report-generated-at');
   const metricsEl = document.getElementById('report-metrics');
@@ -264,10 +291,15 @@
   const heatmapEl = document.getElementById('report-heatmap');
   const emptyEl = document.getElementById('report-empty');
   const refreshBtn = document.getElementById('report-refresh');
+  const loadSampleBtn = document.getElementById('report-load-sample');
   const exportPdfBtn = document.getElementById('report-export-pdf');
   const printBtn = document.getElementById('report-print');
+  const shareSummaryEl = document.getElementById('report-share-summary');
+  const shareCopyBtn = document.getElementById('report-share-copy');
+  const shareStatusEl = document.getElementById('report-share-status');
 
   let latestBuilderText = '';
+  let latestShareText = '';
 
   function safeParse(json) {
     try {
@@ -388,6 +420,17 @@
       url.searchParams.set('focus', context.wordQuestFocus);
       if (context.wordQuestLength) {
         url.searchParams.set('len', context.wordQuestLength);
+      }
+    }
+    if (activityId === 'plan-it') {
+      if (context.builderFocus) {
+        url.searchParams.set('builderFocus', context.builderFocus);
+      }
+      if (context.builderGradeBand) {
+        url.searchParams.set('builderGrade', context.builderGradeBand);
+      }
+      if (context.builderMinutes) {
+        url.searchParams.set('builderMinutes', String(context.builderMinutes));
       }
     }
     return url.toString();
@@ -623,7 +666,7 @@
   }
 
   function renderMetrics(logs) {
-    if (!metricsEl) return;
+    if (!metricsEl) return [];
     const metrics = buildMetrics(logs);
     metricsEl.innerHTML = '';
     metrics.forEach((metric) => {
@@ -635,6 +678,7 @@
       `;
       metricsEl.appendChild(card);
     });
+    return metrics;
   }
 
   function renderFocus(placementRec, weakestRow) {
@@ -691,6 +735,49 @@
     return enabled;
   }
 
+  function buildRecommendedActivities(gaps, placementRec, weakestRow) {
+    const picks = [];
+    const seen = new Set();
+
+    function pushPick(activityId, rationale) {
+      if (!activityId || seen.has(activityId)) return;
+      seen.add(activityId);
+      picks.push({
+        activity: activityId,
+        label: ACTIVITY_LABELS[activityId] || activityId,
+        href: getActivityHref(activityId),
+        rationale
+      });
+    }
+
+    gaps.forEach((gap) => {
+      const playbook = DOMAIN_ACTIVITY_PLAYBOOK[gap.domain] || DOMAIN_ACTIVITY_PLAYBOOK.general;
+      playbook.forEach((step) => {
+        pushPick(step.activity, `${gap.label}: ${step.move}`);
+      });
+    });
+
+    if (placementRec?.focus) {
+      pushPick('word-quest', `Placement focus ${placementRec.focus} for targeted decoding reps.`);
+    }
+
+    if (weakestRow?.standard) {
+      const rec = STANDARD_RECOMMENDATIONS[weakestRow.standard];
+      if (rec?.focus?.toLowerCase().includes('plan-it')) pushPick('plan-it', rec.notes || 'Reinforce planning and reflection routines.');
+      if (rec?.focus?.toLowerCase().includes('write')) pushPick('writing', rec.notes || 'Reinforce writing structure with explicit models.');
+      if (rec?.focus?.toLowerCase().includes('fluency')) pushPick('fluency', rec.notes || 'Reinforce rate, accuracy, and expression.');
+      if (rec?.focus?.toLowerCase().includes('read')) pushPick('comprehension', rec.notes || 'Reinforce text-evidence responses.');
+      if (rec?.focus?.toLowerCase().includes('word')) pushPick('word-quest', rec.notes || 'Reinforce phonics and decoding patterns.');
+    }
+
+    if (!picks.length) {
+      const fallback = DOMAIN_ACTIVITY_PLAYBOOK.general;
+      fallback.forEach((step) => pushPick(step.activity, step.move));
+    }
+
+    return picks.slice(0, 3);
+  }
+
   function buildPulseModel(logs, placementRec, weakestRow) {
     const activityStats = getActivityStats(logs);
     const domainStats = getDomainStats(logs)
@@ -706,8 +793,8 @@
       .sort((a, b) => a.avg - b.avg)
       .slice(0, 3);
 
-    const fallbackStrengths = strengths.length ? strengths : domainStats.slice(0, 2);
-    const fallbackGaps = gaps.length ? gaps : [...domainStats].sort((a, b) => a.avg - b.avg).slice(0, 2);
+    const fallbackStrengths = strengths.length ? strengths : domainStats.slice(0, 3);
+    const fallbackGaps = gaps.length ? gaps : [...domainStats].sort((a, b) => a.avg - b.avg).slice(0, 3);
 
     const priorities = [];
     if (placementRec?.headline) {
@@ -730,6 +817,28 @@
     const supports = getSupportProfile();
     const topPriority = priorities[0] || 'Build evidence with 3-5 scored sessions this week.';
     const domainPriority = fallbackGaps[0]?.label || 'Core literacy';
+    const recommendedActivities = buildRecommendedActivities(fallbackGaps, placementRec, weakestRow);
+
+    const traffic = {
+      red: [],
+      yellow: [],
+      green: []
+    };
+    domainStats.forEach((row) => {
+      const label = `${row.label} (${formatPercent(row.avg)})`;
+      if (row.avg < 0.6) {
+        traffic.red.push(label);
+      } else if (row.avg < 0.8) {
+        traffic.yellow.push(label);
+      } else {
+        traffic.green.push(label);
+      }
+    });
+
+    const interventionSnapshot = activityStats
+      .filter((row) => row.avg !== null)
+      .sort((a, b) => (a.avg - b.avg))
+      .slice(0, 5);
 
     return {
       strengths: fallbackStrengths,
@@ -738,7 +847,10 @@
       supports,
       topPriority,
       domainPriority,
-      activityStats
+      activityStats,
+      recommendedActivities,
+      traffic,
+      interventionSnapshot
     };
   }
 
@@ -760,6 +872,23 @@
     const supportsText = pulse.supports.length
       ? pulse.supports.map(escapeHtml).join(' · ')
       : 'No accessibility supports enabled yet. Suggested starter set: Large text · Line focus · Reduced stimulation.';
+
+    const activityItems = pulse.recommendedActivities.length
+      ? pulse.recommendedActivities.map((item) => `
+        <li>
+          <a class="report-pulse-link" href="${item.href}">${escapeHtml(item.label)}</a>
+          <div class="report-pulse-subnote">${escapeHtml(item.rationale)}</div>
+        </li>
+      `).join('')
+      : '<li>Build 3-5 scored sessions first, then refresh for activity recommendations.</li>';
+
+    const redItems = pulse.traffic.red.length ? pulse.traffic.red.map((item) => `<li>${escapeHtml(item)}</li>`).join('') : '<li>No domains in urgent status.</li>';
+    const yellowItems = pulse.traffic.yellow.length ? pulse.traffic.yellow.map((item) => `<li>${escapeHtml(item)}</li>`).join('') : '<li>No domains in monitor status.</li>';
+    const greenItems = pulse.traffic.green.length ? pulse.traffic.green.map((item) => `<li>${escapeHtml(item)}</li>`).join('') : '<li>No domains in maintain status yet.</li>';
+
+    const snapshotItems = pulse.interventionSnapshot.length
+      ? pulse.interventionSnapshot.map((row) => `<li>${escapeHtml(row.label)} · ${formatPercent(row.avg)} (${row.evidence} samples)</li>`).join('')
+      : '<li>No scored activity snapshot yet.</li>';
 
     pulseEl.innerHTML = `
       <div class="report-pulse-grid">
@@ -785,6 +914,31 @@
           <h3>Priorities + Supports</h3>
           <ul>${priorityItems}</ul>
           <div class="report-pulse-note"><strong>Support profile:</strong> ${supportsText}</div>
+        </article>
+        <article class="report-pulse-card">
+          <h3>Recommended Next Activities</h3>
+          <ul>${activityItems}</ul>
+        </article>
+        <article class="report-pulse-card">
+          <h3>Unified Intervention Snapshot</h3>
+          <ul>${snapshotItems}</ul>
+        </article>
+        <article class="report-pulse-card">
+          <h3>Red / Yellow / Green Workflow</h3>
+          <div class="report-rag-grid">
+            <section class="report-rag-lane report-rag-red">
+              <div class="report-rag-title">Red (Immediate support)</div>
+              <ul>${redItems}</ul>
+            </section>
+            <section class="report-rag-lane report-rag-yellow">
+              <div class="report-rag-title">Yellow (Guided practice)</div>
+              <ul>${yellowItems}</ul>
+            </section>
+            <section class="report-rag-lane report-rag-green">
+              <div class="report-rag-title">Green (Maintain + extend)</div>
+              <ul>${greenItems}</ul>
+            </section>
+          </div>
         </article>
       </div>
     `;
@@ -818,7 +972,10 @@
       const minutes = split[index] || split[split.length - 1];
       const href = getActivityHref(step.activity, {
         wordQuestFocus: wordQuestDefault.focus,
-        wordQuestLength: wordQuestDefault.len
+        wordQuestLength: wordQuestDefault.len,
+        builderFocus: focusId,
+        builderGradeBand: gradeBand,
+        builderMinutes: duration
       });
       lines.push(`${index + 1}) ${step.phase} · ${minutes} min · ${ACTIVITY_LABELS[step.activity] || step.activity}`);
       lines.push(`   ${step.move}`);
@@ -940,13 +1097,110 @@
     return rows;
   }
 
+  function getMetricValue(metrics, label) {
+    return metrics.find((metric) => metric.label === label)?.value || '—';
+  }
+
+  function renderShareSummary(learner, metrics, pulse, weakestRow, placementRec) {
+    if (!shareSummaryEl) return;
+
+    const strengths = pulse.strengths.length
+      ? pulse.strengths.map((row) => `${row.label} ${formatPercent(row.avg)}`).join(', ')
+      : 'Need more scored sessions to confirm strengths.';
+
+    const gaps = pulse.gaps.length
+      ? pulse.gaps.map((row) => `${row.label} ${formatPercent(row.avg)}`).join(', ')
+      : 'No major domain gaps flagged yet.';
+
+    const activities = pulse.recommendedActivities.length
+      ? pulse.recommendedActivities.map((row) => row.label).join(', ')
+      : 'Build additional activity evidence first.';
+
+    const focusLine = weakestRow?.standard
+      ? `Data priority standard: ${weakestRow.standard} (${formatPercent(weakestRow.overall)}).`
+      : placementRec?.focus
+        ? `Placement priority: ${placementRec.focus} (length ${placementRec.length}).`
+        : 'Priority: collect more scored sessions this week.';
+
+    const learnerLabel = learner?.name || 'Learner';
+    const lines = [
+      `${learnerLabel} Literacy Summary`,
+      `Generated: ${new Date().toLocaleString()}`,
+      '',
+      `Sessions completed: ${getMetricValue(metrics, 'Total Sessions')} (${getMetricValue(metrics, 'Sessions (7 days)')} in the last 7 days).`,
+      `Word Quest accuracy: ${getMetricValue(metrics, 'Word Quest Accuracy')}.`,
+      `Fluency estimate: ${getMetricValue(metrics, 'Fluency (est. mastery)')}.`,
+      `Comprehension estimate: ${getMetricValue(metrics, 'Comprehension (est. mastery)')}.`,
+      '',
+      `Strengths: ${strengths}`,
+      `Top 3 gaps: ${gaps}`,
+      `${focusLine}`,
+      `Recommended next activities: ${activities}`,
+      `Intervention priority: ${pulse.topPriority}`
+    ];
+
+    latestShareText = lines.join('\n');
+    shareSummaryEl.textContent = latestShareText;
+    if (shareStatusEl) shareStatusEl.textContent = '';
+  }
+
+  async function copyShareSummary() {
+    if (!latestShareText) {
+      if (shareStatusEl) shareStatusEl.textContent = 'Refresh report first to generate a summary.';
+      return;
+    }
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(latestShareText);
+      } else {
+        throw new Error('clipboard-unavailable');
+      }
+      if (shareStatusEl) shareStatusEl.textContent = 'Summary copied.';
+    } catch {
+      if (shareStatusEl) shareStatusEl.textContent = 'Clipboard unavailable. Copy text directly from the summary box.';
+    }
+  }
+
+  function loadSampleData() {
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+    const sampleLog = [
+      { activity: 'word-quest', label: 'Word Quest', event: '4/5', ts: now - (0.7 * day), detail: { correct: 4, total: 5 } },
+      { activity: 'fluency', label: 'Speed Sprint', event: 'Goal met', ts: now - (0.6 * day), detail: { orf: 82, goal: 95 } },
+      { activity: 'comprehension', label: 'Read & Think', event: '3/5', ts: now - (0.5 * day), detail: { correct: 3, total: 5 } },
+      { activity: 'writing', label: 'Write & Build', event: 'Built paragraph', ts: now - (0.45 * day), detail: { wordCount: 52 } },
+      { activity: 'plan-it', label: 'Plan-It', event: 'Checked (2 issues)', ts: now - (0.4 * day), detail: { issues: 2 } },
+      { activity: 'cloze', label: 'Story Fill', event: '2/4', ts: now - (0.35 * day), detail: { correct: 2, total: 4 } },
+      { activity: 'word-quest', label: 'Word Quest', event: '3/5', ts: now - (0.3 * day), detail: { correct: 3, total: 5 } },
+      { activity: 'fluency', label: 'Speed Sprint', event: 'Checked', ts: now - (0.24 * day), detail: { orf: 76, goal: 95 } },
+      { activity: 'comprehension', label: 'Read & Think', event: '4/5', ts: now - (0.18 * day), detail: { correct: 4, total: 5 } },
+      { activity: 'madlibs', label: 'Silly Stories', event: 'Completed', ts: now - (0.14 * day), detail: { wordCount: 45 } },
+      { activity: 'writing', label: 'Write & Build', event: 'Checked', ts: now - (0.1 * day), detail: { wordCount: 58 } },
+      { activity: 'plan-it', label: 'Plan-It', event: 'Checked (no overlaps)', ts: now - (0.05 * day), detail: { issues: 0 } }
+    ];
+
+    localStorage.setItem('decode_activity_log_v1', JSON.stringify(sampleLog));
+    localStorage.setItem('decode_progress_data', JSON.stringify({
+      wordsAttempted: 140,
+      wordsCorrect: 104
+    }));
+    localStorage.setItem('decode_placement_v1', JSON.stringify({
+      recommendation: {
+        focus: 'vowel_team',
+        length: '5',
+        headline: 'Strengthen vowel-team decoding in short daily cycles.',
+        notes: 'Use targeted decoding reps before comprehension.'
+      }
+    }));
+  }
+
   function refreshReport() {
     const learner = window.DECODE_PLATFORM?.getActiveLearner?.();
     if (learnerNameEl) learnerNameEl.textContent = learner?.name || 'Learner';
     if (generatedAtEl) generatedAtEl.textContent = new Date().toLocaleString();
 
     const logs = getLogs();
-    renderMetrics(logs);
+    const metrics = renderMetrics(logs);
     const rows = renderHeatmap(logs);
     const placementRec = getPlacementRecommendation();
     const weakest = getWeakestStandardRow(rows);
@@ -954,6 +1208,7 @@
 
     const pulse = buildPulseModel(logs, placementRec, weakest);
     renderPulse(pulse);
+    renderShareSummary(learner, metrics, pulse, weakest, placementRec);
 
     if (builderGradeEl && learner?.gradeBand) {
       builderGradeEl.value = normalizeGradeBand(learner.gradeBand);
@@ -967,8 +1222,16 @@
 
   renderBuilderFocusOptions();
   refreshBtn?.addEventListener('click', refreshReport);
+  loadSampleBtn?.addEventListener('click', () => {
+    loadSampleData();
+    refreshReport();
+    if (shareStatusEl) shareStatusEl.textContent = 'Sample data loaded.';
+  });
   exportPdfBtn?.addEventListener('click', exportPdf);
   printBtn?.addEventListener('click', () => window.print());
+  shareCopyBtn?.addEventListener('click', () => {
+    copyShareSummary();
+  });
   builderGenerateBtn?.addEventListener('click', () => renderBuilderPlan());
   builderCopyBtn?.addEventListener('click', () => {
     copyBuilderPlan();

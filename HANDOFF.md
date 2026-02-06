@@ -1,58 +1,82 @@
-<!--
-This file is intentionally short and meant to be shared in a new Codex thread
-so the project context survives switching devices.
--->
+# Literacy Platform Handoff
 
-# Decode the Word — Project Handoff
+Last updated: 2026-02-06
 
 ## Current state
-- Working folder: `literacy-platform/`
-- Tech: static HTML/CSS/vanilla JS (no build step)
-- Pages added: `index.html` (Home hub) + one HTML per activity
-- Activities: Word Quest, Story Fill (Cloze), Read & Think (Comprehension), Speed Sprint (Fluency), Silly Stories (Mad Libs), Write & Build (Writing), Plan‑It
+- Project root: `/Users/robertwilliamknaus/Desktop/New project/literacy-platform`
+- App name: `Decode the Word`
+- Core pages in visual suite: `word-quest`, `fluency`, `cloze`, `comprehension`, `writing`, `plan-it`, `teacher-report`
+- Visual suite status: stable on current baseline (`14/14` pass)
 
-## Recent fixes
-- Header navigation now wraps instead of horizontal scrolling (prevents “giant pill” overlap on narrow windows).
-- Word Quest game modes are now session-based: HUD/teams/timer/hearts only run when `gameMode.active` is true.
-  - `loadSettings()` resets `gameMode.active` to `false` on page load.
-  - Team/timer/challenge behavior is gated behind `gameMode.active`.
-- Other activities (Cloze / Comprehension / Fluency) now respect `decode_settings.gameMode.active` before showing any HUD.
-- Teacher modal usability improvements:
-  - Scroll/clipping fixed (modal content can scroll).
-  - Force-light overrides prevent washed-out text when OS/browser is in dark mode.
-  - Custom word row layout improved (more room for the input + buttons).
-- Contrast tweaks applied in `style.css` for absent tiles/keys (projector-friendly).
-- Word Quest status colors fixed: submitted tiles/keys now keep readable contrast (base Word Quest tile/key styles no longer override `.correct/.present/.absent` backgrounds).
-- Custom word masking no longer triggers Chrome password-manager prompts:
-  - Uses a CSS masking class when supported; falls back to password type otherwise.
-- Word Quest connected sentences: every English sentence now contains the exact target word (fixed 25 mismatches in `words.js`).
-- Reveal modal cleanup:
-  - Translate is now a click-to-open section (collapsed by default).
-  - Teacher recording tools are hidden by default; enable via Teacher → “Show teacher recording tools on the reveal screen”.
-- Home now includes a Placement (Quick Screener) + Progress preview (`index.html` + `home.js`).
-  - Placement saves to `decode_placement_v1` and generates Word Quest links like `word-quest.html?focus=cvc&len=3`.
-  - Placement grade band now uses `K-2`, `3-5`, `6-8`, `9-12` and syncs UI look + learner profile.
-  - Word Quest reads `focus` / `len` URL params on load.
-  - Progress preview reads Word Quest stats from `decode_progress_data` and recent activity from `decode_activity_log_v1`.
-- `platform.js` now exposes `window.DECODE_PLATFORM.logActivity()` and activities write lightweight local-only events for the Home activity log.
-- Activities now default grade filters based on the saved learner profile (Comprehension / Fluency / Writing).
-- Plan-It refresh:
-  - Multiple age-appropriate scenarios (K-2 → 9-12), fixed tasks auto-fill, and an Auto-plan option.
-  - Click a task, then click a highlighted timeline slot to place it.
-  - Optional reflection prompt when a plan is conflict-free.
-  - Teacher tools: add a mini-lesson video link per scenario.
-- Teacher mini-lesson links (non-Word Quest pages): platform injects a collapsed “Teacher tools” section that can store a video link per activity (opens in a new tab; no downloading).
+## Max-Impact plan progress
+### Reliability first (completed)
+- Removed duplicate/conflicting legacy `body.force-light` block in `style.css` to eliminate override drift.
+- Hardened visual tests against transient toasts in `tests/visual.spec.js` (voice-install notices now suppressed in snapshots).
+- Updated and re-froze Playwright baselines.
 
-## Next steps (recommended)
-1. Verify in-browser: Placement → Word Quest sets focus/length correctly; Home progress updates after a few rounds.
-2. Add export-friendly MTSS notes/report view (local-only first; later sync).
-3. Expand placement into a fuller pathway map (comprehension + writing recommendations).
+### Teacher intelligence layer (completed)
+- Expanded Literacy Pulse in `teacher-report.js` with:
+  - strengths
+  - top 3 gaps
+  - recommended next activities
+  - unified intervention snapshot
+  - red/yellow/green workflow lanes
 
-## How to run locally
-From the `literacy-platform/` folder:
-```sh
-python3 -m http.server 8000
+### Workflow wow factor (completed)
+- Added Plan-It one-click 10/20/30 lesson builder in:
+  - `plan-it.html`
+  - `plan-it.js`
+  - `style.css`
+- Builder supports target skill + grade band and renders I do / We do / You do with support.
+- Teacher Report builder deep-links into Plan-It with builder params.
+
+### Leadership-ready finish (completed)
+- Added shareable summary section to teacher report:
+  - summary preview
+  - copy-to-clipboard action
+- Added sample-data loader button for demos/showcase flow.
+- Updated print rules to keep share controls out of printed output.
+
+## Most recent validation
+Command run:
+
+```bash
+npm run test:visual
 ```
-Then open `http://localhost:8000/`.
 
-Note: microphone recording typically requires `http://localhost` (not `file://`).
+Result:
+- Total tests: 14
+- Passed: 14
+- Failed: 0
+
+Artifacts:
+- HTML report: `playwright-report/index.html`
+- Test artifacts: `test-results/`
+
+## Key files changed
+- `style.css`
+- `tests/visual.spec.js`
+- `teacher-report.html`
+- `teacher-report.js`
+- `plan-it.html`
+- `plan-it.js`
+
+## Resume checklist
+1. Open `playwright-report/index.html` and spot-check updated visuals.
+2. Open `teacher-report.html` and test:
+   - Load sample data
+   - Shareable summary copy
+   - One-Tap lesson builder output
+3. Open `plan-it.html` and test:
+   - one-click lesson builder controls
+   - builder deep links to activities
+4. If visuals intentionally change again, run:
+
+```bash
+npm run test:visual:update
+npm run test:visual
+```
+
+## Notes for future Codex sessions
+- In restricted sandbox mode, Playwright may need elevated execution to launch Chromium.
+- Snapshot flake root cause was transient toast content on Word Quest; this is now neutralized in test setup.

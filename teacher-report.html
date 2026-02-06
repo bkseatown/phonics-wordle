@@ -28,6 +28,7 @@
           </div>
           <div class="report-actions">
             <button id="report-refresh" class="secondary-btn" type="button">Refresh</button>
+            <button id="report-load-sample" class="secondary-btn" type="button">Load Sample Data</button>
             <button id="report-export-pdf" class="primary-btn" type="button">Export PDF</button>
             <button id="report-print" class="secondary-btn" type="button">Print</button>
           </div>
@@ -55,11 +56,23 @@
       <section class="report-card" aria-label="Literacy pulse">
         <div class="report-card-header">
           <div>
-            <h2>Literacy Pulse (Beta)</h2>
+            <h2>Literacy Pulse</h2>
             <p class="home-subtitle">Auto-generated strengths, barriers, and 4-week intervention priorities.</p>
           </div>
         </div>
         <div id="report-pulse" class="report-pulse"></div>
+      </section>
+
+      <section class="report-card" aria-label="Shareable summary">
+        <div class="report-card-header">
+          <div>
+            <h2>Shareable Summary</h2>
+            <p class="home-subtitle">Family/admin-ready summary generated from learner data.</p>
+          </div>
+          <button id="report-share-copy" class="secondary-btn" type="button">Copy Summary</button>
+        </div>
+        <div id="report-share-summary" class="report-share-summary"></div>
+        <div id="report-share-status" class="muted"></div>
       </section>
 
       <section class="report-card" aria-label="One-tap lesson builder">
