@@ -1,0 +1,42 @@
+{
+  "generatedAt": "2026-02-07T12:38:13.174Z",
+  "region": "eastus",
+  "packId": "ryan-en-gb",
+  "packName": "Ryan British English",
+  "languages": [
+    "en"
+  ],
+  "fields": [
+    "word",
+    "def",
+    "sentence",
+    "passage"
+  ],
+  "voiceMap": {
+    "en": "en-GB-RyanNeural",
+    "es": "es-ES-ElviraNeural",
+    "zh": "zh-CN-XiaoxiaoNeural",
+    "tl": "fil-PH-BlessicaNeural",
+    "hi": "hi-IN-SwaraNeural"
+  },
+  "retries": 2,
+  "words": 0,
+  "attempted": 80,
+  "generated": 48,
+  "reused": 32,
+  "failed": 0,
+  "generatedByField": {
+    "passage": 48
+  },
+  "reusedByField": {
+    "passage": 32
+  },
+  "failedByField": {},
+  "phonemeCatalogSize": 0,
+  "phonemeTasks": 0,
+  "skippedMissing": 0,
+  "skippedNoVoice": 0,
+  "failures": [],
+  "missingDetails": [],
+  "noVoiceDetails": []
+}

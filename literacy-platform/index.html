@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CORNERSTONE MTSS — Learning Hub</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="platform.js" defer></script>
+    <script src="class-blocks.js" defer></script>
+    <script src="home.js" defer></script>
+  </head>
+
+  <body class="home-page force-light look-35 home-details-collapsed">
+    <header>
+      <div class="header-top">
+        <h1>
+          <a href="index.html">CORNERSTONE MTSS</a>
+        </h1>
+        <nav class="header-actions" aria-label="Primary">
+          <a class="link-btn active" aria-current="page" href="index.html">Home</a>
+          <a class="link-btn" href="word-quest.html">Start Activity</a>
+          <a class="link-btn" href="teacher-report.html" data-student-hidden="true">Teacher Report</a>
+          <button id="home-header-toggle" class="link-btn" type="button">Workspace</button>
+        </nav>
+      </div>
+    </header>
+
+    <main class="home-main">
+      <section class="home-card home-hero home-hero-lite" aria-label="Welcome">
+        <div>
+          <div class="home-kicker">CORNERSTONE MTSS</div>
+          <h2>Welcome. Choose your role to begin.</h2>
+          <p class="home-lede">
+            A calm, guided start for every user. You will get a tailored next step first, then deeper tools only when needed.
+          </p>
+
+          <div class="home-start-flow" aria-label="Start flow">
+            <span class="home-flow-chip">1. Choose role</span>
+            <span class="home-flow-chip">2. Start recommended path</span>
+            <span class="home-flow-chip">3. Open workspace tools</span>
+          </div>
+
+          <div class="home-role-picker" aria-label="Role quick select">
+            <button type="button" class="home-role-pick" data-role-target="teacher">Teacher</button>
+            <button type="button" class="home-role-pick" data-role-target="learning-support">Learning Support</button>
+            <button type="button" class="home-role-pick" data-role-target="eal">EAL</button>
+            <button type="button" class="home-role-pick" data-role-target="slp">SLP</button>
+            <button type="button" class="home-role-pick" data-role-target="counselor">Counselor</button>
+            <button type="button" class="home-role-pick" data-role-target="psychologist">Psychologist</button>
+            <button type="button" class="home-role-pick" data-role-target="admin">Administrator</button>
+            <button type="button" class="home-role-pick" data-role-target="dean">Dean</button>
+            <button type="button" class="home-role-pick" data-role-target="parent">Parent</button>
+            <button type="button" class="home-role-pick" data-role-target="student">Student</button>
+          </div>
+
+          <div class="home-cta-row" aria-label="Quick start">
+            <a id="home-role-launch" class="home-cta primary" href="word-quest.html">Start My Pathway</a>
+            <button id="home-toggle-workspace" class="home-cta ghost" type="button">Show Workspace Tools</button>
+          </div>
+          <p id="home-role-preview" class="home-role-preview muted" aria-live="polite">
+            Select a role to preview your first recommended action.
+          </p>
+        </div>
+
+        <aside class="home-hero-panel home-hero-panel-lite" aria-label="Guided first steps">
+          <div class="home-mini-title">First Session Plan</div>
+          <ol class="home-quick-steps">
+            <li>Pick your role.</li>
+            <li>Use the recommended first activity.</li>
+            <li>Run one short session (10-15 minutes).</li>
+            <li>Open workspace tools if you want deeper controls.</li>
+          </ol>
+          <div class="home-visual-mode" aria-label="Visual style controls">
+            <div class="home-mini-title">Visual style</div>
+            <div class="home-visual-mode-row" role="group" aria-label="Home visual style">
+              <button id="home-visual-fun" class="home-visual-chip active" type="button" aria-pressed="true">Fun</button>
+              <button id="home-visual-calm" class="home-visual-chip" type="button" aria-pressed="false">Calm</button>
+            </div>
+          </div>
+          <p class="home-mini-hint">Calm mode reduces visual noise without changing tools.</p>
+        </aside>
+      </section>
+
+      <section id="home-workspace-start" class="home-card" data-home-detail aria-label="Placement">
+        <div class="home-card-header">
+          <h2>Placement (Quick Screener)</h2>
+          <p class="home-subtitle">
+            Answer a few quick questions and get a recommended starting focus for Word Quest.
+          </p>
+        </div>
+
+        <div class="home-placement-grid">
+          <div id="placement-summary" class="home-placement-summary" aria-live="polite"></div>
+          <div class="home-cta-row" aria-label="Placement actions">
+            <button id="placement-start" class="home-cta primary" type="button">Start placement</button>
+            <a id="placement-open-word-quest" class="home-cta ghost" href="word-quest.html">Open Word Quest</a>
+          </div>
+        </div>
+      </section>
+
+      <section id="learners" class="home-card" data-home-detail aria-label="Learners" data-student-hidden="true">
+        <div class="home-card-header">
+          <h2>Learners</h2>
+          <p class="home-subtitle">Switch learners to isolate progress, placement, and activity data.</p>
+        </div>
+
+        <div class="home-progress-grid">
+          <div class="home-progress-panel" aria-label="Active learner">
+            <div class="home-mini-title">Active Learner</div>
+            <label class="home-field-label" for="learner-active-select">Current learner</label>
+            <select id="learner-active-select" class="home-select"></select>
+            <div id="learner-active-meta" class="muted"></div>
+          </div>
+
+          <div class="home-progress-panel" aria-label="Add learner">
+            <div class="home-mini-title">Add Learner</div>
+            <label class="home-field-label" for="learner-name-input">Name</label>
+            <input id="learner-name-input" class="home-input" type="text" placeholder="Learner name" />
+            <label class="home-field-label" for="learner-grade-input">Grade band (optional)</label>
+            <select id="learner-grade-input" class="home-select">
+              <option value="">Choose…</option>
+              <option value="K-2">K–2</option>
+              <option value="3-5">3–5</option>
+              <option value="6-8">6–8</option>
+              <option value="9-12">9–12</option>
+            </select>
+            <div class="home-cta-row">
+              <button id="learner-add-btn" class="home-cta ghost" type="button">Add learner</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="home-progress-panel" aria-label="Learner roster">
+          <div class="home-mini-title">Roster</div>
+          <ul id="learner-list" class="home-learner-list"></ul>
+          <div id="learner-status" class="muted home-report-status" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="home-card" data-home-detail aria-label="Progress">
+        <div class="home-card-header">
+          <h2>Progress (Preview)</h2>
+          <p class="home-subtitle">Data is saved on this device/browser only unless you transfer or import it on another device.</p>
+        </div>
+
+        <div class="home-progress-grid">
+          <div class="home-progress-panel" aria-label="Word Quest progress">
+            <div class="home-mini-title">Word Quest</div>
+            <div id="progress-word-quest" class="home-progress-number">—</div>
+            <div id="progress-word-quest-detail" class="muted"></div>
+          </div>
+
+          <div class="home-progress-panel" aria-label="Recent activity">
+            <div class="home-mini-title">Recent Activity</div>
+            <ul id="progress-activity-log" class="home-progress-list" aria-label="Activity log"></ul>
+            <div id="progress-activity-empty" class="muted"></div>
+          </div>
+        </div>
+
+        <div class="home-cta-row home-report-actions" aria-label="Report actions" data-student-hidden="true">
+          <button id="progress-export-json" class="home-cta ghost" type="button">Export Data (JSON)</button>
+          <button id="progress-export-csv" class="home-cta ghost" type="button">Export Activity (CSV)</button>
+          <button id="progress-import-json" class="home-cta ghost" type="button">Import Data (JSON)</button>
+          <input id="progress-import-file" class="home-file-input" type="file" accept="application/json,.json" />
+        </div>
+        <div id="progress-report-status" class="muted home-report-status" aria-live="polite"></div>
+        <div class="home-transfer-panel" data-student-hidden="true">
+          <div class="home-mini-title">Quick Device Transfer</div>
+          <p class="muted">Move profile, learner roster, activity logs, role settings, PIN/recovery settings, and reports between devices.</p>
+          <ol class="home-transfer-steps">
+            <li>On your old device: click <strong>Generate + Copy Code</strong>.</li>
+            <li>On your new device: paste the code here and click <strong>Apply Code</strong>.</li>
+            <li>Refresh the page if needed to see imported role/dashboard changes.</li>
+          </ol>
+          <p class="home-transfer-note">Applying a code updates matching local keys and can overwrite current device values.</p>
+          <label class="home-field-label" for="progress-transfer-code">Transfer code</label>
+          <textarea id="progress-transfer-code" class="home-input home-transfer-code" rows="5" placeholder="Generate code here, then paste on another device and click Apply."></textarea>
+          <div class="home-cta-row">
+            <button id="progress-transfer-generate" class="home-cta ghost" type="button">Generate + Copy Code</button>
+            <button id="progress-transfer-apply" class="home-cta ghost" type="button">Apply Code</button>
+          </div>
+          <div id="progress-transfer-status" class="muted home-report-status" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section id="role-dashboard" class="home-card" data-home-detail aria-label="Role dashboard">
+        <div class="home-card-header">
+          <h2>Role Dashboard</h2>
+          <p class="home-subtitle">Choose your role to get a tailored daily workflow, evidence lens, and one-click launch actions.</p>
+        </div>
+        <div class="home-role-controls">
+          <label class="home-field-label" for="home-role-select">Role pathway</label>
+          <select id="home-role-select" class="home-select" aria-label="Home role selector">
+            <option value="teacher">Teacher</option>
+            <option value="admin">Administrator</option>
+            <option value="dean">Dean</option>
+            <option value="learning-support">Learning Support Teacher</option>
+            <option value="slp">Speech and Language Pathologist</option>
+            <option value="eal">EAL Specialist</option>
+            <option value="counselor">School Counselor</option>
+            <option value="psychologist">School Psychologist</option>
+            <option value="student">Student</option>
+            <option value="parent">Parent / Caregiver</option>
+          </select>
+          <div id="home-role-signal" class="home-role-signal" aria-live="polite"></div>
+          <div id="home-role-security" class="home-role-security muted" aria-live="polite"></div>
+          <div class="home-pin-controls" data-student-hidden="true" aria-label="Student mode PIN controls">
+            <label class="home-field-label" for="home-pin-current">Current adult PIN</label>
+            <input id="home-pin-current" class="home-input" type="password" inputmode="numeric" autocomplete="off" placeholder="Enter current PIN" />
+            <label class="home-field-label" for="home-pin-new">New adult PIN (4-8 digits)</label>
+            <input id="home-pin-new" class="home-input" type="password" inputmode="numeric" autocomplete="off" placeholder="Enter new PIN" />
+            <label class="home-field-label" for="home-pin-confirm">Confirm new PIN</label>
+            <input id="home-pin-confirm" class="home-input" type="password" inputmode="numeric" autocomplete="off" placeholder="Re-enter new PIN" />
+            <label class="home-check-row">
+              <input id="home-pin-strict" type="checkbox" />
+              <span>Strict mode (disable default fallback PIN when custom PIN exists)</span>
+            </label>
+            <div class="home-cta-row">
+              <button id="home-pin-save" class="home-cta ghost" type="button">Save PIN</button>
+              <button id="home-pin-strict-save" class="home-cta ghost" type="button">Update Lock Mode</button>
+              <button id="home-pin-reset" class="home-cta ghost" type="button">Reset to Default</button>
+            </div>
+            <div id="home-pin-status" class="home-report-status muted" aria-live="polite"></div>
+            <div class="home-recovery-panel">
+              <label class="home-field-label" for="home-recovery-phrase">Recovery phrase</label>
+              <textarea id="home-recovery-phrase" class="home-input home-transfer-code" rows="2" readonly></textarea>
+              <div class="home-cta-row">
+                <button id="home-recovery-copy" class="home-cta ghost" type="button">Copy Recovery Phrase</button>
+                <button id="home-recovery-rotate" class="home-cta ghost" type="button">Regenerate Phrase</button>
+              </div>
+              <label class="home-field-label" for="home-recovery-input">Forgot PIN? Enter recovery phrase</label>
+              <input id="home-recovery-input" class="home-input" type="text" autocomplete="off" placeholder="Enter recovery phrase to reset PIN" />
+              <div class="home-cta-row">
+                <button id="home-recovery-apply" class="home-cta ghost" type="button">Reset PIN With Phrase</button>
+              </div>
+              <div id="home-recovery-status" class="home-report-status muted" aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+        <div id="home-role-summary" class="home-role-summary"></div>
+        <div id="home-role-cards" class="home-role-grid"></div>
+        <div id="home-role-actions" class="home-cta-row"></div>
+        <div class="home-class-block-panel" data-student-hidden="true">
+          <div class="home-mini-title">Class Block Launcher (20 / 30 / 50)</div>
+          <p class="home-subtitle">Uses the selected role + learner grade band. Launches auto-log into the intervention timeline.</p>
+          <div id="home-class-block-grid" class="home-class-block-grid"></div>
+          <div id="home-class-block-status" class="muted home-report-status" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <section class="home-card" data-home-detail aria-label="Skill path">
+        <div class="home-card-header">
+          <h2>Skill Path (Preview)</h2>
+          <p class="home-subtitle">
+            Start with Word Quest, then choose an “Apply” activity. This hub will evolve into a full pathway map.
+          </p>
+        </div>
+
+        <div class="home-path-grid">
+          <a class="home-path-step" href="word-quest.html">
+            <div class="home-step-kicker">Step 1</div>
+            <div class="home-step-title">Word Quest</div>
+            <div class="home-step-desc">Pattern-focused word practice with feedback, audio, and optional game modes.</div>
+          </a>
+          <a class="home-path-step" href="fluency.html">
+            <div class="home-step-kicker">Step 2</div>
+            <div class="home-step-title">Speed Sprint</div>
+            <div class="home-step-desc">Timed practice to build accuracy, rate, and confidence.</div>
+          </a>
+          <a class="home-path-step" href="comprehension.html">
+            <div class="home-step-kicker">Step 3</div>
+            <div class="home-step-title">Read &amp; Think</div>
+            <div class="home-step-desc">Short passages with questions and quick feedback.</div>
+          </a>
+          <a class="home-path-step" href="writing.html">
+            <div class="home-step-kicker">Step 4</div>
+            <div class="home-step-title">Write &amp; Build</div>
+            <div class="home-step-desc">Plan → draft → revise with scaffolds and sentence starters.</div>
+          </a>
+        </div>
+      </section>
+
+      <section class="home-card" data-home-detail aria-label="Activities">
+        <div class="home-card-header">
+          <h2>Activities</h2>
+          <p class="home-subtitle">Pick a module. Each stays focused and predictable for students.</p>
+        </div>
+
+        <div class="home-activity-grid">
+          <a class="home-activity" href="word-quest.html">
+            <div class="home-activity-title">Word Quest</div>
+            <div class="home-activity-desc">Guess the word, hear it spoken, and build pattern awareness.</div>
+            <div class="home-activity-meta">Decoding • Vocabulary • Audio</div>
+          </a>
+          <a class="home-activity" href="cloze.html">
+            <div class="home-activity-title">Story Fill</div>
+            <div class="home-activity-desc">Fill the blanks from a word bank to strengthen context and syntax.</div>
+            <div class="home-activity-meta">Syntax • Meaning • SEL prompts</div>
+          </a>
+          <a class="home-activity" href="comprehension.html">
+            <div class="home-activity-title">Read &amp; Think</div>
+            <div class="home-activity-desc">Answer questions and explain thinking with scaffolds.</div>
+            <div class="home-activity-meta">Comprehension • Strategy</div>
+          </a>
+          <a class="home-activity" href="fluency.html">
+            <div class="home-activity-title">Speed Sprint</div>
+            <div class="home-activity-desc">Timed reading practice with simple tracking.</div>
+            <div class="home-activity-meta">Fluency • Accuracy</div>
+          </a>
+          <a class="home-activity" href="madlibs.html">
+            <div class="home-activity-title">Silly Stories</div>
+            <div class="home-activity-desc">Playful language practice with templates.</div>
+            <div class="home-activity-meta">Grammar • Vocabulary • Fun</div>
+          </a>
+          <a class="home-activity" href="writing.html">
+            <div class="home-activity-title">Write &amp; Build</div>
+            <div class="home-activity-desc">Structured planning and drafting for stronger writing.</div>
+            <div class="home-activity-meta">Writing • Organization</div>
+          </a>
+          <a class="home-activity" href="plan-it.html">
+            <div class="home-activity-title">Plan-It</div>
+            <div class="home-activity-desc">Executive-function scenarios: plan steps and order tasks.</div>
+            <div class="home-activity-meta">SEL • EF • Routines</div>
+          </a>
+          <a class="home-activity" href="number-sense.html">
+            <div class="home-activity-title">Number Sense Sprint</div>
+            <div class="home-activity-desc">Short numeracy probes with quick feedback and intervention-ready logging.</div>
+            <div class="home-activity-meta">Numeracy • MTSS • Progress Monitoring</div>
+          </a>
+          <a class="home-activity" href="operations.html">
+            <div class="home-activity-title">Operation Builder</div>
+            <div class="home-activity-desc">Strategy-first operation practice with explicit coaching and session evidence.</div>
+            <div class="home-activity-meta">Operations • Conceptual Math • Intervention</div>
+          </a>
+          <a class="home-activity" href="teacher-report.html" data-student-hidden="true">
+            <div class="home-activity-title">Teacher Report</div>
+            <div class="home-activity-desc">Printable growth summary with standards-based mastery heatmap.</div>
+            <div class="home-activity-meta">Reports • Standards • Heatmap</div>
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <div id="modal-overlay" class="hidden" aria-hidden="true"></div>
+
+    <div id="placement-modal" class="modal hidden placement-modal" role="dialog" aria-modal="true" aria-label="Placement screener">
+      <div class="modal-content">
+        <button id="placement-close" class="close-btn" type="button" aria-label="Close">✕</button>
+        <h2>Quick Placement</h2>
+        <p class="muted">Check what the student can do independently most days.</p>
+
+        <div class="placement-grid" aria-label="Placement form">
+          <div class="placement-field">
+            <label for="placement-grade">Grade band (optional)</label>
+            <select id="placement-grade">
+              <option value="">Choose…</option>
+              <option value="K-2">K–2</option>
+              <option value="3-5">3–5</option>
+              <option value="6-8">6–8</option>
+              <option value="9-12">9–12</option>
+            </select>
+          </div>
+
+          <fieldset class="placement-fieldset">
+            <legend>Decoding skills</legend>
+            <label class="placement-check">
+              <input id="skill-letter-sounds" type="checkbox" />
+              <span>Knows most letter sounds (consonants + short vowels)</span>
+            </label>
+            <label class="placement-check">
+              <input id="skill-cvc" type="checkbox" />
+              <span>Reads CVC short-vowel words (cat, ship, man)</span>
+            </label>
+            <label class="placement-check">
+              <input id="skill-digraph" type="checkbox" />
+              <span>Reads digraphs (sh, ch, th)</span>
+            </label>
+            <label class="placement-check">
+              <input id="skill-blends" type="checkbox" />
+              <span>Reads blends (st, bl, cr)</span>
+            </label>
+            <label class="placement-check">
+              <input id="skill-magic-e" type="checkbox" />
+              <span>Reads silent‑e words (make, time)</span>
+            </label>
+            <label class="placement-check">
+              <input id="skill-vowel-team" type="checkbox" />
+              <span>Reads vowel teams (rain, seed, boat)</span>
+            </label>
+            <label class="placement-check">
+              <input id="skill-r-controlled" type="checkbox" />
+              <span>Reads r‑controlled vowels (car, her, fork)</span>
+            </label>
+            <label class="placement-check">
+              <input id="skill-multisyllable" type="checkbox" />
+              <span>Can break multisyllable words into parts</span>
+            </label>
+          </fieldset>
+        </div>
+
+        <div class="placement-actions" aria-label="Placement results">
+          <button id="placement-calc" type="button" class="primary-btn">Get recommendation</button>
+          <a id="placement-go-word-quest" class="secondary-btn hidden" href="word-quest.html">Start Word Quest</a>
+          <button id="placement-clear" type="button" class="secondary-btn">Clear</button>
+        </div>
+
+        <div id="placement-result" class="placement-result hidden" aria-live="polite"></div>
+      </div>
+    </div>
+  </body>
+</html>

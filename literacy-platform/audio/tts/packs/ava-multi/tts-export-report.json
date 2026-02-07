@@ -1,0 +1,42 @@
+{
+  "generatedAt": "2026-02-07T12:36:42.943Z",
+  "region": "eastus",
+  "packId": "ava-multi",
+  "packName": "Ava Multilingual",
+  "languages": [
+    "en"
+  ],
+  "fields": [
+    "word",
+    "def",
+    "sentence",
+    "passage"
+  ],
+  "voiceMap": {
+    "en": "en-US-AvaMultilingualNeural",
+    "es": "en-US-AvaMultilingualNeural",
+    "zh": "en-US-AvaMultilingualNeural",
+    "tl": "en-US-AvaMultilingualNeural",
+    "hi": "hi-IN-SwaraNeural"
+  },
+  "retries": 2,
+  "words": 0,
+  "attempted": 80,
+  "generated": 48,
+  "reused": 32,
+  "failed": 0,
+  "generatedByField": {
+    "passage": 48
+  },
+  "reusedByField": {
+    "passage": 32
+  },
+  "failedByField": {},
+  "phonemeCatalogSize": 0,
+  "phonemeTasks": 0,
+  "skippedMissing": 0,
+  "skippedNoVoice": 0,
+  "failures": [],
+  "missingDetails": [],
+  "noVoiceDetails": []
+}

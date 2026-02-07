@@ -1,0 +1,40 @@
+{
+  "generatedAt": "2026-02-07T12:49:23.873Z",
+  "region": "eastus",
+  "packId": "emma-en",
+  "packName": "Emma English",
+  "languages": [
+    "en"
+  ],
+  "fields": [
+    "word",
+    "def",
+    "sentence",
+    "passage"
+  ],
+  "voiceMap": {
+    "en": "en-US-EmmaNeural",
+    "es": "es-ES-ElviraNeural",
+    "zh": "zh-CN-XiaoxiaoNeural",
+    "tl": "fil-PH-BlessicaNeural",
+    "hi": "hi-IN-SwaraNeural"
+  },
+  "retries": 2,
+  "words": 0,
+  "attempted": 80,
+  "generated": 0,
+  "reused": 80,
+  "failed": 0,
+  "generatedByField": {},
+  "reusedByField": {
+    "passage": 80
+  },
+  "failedByField": {},
+  "phonemeCatalogSize": 0,
+  "phonemeTasks": 0,
+  "skippedMissing": 0,
+  "skippedNoVoice": 0,
+  "failures": [],
+  "missingDetails": [],
+  "noVoiceDetails": []
+}

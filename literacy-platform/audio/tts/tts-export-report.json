@@ -1,0 +1,35 @@
+{
+  "generatedAt": "2026-02-07T04:47:35.255Z",
+  "region": "eastus",
+  "packId": "default",
+  "packName": "Default voice pack",
+  "languages": [
+    "en",
+    "es",
+    "zh",
+    "tl"
+  ],
+  "fields": [
+    "word",
+    "def",
+    "sentence"
+  ],
+  "voiceMap": {
+    "en": "en-US-JennyNeural",
+    "es": "es-ES-ElviraNeural",
+    "zh": "zh-CN-XiaoxiaoNeural",
+    "tl": "fil-PH-BlessicaNeural",
+    "hi": "hi-IN-SwaraNeural"
+  },
+  "retries": 3,
+  "words": 500,
+  "attempted": 6000,
+  "generated": 0,
+  "reused": 6000,
+  "failed": 0,
+  "skippedMissing": 0,
+  "skippedNoVoice": 0,
+  "failures": [],
+  "missingDetails": [],
+  "noVoiceDetails": []
+}
