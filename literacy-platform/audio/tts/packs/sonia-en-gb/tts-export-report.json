@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-07T12:39:01.060Z",
+  "generatedAt": "2026-02-07T15:17:31.063Z",
   "region": "eastus",
   "packId": "sonia-en-gb",
   "packName": "Sonia British English",
@@ -19,17 +19,17 @@
     "tl": "fil-PH-BlessicaNeural",
     "hi": "hi-IN-SwaraNeural"
   },
-  "retries": 2,
+  "retries": 1,
   "words": 0,
-  "attempted": 80,
-  "generated": 48,
-  "reused": 32,
+  "attempted": 150,
+  "generated": 70,
+  "reused": 80,
   "failed": 0,
   "generatedByField": {
-    "passage": 48
+    "passage": 70
   },
   "reusedByField": {
-    "passage": 32
+    "passage": 80
   },
   "failedByField": {},
   "phonemeCatalogSize": 0,

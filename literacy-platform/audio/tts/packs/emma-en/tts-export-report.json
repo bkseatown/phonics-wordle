@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-07T12:49:23.873Z",
+  "generatedAt": "2026-02-07T15:14:43.602Z",
   "region": "eastus",
   "packId": "emma-en",
   "packName": "Emma English",
@@ -19,13 +19,15 @@
     "tl": "fil-PH-BlessicaNeural",
     "hi": "hi-IN-SwaraNeural"
   },
-  "retries": 2,
+  "retries": 1,
   "words": 0,
-  "attempted": 80,
-  "generated": 0,
+  "attempted": 150,
+  "generated": 70,
   "reused": 80,
   "failed": 0,
-  "generatedByField": {},
+  "generatedByField": {
+    "passage": 70
+  },
   "reusedByField": {
     "passage": 80
   },
