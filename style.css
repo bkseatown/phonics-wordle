@@ -6396,6 +6396,33 @@ body {
     background: #e2e8f0;
 }
 
+.sound-video-panel {
+    margin-top: 10px;
+    display: grid;
+    gap: 8px;
+}
+
+.sound-video-player {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid #dbe3ee;
+    background: #020617;
+    max-height: 260px;
+}
+
+.sound-video-status {
+    font-size: 0.82rem;
+    color: #475569;
+}
+
+.sound-video-status[data-tone="warn"] {
+    color: #b45309;
+}
+
+.sound-video-status[data-tone="success"] {
+    color: #15803d;
+}
+
 /* ---------- Classroom Dock ---------- */
 .classroom-dock {
     position: fixed;
@@ -6795,7 +6822,7 @@ body.word-quest-page main {
 }
 
 body.word-quest-page .controls {
-    grid-template-columns: max-content max-content;
+    grid-template-columns: max-content max-content max-content;
     justify-content: flex-start;
 }
 

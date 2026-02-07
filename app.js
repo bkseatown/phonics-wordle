@@ -64,7 +64,13 @@ let practiceRecorder = {
 };
 const practiceRecordings = new Map();
 const phonemeAudioCache = new Map();
+const phonemeVideoLookupCache = new Map();
 const activeAudioPlayers = new Set();
+const PHONEME_VIDEO_LIBRARY_CANDIDATE_DIRS = [
+    'assets/articulation/clips',
+    'public/assets/articulation/clips'
+];
+let activeSoundVideoObjectUrl = '';
 const PACKED_TTS_DEFAULT_MANIFEST_PATH = 'audio/tts/tts-manifest.json';
 const PACKED_TTS_PACK_REGISTRY_PATH = 'audio/tts/packs/pack-registry.json';
 const packedTtsManifestCacheByPath = new Map();
@@ -137,6 +143,8 @@ const DEFAULT_SETTINGS = {
 };
 
 const UI_LOOK_CLASSES = ['look-k2', 'look-35', 'look-612'];
+const HOME_ROLE_STORAGE_KEY = 'cornerstone_home_role_v1';
+const YOUNG_AUDIENCE_ROLE_PATHWAYS = new Set(['eal']);
 const CUSTOM_WORD_BLOCK_PATTERNS = [
     /fuck/i,
     /shit/i,
@@ -155,6 +163,9 @@ const CUSTOM_WORD_BLOCK_PATTERNS = [
     /fetish/i,
     /nsfw/i
 ];
+let kidSafeWordEntriesCache = null;
+let kidSafeWordEntriesSourceSize = -1;
+let kidSafeWordEntriesOverrideSize = -1;
 
 function getUiLookValue() {
     const raw = (appSettings?.uiLook || DEFAULT_SETTINGS.uiLook || '35').toString();
@@ -697,10 +708,11 @@ function normalizeTextForCompare(text = '') {
 }
 
 function getCurrentEntryByLanguage(languageCode = 'en') {
-    if (!currentEntry) return null;
+    const resolvedEntry = getWordEntryForAudience(currentWord) || currentEntry;
+    if (!resolvedEntry) return null;
     const lang = normalizePackedTtsLanguage(languageCode);
-    if (lang === 'en') return currentEntry.en || null;
-    return currentEntry[lang] || null;
+    if (lang === 'en') return resolvedEntry.en || resolvedEntry || null;
+    return resolvedEntry[lang] || resolvedEntry.en || resolvedEntry || null;
 }
 
 function resolveCurrentWordTtsType(text, languageCode = 'en', requestedType = 'word') {
@@ -1030,6 +1042,152 @@ function getPhonemeRecordingKey(sound = '') {
     return `phoneme_${sound.toString().toLowerCase()}`;
 }
 
+function getPhonemeVideoRecordingKey(sound = '') {
+    return `phonemevideo_${sound.toString().toLowerCase()}`;
+}
+
+function releaseActiveSoundVideoUrl() {
+    if (activeSoundVideoObjectUrl) {
+        try {
+            URL.revokeObjectURL(activeSoundVideoObjectUrl);
+        } catch (e) {}
+        activeSoundVideoObjectUrl = '';
+    }
+}
+
+function normalizeSoundVideoFilename(sound = '') {
+    return normalizePhonemeSoundKey(sound)
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
+
+function buildBundledPhonemeVideoCandidates(sound = '', phoneme = null) {
+    const candidates = [];
+    const customVideo = (phoneme && typeof phoneme.video === 'string') ? phoneme.video.trim() : '';
+    if (customVideo) candidates.push(customVideo);
+    const fileSafe = normalizeSoundVideoFilename(sound);
+    if (!fileSafe) return candidates;
+    PHONEME_VIDEO_LIBRARY_CANDIDATE_DIRS.forEach((dir) => {
+        candidates.push(`${dir}/${fileSafe}.mp4`);
+        candidates.push(`${dir}/${fileSafe}.webm`);
+    });
+    return Array.from(new Set(candidates));
+}
+
+async function canLoadVideoUrl(url = '') {
+    if (!url) return false;
+    try {
+        const res = await fetch(url, { method: 'HEAD', cache: 'no-store' });
+        if (res.ok) return true;
+    } catch (e) {}
+    try {
+        const res = await fetch(url, {
+            method: 'GET',
+            cache: 'no-store',
+            headers: { Range: 'bytes=0-1' }
+        });
+        return !!res.ok;
+    } catch (e) {
+        return false;
+    }
+}
+
+async function resolveBundledPhonemeVideoUrl(sound = '', phoneme = null) {
+    const normalizedSound = normalizePhonemeSoundKey(sound);
+    if (!normalizedSound) return '';
+    if (phonemeVideoLookupCache.has(normalizedSound)) {
+        return phonemeVideoLookupCache.get(normalizedSound) || '';
+    }
+    const candidates = buildBundledPhonemeVideoCandidates(normalizedSound, phoneme);
+    for (const url of candidates) {
+        // eslint-disable-next-line no-await-in-loop
+        if (await canLoadVideoUrl(url)) {
+            phonemeVideoLookupCache.set(normalizedSound, url);
+            return url;
+        }
+    }
+    phonemeVideoLookupCache.set(normalizedSound, '');
+    return '';
+}
+
+async function resolvePhonemeVideoSource(sound = '', phoneme = null) {
+    const normalizedSound = normalizePhonemeSoundKey(sound);
+    if (!normalizedSound) return null;
+
+    await ensureDBReady();
+    const teacherBlob = await getAudioFromDB(getPhonemeVideoRecordingKey(normalizedSound));
+    if (teacherBlob) {
+        releaseActiveSoundVideoUrl();
+        activeSoundVideoObjectUrl = URL.createObjectURL(teacherBlob);
+        return {
+            url: activeSoundVideoObjectUrl,
+            source: 'teacher',
+            kind: 'blob'
+        };
+    }
+
+    releaseActiveSoundVideoUrl();
+    const bundled = await resolveBundledPhonemeVideoUrl(normalizedSound, phoneme);
+    if (bundled) {
+        return {
+            url: bundled,
+            source: 'library',
+            kind: 'url'
+        };
+    }
+    return null;
+}
+
+function setSoundVideoStatus(message = '', tone = 'info') {
+    const statusEl = document.getElementById('sound-video-status');
+    if (!statusEl) return;
+    statusEl.textContent = message || '';
+    statusEl.dataset.tone = tone;
+}
+
+function getSoundVideoPlayer() {
+    return document.getElementById('sound-video-player');
+}
+
+function clearSoundVideoPlayer() {
+    const videoEl = getSoundVideoPlayer();
+    if (!videoEl) return;
+    try { videoEl.pause(); } catch (e) {}
+    videoEl.removeAttribute('src');
+    videoEl.load();
+    videoEl.classList.add('hidden');
+    videoEl.dataset.source = '';
+}
+
+async function showPhonemeVideoPreview(sound = '', phoneme = null, options = {}) {
+    const videoEl = getSoundVideoPlayer();
+    if (!videoEl) return false;
+    const autoplay = !!options.autoplay;
+    const source = await resolvePhonemeVideoSource(sound, phoneme);
+    if (!source?.url) {
+        clearSoundVideoPlayer();
+        setSoundVideoStatus('No sound clip yet. Add one with Record or Upload.', 'warn');
+        return false;
+    }
+
+    videoEl.src = source.url;
+    videoEl.classList.remove('hidden');
+    videoEl.dataset.source = source.source;
+    setSoundVideoStatus(
+        source.source === 'teacher'
+            ? 'Using teacher video for this sound.'
+            : 'Using library video for this sound.',
+        source.source === 'teacher' ? 'success' : 'info'
+    );
+    if (autoplay) {
+        try {
+            await videoEl.play();
+        } catch (e) {}
+    }
+    return true;
+}
+
 function clearPhonemeCache(sound = '') {
     if (!sound) return;
     const key = getPhonemeRecordingKey(sound);
@@ -1043,6 +1201,8 @@ function clearAllPhonemeCache() {
         if (entry?.url) URL.revokeObjectURL(entry.url);
     });
     phonemeAudioCache.clear();
+    phonemeVideoLookupCache.clear();
+    releaseActiveSoundVideoUrl();
 }
 
 async function prefetchPhonemeClips(sounds = []) {
@@ -2131,11 +2291,10 @@ async function speak(text, type = "word") {
     if (type === "word") {
         dbKey = `${text.toLowerCase()}_word`;
     } else if (type === "sentence") {
-        // Handle both data structures for sentences
-        let currentSentence = null;
-        if (currentEntry && currentEntry.en && currentEntry.en.sentence) {
+        let currentSentence = getWordCopyForAudience(currentWord, 'en').sentence;
+        if (!currentSentence && currentEntry && currentEntry.en && currentEntry.en.sentence) {
             currentSentence = currentEntry.en.sentence;
-        } else if (currentEntry && currentEntry.sentence) {
+        } else if (!currentSentence && currentEntry && currentEntry.sentence) {
             currentSentence = currentEntry.sentence;
         }
         
@@ -2584,19 +2743,28 @@ async function playTextInLanguage(text, languageCode) {
     speakUtterance(msg);
 }
 
-function getTranslationData(word, langCode) {
+function getTranslationData(word, langCode, options = {}) {
     if (!word || !langCode || langCode === 'en') return null;
     const lower = word.toLowerCase();
-    const source = (typeof WORDS_DATA !== 'undefined') ? WORDS_DATA : null;
-    const entry = source && source[lower] ? source[lower][langCode] : null;
-    if (entry) {
+    const normalizedLang = normalizePackedTtsLanguage(langCode);
+    const audienceMode = normalizeAudienceMode(options.audienceMode || getResolvedAudienceMode());
+
+    const audienceCopy = getWordCopyForAudience(lower, normalizedLang, audienceMode);
+    if (audienceCopy.definition || audienceCopy.sentence) {
         return {
-            definition: entry.def || '',
-            sentence: entry.sentence || ''
+            definition: audienceCopy.definition || '',
+            sentence: audienceCopy.sentence || ''
         };
     }
+
     if (window.TRANSLATIONS && typeof window.TRANSLATIONS.getTranslation === 'function') {
-        return window.TRANSLATIONS.getTranslation(lower, langCode);
+        const fallback = window.TRANSLATIONS.getTranslation(lower, normalizedLang);
+        if (!fallback) return null;
+        if (audienceMode !== 'young-eal') return fallback;
+        return {
+            definition: simplifyRevealDefinition(fallback.definition || '', lower, normalizedLang),
+            sentence: simplifyRevealSentence(fallback.sentence || '', lower, normalizedLang)
+        };
     }
     return null;
 }
@@ -2753,10 +2921,11 @@ function initControls() {
                 hearSentenceBtn.blur();
                 return;
             }
-            let sentence = null;
-            if (currentEntry && currentEntry.en && currentEntry.en.sentence) {
+            const audienceCopy = getWordCopyForAudience(currentWord, 'en');
+            let sentence = audienceCopy.sentence || null;
+            if (!sentence && currentEntry && currentEntry.en && currentEntry.en.sentence) {
                 sentence = currentEntry.en.sentence;
-            } else if (currentEntry && currentEntry.sentence) {
+            } else if (!sentence && currentEntry && currentEntry.sentence) {
                 sentence = currentEntry.sentence;
             }
             
@@ -3253,6 +3422,7 @@ async function importPlatformSettingsFromFile(file) {
         merged.narrationStyle = normalizeNarrationStyle(merged.narrationStyle || DEFAULT_SETTINGS.narrationStyle);
         merged.speechQualityMode = normalizeSpeechQualityMode(merged.speechQualityMode || DEFAULT_SETTINGS.speechQualityMode);
         merged.ttsPackId = normalizeTtsPackId(merged.ttsPackId || DEFAULT_SETTINGS.ttsPackId);
+        merged.guessCount = normalizeGuessCount(merged.guessCount ?? DEFAULT_SETTINGS.guessCount);
 
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged));
         showToast('Settings imported. Reloading...');
@@ -3494,7 +3664,7 @@ function ensureBonusControls() {
             <option value="young-eal">Young / EAL-friendly</option>
             <option value="general">General</option>
         </select>
-        <div class="teacher-subtext">Young/EAL mode keeps reveal copy simple and classroom-safe while staying playful.</div>
+        <div class="teacher-subtext">Auto defaults to Young/EAL for K-2 learners, EAL pathway, and non-English translation mode.</div>
     `;
     grid.appendChild(row);
 }
@@ -3773,8 +3943,9 @@ async function updateTtsPackStatusFromManifest({ pack = null } = {}) {
 }
 
 async function playTtsPackSampleClip() {
-    const sentence = String(currentEntry?.en?.sentence || '').trim();
-    const definition = String(currentEntry?.en?.def || '').trim();
+    const audienceCopy = getWordCopyForAudience(currentWord, 'en');
+    const sentence = String(audienceCopy.sentence || currentEntry?.en?.sentence || '').trim();
+    const definition = String(audienceCopy.definition || currentEntry?.en?.def || '').trim();
     const word = String(currentWord || '').trim();
 
     let played = false;
@@ -4668,6 +4839,7 @@ function updateAdaptiveActions() {
     // Get current word info
     const word = currentWord;
     const entry = currentEntry;
+    const audienceCopy = getWordCopyForAudience(word, 'en');
     
     if (!word || !entry) return;
     
@@ -4685,10 +4857,11 @@ function updateAdaptiveActions() {
     hearWord.onclick = () => speak(word, 'word');
     
     // Show "Hear sentence" only if sentence exists
-    if (entry.sentence && entry.sentence.length > 5) {
+    const sentenceText = audienceCopy.sentence || entry?.sentence || entry?.en?.sentence || '';
+    if (sentenceText && sentenceText.length > 5) {
         hearSentence.style.display = 'inline-block';
         hearSentence.classList.add('hint-primary');
-        hearSentence.onclick = () => speak(entry.sentence, 'sentence');
+        hearSentence.onclick = () => speak(sentenceText, 'sentence');
     } else {
         hearSentence.style.display = 'none';
     }
@@ -5367,22 +5540,15 @@ function showEndModal(win) {
     const syllableText = currentEntry?.syllables ? currentEntry.syllables.replace(/-/g, " • ") : "";
     updateModalSyllables(currentWord, syllableText);
     
-    // Handle both data structures (your multilingual format vs simple format)
-    let def, sentence;
-    const wordData = (typeof WORDS_DATA !== 'undefined') ? WORDS_DATA[currentWord] : null;
-    const enData = wordData && wordData.en ? wordData.en : null;
-    if (enData) {
-        def = enData.def;
-        sentence = enData.sentence;
-    } else if (currentEntry && currentEntry.en) {
-        def = currentEntry.en.def;
-        sentence = currentEntry.en.sentence;
-    } else {
-        def = currentEntry?.def || "";
-        sentence = currentEntry?.sentence || "";
-    }
+    const resolvedAudienceMode = getResolvedAudienceMode();
+    const audienceCopy = getWordCopyForAudience(currentWord, 'en', resolvedAudienceMode);
+    let def = audienceCopy.definition || currentEntry?.en?.def || currentEntry?.def || "";
+    let sentence = audienceCopy.sentence || currentEntry?.en?.sentence || currentEntry?.sentence || "";
 
-    const adaptedCopy = adaptRevealCopyForAudience(def, sentence, currentWord);
+    const adaptedCopy = adaptRevealCopyForAudience(def, sentence, currentWord, {
+        mode: resolvedAudienceMode,
+        languageCode: 'en'
+    });
     def = adaptedCopy.definition;
     sentence = adaptedCopy.sentence;
     renderAudienceModeNote(adaptedCopy.mode);
@@ -5458,7 +5624,9 @@ function showEndModal(win) {
             return;
         }
 
-        const translation = getTranslationData(currentWord, selectedLang);
+        const translation = getTranslationData(currentWord, selectedLang, {
+            audienceMode: resolvedAudienceMode
+        });
         if (translation && (translation.definition || translation.sentence)) {
             translatedDef.textContent = translation.definition || '';
             translatedSentence.textContent = translation.sentence ? `"${translation.sentence}"` : '';
@@ -6105,6 +6273,37 @@ const YOUNG_AUDIENCE_WORD_REPLACEMENTS = [
 ];
 
 const YOUNG_AUDIENCE_BLOCKLIST = /\b(kill|killed|dead|blood|drunk|weapon|gun|tax bill)\b/i;
+const YOUNG_AUDIENCE_EXTRA_BLOCKLIST = [
+    /\b(violence|violent|murder|murdered|corpse|knife|bomb|suicide|self-harm)\b/i,
+    /\b(booze|hangover|intoxicated)\b/i,
+    /\b(sex|sexual|porn|nude|naked)\b/i
+];
+const KID_SAFE_TEXT_FALLBACKS = {
+    en: {
+        definition: (word) => `"${word}" is a school word we can practice in reading and writing.`,
+        sentence: (word) => `We can use "${word}" in a short class sentence.`
+    },
+    es: {
+        definition: (word) => `"${word}" es una palabra escolar para practicar lectura y escritura.`,
+        sentence: (word) => `Podemos usar "${word}" en una oración corta de clase.`
+    },
+    zh: {
+        definition: (word) => `"${word}" 是我们可以在课堂上练习的词。`,
+        sentence: (word) => `我们可以在短句里使用 "${word}"。`
+    },
+    tl: {
+        definition: (word) => `"${word}" ay salitang pampaaralan na maaari nating sanayin sa pagbasa at pagsulat.`,
+        sentence: (word) => `Maaari nating gamitin ang "${word}" sa maikling pangungusap sa klase.`
+    },
+    vi: {
+        definition: (word) => `"${word}" là từ dùng trong lớp để luyện đọc và viết.`,
+        sentence: (word) => `Chúng ta có thể dùng "${word}" trong một câu ngắn ở lớp.`
+    },
+    ms: {
+        definition: (word) => `"${word}" ialah perkataan kelas untuk latihan membaca dan menulis.`,
+        sentence: (word) => `Kita boleh guna "${word}" dalam ayat kelas yang ringkas.`
+    }
+};
 
 function cleanAudienceText(value) {
     return String(value || '')
@@ -6136,12 +6335,256 @@ function ensureEndingPunctuation(value) {
     return `${text}.`;
 }
 
+function ensureEndingPunctuationForLanguage(value, languageCode = 'en') {
+    const text = cleanAudienceText(value);
+    if (!text) return '';
+    const lang = normalizePackedTtsLanguage(languageCode);
+    if (lang === 'zh') {
+        if (/[。！？]$/.test(text)) return text;
+        return `${text}。`;
+    }
+    return ensureEndingPunctuation(text);
+}
+
 function applyYoungAudienceReplacements(value) {
     let text = cleanAudienceText(value);
     YOUNG_AUDIENCE_WORD_REPLACEMENTS.forEach(([pattern, replacement]) => {
         text = text.replace(pattern, replacement);
     });
     return text;
+}
+
+function normalizeAudienceRolePathway(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return '';
+    if (raw === 'ell' || raw === 'esl') return 'eal';
+    return raw;
+}
+
+function getCurrentAudienceRolePathway() {
+    const bodyRole = normalizeAudienceRolePathway(document.body?.dataset?.rolePathway || '');
+    if (bodyRole) return bodyRole;
+    return normalizeAudienceRolePathway(localStorage.getItem(HOME_ROLE_STORAGE_KEY) || '');
+}
+
+function getKidSafeFallbackText(word, field = 'definition', languageCode = 'en') {
+    const lang = normalizePackedTtsLanguage(languageCode);
+    const fallbackSet = KID_SAFE_TEXT_FALLBACKS[lang] || KID_SAFE_TEXT_FALLBACKS.en;
+    const fallbackBuilder = field === 'sentence' ? fallbackSet.sentence : fallbackSet.definition;
+    return fallbackBuilder(String(word || '').toLowerCase());
+}
+
+function trimToFirstSentence(text = '') {
+    const cleaned = cleanAudienceText(text);
+    if (!cleaned) return '';
+    const split = cleaned.split(/(?<=[.!?。！？])\s+/);
+    return split[0] || cleaned;
+}
+
+function truncateForAudienceLanguage(value, languageCode = 'en', maxWords = 16) {
+    const cleaned = cleanAudienceText(value);
+    if (!cleaned) return '';
+    const lang = normalizePackedTtsLanguage(languageCode);
+    if (lang === 'zh') {
+        if (cleaned.length <= 32) return cleaned;
+        return `${cleaned.slice(0, 31).replace(/[，、,:;]+$/, '')}…`;
+    }
+    if (countWords(cleaned) <= maxWords) return cleaned;
+    return truncateWords(cleaned, maxWords);
+}
+
+function isYoungAudienceUnsafeText(value) {
+    if (!value) return false;
+    if (YOUNG_AUDIENCE_BLOCKLIST.test(value)) return true;
+    return YOUNG_AUDIENCE_EXTRA_BLOCKLIST.some((pattern) => pattern.test(value));
+}
+
+function buildKidSafeAudienceText(rawText, {
+    word = '',
+    field = 'definition',
+    languageCode = 'en'
+} = {}) {
+    const lang = normalizePackedTtsLanguage(languageCode);
+    let text = cleanAudienceText(rawText);
+    if (lang === 'en') {
+        text = applyYoungAudienceReplacements(text);
+    }
+    text = trimToFirstSentence(text);
+
+    const maxWords = field === 'sentence' ? 18 : 16;
+    text = truncateForAudienceLanguage(text, lang, maxWords);
+
+    if (!text || isYoungAudienceUnsafeText(text)) {
+        return getKidSafeFallbackText(word, field, lang);
+    }
+    return ensureEndingPunctuationForLanguage(text, lang);
+}
+
+function cloneWordEntry(entry = {}) {
+    if (!entry || typeof entry !== 'object') return {};
+    const clone = { ...entry };
+    Object.keys(clone).forEach((key) => {
+        const value = clone[key];
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+            clone[key] = { ...value };
+        } else if (Array.isArray(value)) {
+            clone[key] = value.slice();
+        }
+    });
+    return clone;
+}
+
+function getYoungAudienceOverridesSource() {
+    const source = window.YOUNG_AUDIENCE_OVERRIDES;
+    if (!source || typeof source !== 'object') return {};
+    return source;
+}
+
+function getYoungOverrideWordCount() {
+    return Object.keys(getYoungAudienceOverridesSource()).length;
+}
+
+function normalizeYoungOverrideText(value, languageCode = 'en') {
+    const text = cleanAudienceText(value);
+    if (!text) return '';
+    return ensureEndingPunctuationForLanguage(text, languageCode);
+}
+
+function getFieldOverrideKeys(field = 'definition') {
+    if (field === 'sentence') {
+        return ['sentence_young', 'sent_young', 'sentenceYoung'];
+    }
+    return ['def_young', 'definition_young', 'defYoung'];
+}
+
+function readOverrideTextFromContainer(container, field = 'definition', languageCode = 'en') {
+    if (!container || typeof container !== 'object') return '';
+    const keys = getFieldOverrideKeys(field);
+    for (const key of keys) {
+        const value = container[key];
+        if (typeof value === 'string' && value.trim()) {
+            return normalizeYoungOverrideText(value, languageCode);
+        }
+    }
+    return '';
+}
+
+function getManualYoungOverride(word, languageCode = 'en', field = 'definition') {
+    const key = String(word || '').trim().toLowerCase();
+    if (!key) return '';
+    const overrides = getYoungAudienceOverridesSource();
+    const entry = overrides[key];
+    if (!entry || typeof entry !== 'object') return '';
+
+    const lang = normalizePackedTtsLanguage(languageCode);
+    const langContainer = (entry[lang] && typeof entry[lang] === 'object') ? entry[lang] : null;
+    const enContainer = (entry.en && typeof entry.en === 'object') ? entry.en : null;
+
+    let text = readOverrideTextFromContainer(langContainer, field, lang);
+    if (!text) text = readOverrideTextFromContainer(entry, field, lang);
+    if (!text && lang !== 'en') text = readOverrideTextFromContainer(enContainer, field, 'en');
+    if (!text && lang !== 'en') text = readOverrideTextFromContainer(entry, field, 'en');
+    return text;
+}
+
+function buildKidSafeEntryVariant(word, entry = {}) {
+    const safeEntry = cloneWordEntry(entry);
+    ['en', 'es', 'zh', 'tl', 'vi', 'ms'].forEach((langCode) => {
+        const langEntry = (entry?.[langCode] && typeof entry[langCode] === 'object')
+            ? entry[langCode]
+            : null;
+        if (!langEntry) return;
+        const manualDef = getManualYoungOverride(word, langCode, 'definition');
+        const manualSentence = getManualYoungOverride(word, langCode, 'sentence');
+        safeEntry[langCode] = {
+            ...langEntry,
+            def: manualDef || buildKidSafeAudienceText(langEntry.def, {
+                word,
+                field: 'definition',
+                languageCode: langCode
+            }),
+            sentence: manualSentence || buildKidSafeAudienceText(langEntry.sentence, {
+                word,
+                field: 'sentence',
+                languageCode: langCode
+            })
+        };
+    });
+
+    const manualRootDef = getManualYoungOverride(word, 'en', 'definition');
+    const manualRootSentence = getManualYoungOverride(word, 'en', 'sentence');
+
+    if (safeEntry.def || safeEntry.sentence || manualRootDef || manualRootSentence) {
+        safeEntry.def = manualRootDef || buildKidSafeAudienceText(safeEntry.def, {
+            word,
+            field: 'definition',
+            languageCode: 'en'
+        });
+        safeEntry.sentence = manualRootSentence || buildKidSafeAudienceText(safeEntry.sentence, {
+            word,
+            field: 'sentence',
+            languageCode: 'en'
+        });
+    }
+
+    if (safeEntry.en && typeof safeEntry.en === 'object') {
+        if (manualRootDef) safeEntry.en.def = manualRootDef;
+        if (manualRootSentence) safeEntry.en.sentence = manualRootSentence;
+    }
+
+    return safeEntry;
+}
+
+function getWordEntriesSource() {
+    if (window.WORD_ENTRIES && typeof window.WORD_ENTRIES === 'object') return window.WORD_ENTRIES;
+    if (typeof WORDS_DATA !== 'undefined' && WORDS_DATA && typeof WORDS_DATA === 'object') return WORDS_DATA;
+    return {};
+}
+
+function getKidSafeWordEntries() {
+    const source = getWordEntriesSource();
+    const sourceSize = Object.keys(source).length;
+    const overrideSize = getYoungOverrideWordCount();
+    if (
+        kidSafeWordEntriesCache
+        && kidSafeWordEntriesSourceSize === sourceSize
+        && kidSafeWordEntriesOverrideSize === overrideSize
+    ) {
+        return kidSafeWordEntriesCache;
+    }
+    const safe = {};
+    Object.keys(source).forEach((word) => {
+        safe[word] = buildKidSafeEntryVariant(word, source[word]);
+    });
+    kidSafeWordEntriesCache = safe;
+    kidSafeWordEntriesSourceSize = sourceSize;
+    kidSafeWordEntriesOverrideSize = overrideSize;
+    return kidSafeWordEntriesCache;
+}
+
+function getWordEntryForAudience(word, mode = getResolvedAudienceMode()) {
+    const key = String(word || '').trim().toLowerCase();
+    if (!key) return null;
+    if (normalizeAudienceMode(mode) === 'young-eal') {
+        const safeEntries = getKidSafeWordEntries();
+        if (safeEntries?.[key]) return safeEntries[key];
+    }
+    return getWordEntriesSource()?.[key] || null;
+}
+
+function getWordCopyForAudience(word, languageCode = 'en', mode = getResolvedAudienceMode()) {
+    const key = String(word || '').trim().toLowerCase();
+    if (!key) return { definition: '', sentence: '', languageCode: normalizePackedTtsLanguage(languageCode) };
+    const lang = normalizePackedTtsLanguage(languageCode);
+    const entry = getWordEntryForAudience(key, mode);
+    const localized = (lang === 'en')
+        ? (entry?.en || entry || null)
+        : (entry?.[lang] || entry?.en || entry || null);
+    return {
+        definition: cleanAudienceText(localized?.def || entry?.def || ''),
+        sentence: cleanAudienceText(localized?.sentence || entry?.sentence || ''),
+        languageCode: lang
+    };
 }
 
 function getResolvedAudienceMode() {
@@ -6151,46 +6594,41 @@ function getResolvedAudienceMode() {
     const profile = window.DECODE_PLATFORM?.getProfile?.() || {};
     const gradeBand = normalizeGradeBandForAudience(profile.gradeBand || '');
     const uiLook = getUiLookValue();
+    const rolePathway = getCurrentAudienceRolePathway();
     const translationLockedNonEnglish = !!appSettings.translation?.pinned && appSettings.translation?.lang && appSettings.translation.lang !== 'en';
     const translationDefaultNonEnglish = !!appSettings.translation?.lang && appSettings.translation.lang !== 'en';
 
-    if (gradeBand === 'K-2' || uiLook === 'k2' || translationLockedNonEnglish || translationDefaultNonEnglish) {
+    if (
+        gradeBand === 'K-2'
+        || uiLook === 'k2'
+        || translationLockedNonEnglish
+        || translationDefaultNonEnglish
+        || YOUNG_AUDIENCE_ROLE_PATHWAYS.has(rolePathway)
+    ) {
         return 'young-eal';
     }
     return 'general';
 }
 
-function simplifyRevealDefinition(definitionText, word) {
-    let text = applyYoungAudienceReplacements(definitionText);
-    if (!text) {
-        return `"${word}" is a word we can practice in reading and writing.`;
-    }
-
-    const sentenceSplit = text.split(/(?<=[.!?])\s+/);
-    if (sentenceSplit.length > 1) {
-        text = sentenceSplit[0];
-    }
-
-    if (countWords(text) > 16) {
-        text = truncateWords(text, 16);
-    }
-    return ensureEndingPunctuation(text);
+function simplifyRevealDefinition(definitionText, word, languageCode = 'en') {
+    return buildKidSafeAudienceText(definitionText, {
+        word,
+        field: 'definition',
+        languageCode
+    });
 }
 
-function simplifyRevealSentence(sentenceText, word) {
-    let text = applyYoungAudienceReplacements(sentenceText);
-    if (!text || YOUNG_AUDIENCE_BLOCKLIST.test(text)) {
-        return `We used the word "${word}" in a silly class story.`;
-    }
-
-    if (countWords(text) > 18) {
-        text = truncateWords(text, 18);
-    }
-    return ensureEndingPunctuation(text);
+function simplifyRevealSentence(sentenceText, word, languageCode = 'en') {
+    return buildKidSafeAudienceText(sentenceText, {
+        word,
+        field: 'sentence',
+        languageCode
+    });
 }
 
-function adaptRevealCopyForAudience(definitionText, sentenceText, word) {
-    const mode = getResolvedAudienceMode();
+function adaptRevealCopyForAudience(definitionText, sentenceText, word, options = {}) {
+    const mode = normalizeAudienceMode(options.mode || getResolvedAudienceMode());
+    const languageCode = normalizePackedTtsLanguage(options.languageCode || 'en');
     if (mode !== 'young-eal') {
         return {
             definition: definitionText,
@@ -6200,8 +6638,8 @@ function adaptRevealCopyForAudience(definitionText, sentenceText, word) {
     }
 
     return {
-        definition: simplifyRevealDefinition(definitionText, word),
-        sentence: simplifyRevealSentence(sentenceText, word),
+        definition: simplifyRevealDefinition(definitionText, word, languageCode),
+        sentence: simplifyRevealSentence(sentenceText, word, languageCode),
         mode
     };
 }
@@ -6854,14 +7292,418 @@ const DEFAULT_DECODABLE_TEXTS = [
         focus: 'Presentation fluency',
         tags: ['multisyllable', 'schwa', 'suffix'],
         content: 'A learner drafted a reflection script for an internship panel. They rehearsed transitions, checked stress patterns in multisyllabic words, and adjusted pacing for audience comprehension. The final read-through sounded clear, credible, and professional.'
+    },
+    {
+        title: 'Big Net Picnic',
+        level: 'K-2 · CVC',
+        gradeBand: 'K-2',
+        focus: 'Short vowels',
+        tags: ['cvc'],
+        content: 'Tim and Kim had a big red net and a bag. They ran to the pond to get fish for a pretend picnic game. Tim let the net dip in the pond, and Kim set the bag on a log. They did not get fish, but they got wet and had fun.'
+    },
+    {
+        title: 'Mud Hut Plan',
+        level: 'K-2 · CVC',
+        gradeBand: 'K-2',
+        focus: 'Short vowels',
+        tags: ['cvc'],
+        content: 'Sam had a mud hut map on a pad. Max dug in the mud and Pat put sticks on top. The hut had a big gap, so Sam put in a flat plank. At dusk, the hut was set, and the kids sat by it to clap and grin.'
+    },
+    {
+        title: 'Zip the Bag',
+        level: 'K-2 · CVC',
+        gradeBand: 'K-2',
+        focus: 'Short vowels',
+        tags: ['cvc'],
+        content: 'Liz had to pack a bag for a short trip. She put in a hat, a cup, and a map. The bag did not zip at first, so she had to swap one big item for a small one. Then the zip shut, and Liz was set to go.'
+    },
+    {
+        title: 'Hot Pot Shop',
+        level: 'K-2 · CVC',
+        gradeBand: 'K-2',
+        focus: 'Short vowels',
+        tags: ['cvc'],
+        content: 'At the shop, Rob saw a hot pot and a red pan. Nan got a cup and a lid. The clerk said, "Check the tag to pick the best cost." Rob did the math on his pad, and Nan said the plan was smart and fair.'
+    },
+    {
+        title: 'Chalk and Cheese',
+        level: 'K-2 · Digraphs',
+        gradeBand: 'K-2',
+        focus: 'Ch and sh',
+        tags: ['digraph'],
+        content: 'Chad had chalk and a dish. Shea had cheese and chips. They had to choose one snack for lunch and one tool for art. Chad chose chalk and chips, and Shea chose cheese and a brush. They both had what they need and got to work.'
+    },
+    {
+        title: 'The Thin Thread',
+        level: 'K-2 · Digraphs',
+        gradeBand: 'K-2',
+        focus: 'Th',
+        tags: ['digraph'],
+        content: 'Theo saw a thin thread on his shirt and told Beth. Beth said, "Think and then fix it with care." They got a thick cloth and set the shirt on the bench. With calm hands, they fixed the thread and put the shirt back on.'
+    },
+    {
+        title: 'Shark in the Shade',
+        level: 'K-2 · Digraphs',
+        gradeBand: 'K-2',
+        focus: 'Sh and ch',
+        tags: ['digraph'],
+        content: 'At beach class, kids drew a shark in the shade. Ash drew sharp fins and Chip drew a shell near each wave. The coach said, "Check your sketch and add one more shape." They did, then they shared each page with a classmate.'
+    },
+    {
+        title: 'Lunch Bench Check',
+        level: 'K-2 · Digraphs',
+        gradeBand: 'K-2',
+        focus: 'Sh, ch, th',
+        tags: ['digraph'],
+        content: 'At lunch, the class did a quick bench check. They found a chip bag, a thin cloth, and a lunch tray with a splash. "Push each dish to the center," said the teacher. The class did each task and left the bench clean.'
+    },
+    {
+        title: 'Clap for the Frog',
+        level: 'K-2 · Blends',
+        gradeBand: 'K-2',
+        focus: 'Initial blends',
+        tags: ['ccvc', 'cvcc'],
+        content: 'Brad and Clare saw a frog jump from grass to rock. The frog did a quick flip and then hid by a plant. "Clap if you spot it again," said Brad. The frog sprang back, and the class gave one big clap for the brave frog.'
+    },
+    {
+        title: 'Trip to the Brick Pond',
+        level: 'K-2 · Blends',
+        gradeBand: 'K-2',
+        focus: 'Initial and final blends',
+        tags: ['ccvc', 'cvcc'],
+        content: 'The class took a trip to a pond by a brick path. Brent brought a black sketch pad, and Priya brought a chart. They sat on a flat rock and drew each duck. At the end, they clipped each sketch to a class board.'
+    },
+    {
+        title: 'Fresh Grass Track',
+        level: 'K-2 · Blends',
+        gradeBand: 'K-2',
+        focus: 'Blends',
+        tags: ['ccvc', 'cvcc'],
+        content: 'On sports day, the class ran laps on the fresh grass track. Fred was fast at the start, but Grace kept a calm pace and passed him at the end. The coach said, "Great grit from both of you." They shook hands and got a drink.'
+    },
+    {
+        title: 'Black Flag Sprint',
+        level: 'K-2 · Blends',
+        gradeBand: 'K-2',
+        focus: 'Blends',
+        tags: ['ccvc', 'cvcc'],
+        content: 'In relay class, one team had a black flag and one had a blue flag. Each group had to sprint to a mark and clip the flag to a stand. Brock slipped one step but did not quit. He got back up and still helped his team win.'
+    },
+    {
+        title: 'Pete and the Cube',
+        level: 'K-2 · Magic E',
+        gradeBand: 'K-2',
+        focus: 'Long vowel CVCe',
+        tags: ['cvce'],
+        content: 'Pete made a cube from paper and tape. He wrote these words on each side: made, note, bike, and cube. "The e is silent and helps the vowel say its name," said Pete. The group read each side and gave Pete a smile.'
+    },
+    {
+        title: 'Ride the Bike Lane',
+        level: 'K-2 · Magic E',
+        gradeBand: 'K-2',
+        focus: 'Long vowel CVCe',
+        tags: ['cvce'],
+        content: 'Jade and Mike rode in the bike lane by the lake. A sign said, "Ride safe and keep space." Mike saw that every key word had a final e. Jade said, "We can decode these words fast now." They waved and rode home safe.'
+    },
+    {
+        title: 'Home Note Code',
+        level: 'K-2 · Magic E',
+        gradeBand: 'K-2',
+        focus: 'Long vowel CVCe',
+        tags: ['cvce'],
+        content: 'At home, Zoe hid a note with a code for her dad. The note said, "Look by the stove and then by the vase." Dad solved each clue and found a joke by the gate. Zoe clapped and said, "Nice decode work!"'
+    },
+    {
+        title: 'Team Seal Rescue',
+        level: 'K-2 · Vowel Teams',
+        gradeBand: 'K-2',
+        focus: 'Ea and ee',
+        tags: ['vowel_team'],
+        content: 'At the beach, a team saw a seal near a green rope. The coach said, "Keep clear and speak low." They read the safety sheet, then called the rescue crew. The team stayed calm, and the seal got safe care right away.'
+    },
+    {
+        title: 'Rainy Day Paint',
+        level: 'K-2 · Vowel Teams',
+        gradeBand: 'K-2',
+        focus: 'Ai and ay',
+        tags: ['vowel_team'],
+        content: 'On a rainy day, the class did paint time. Mia made a bright rainbow and Jay made a train in gray. They read labels on each paint tray and put lids on when done. The room stayed neat, and each page looked great.'
+    },
+    {
+        title: 'Blue Moon Cruise',
+        level: 'K-2 · Vowel Teams',
+        gradeBand: 'K-2',
+        focus: 'Oo and ue',
+        tags: ['vowel_team'],
+        content: 'The class read a story called Blue Moon Cruise. In the tale, a crew used clues to choose a route. The teacher paused at each vowel team and had students echo read. By the end, the whole group read with smooth pace.'
+    },
+    {
+        title: 'Farm Cart Race',
+        level: 'K-2 · R-Controlled',
+        gradeBand: 'K-2',
+        focus: 'Ar',
+        tags: ['r_controlled'],
+        content: 'At the farm fair, kids ran a cart race in the barn yard. Mark pushed his cart past a dark tarp and a sharp turn. Sara kept her cart on the marked path. Both carts got to the start line for one more round.'
+    },
+    {
+        title: 'Storm at the Port',
+        level: 'K-2 · R-Controlled',
+        gradeBand: 'K-2',
+        focus: 'Or',
+        tags: ['r_controlled'],
+        content: 'A storm hit the port at dawn. The short horn warned each boat to stay near shore. Nora and Jorge read the port report board and saw the word storm many times. They talked about or words and then went indoors.'
+    },
+    {
+        title: 'Turn at Bird Park',
+        level: 'K-2 · R-Controlled',
+        gradeBand: 'K-2',
+        focus: 'Er, ir, ur',
+        tags: ['r_controlled'],
+        content: 'At Bird Park, a sign said, "Turn left at the fern and look for birds near the curb." Mira heard the er sound in fern, bird, and curb. She circled each word in her notebook and read the line again with clear voice.'
+    },
+    {
+        title: 'Coin Count Out Loud',
+        level: 'K-2 · Diphthongs',
+        gradeBand: 'K-2',
+        focus: 'Oi and ou',
+        tags: ['diphthong'],
+        content: 'Joy found coins in a toy box and said, "Let us count out loud." Lou joined in and pointed to each coin. They heard oi in coin and ou in out. Then they wrote both patterns on a card and stuck it on the wall.'
+    },
+    {
+        title: 'Boy Scout Point',
+        level: 'K-2 · Diphthongs',
+        gradeBand: 'K-2',
+        focus: 'Oi and ou',
+        tags: ['diphthong'],
+        content: 'The scout group met at a point by the trail. One boy had to shout when he found the route mark. The leader said, "Listen for oi and ou words while we walk." The group did, and they found many sound pattern pairs.'
+    },
+    {
+        title: 'Bell Buzz Hill',
+        level: 'K-2 · FLOSS',
+        gradeBand: 'K-2',
+        focus: 'FLOSS endings',
+        tags: ['floss'],
+        content: 'At camp, the bell rang from the hill, and Tess said, "Class starts now." Russ had a pass and Jill had a shell for the lesson bin. The class read words that end in ll, ss, and zz and then sorted them by ending.'
+    },
+    {
+        title: 'Cliff Pass Toss',
+        level: 'K-2 · FLOSS',
+        gradeBand: 'K-2',
+        focus: 'FLOSS endings',
+        tags: ['floss'],
+        content: 'On game day, kids had to toss a ball past a small cliff mark. Miss Bell said, "Do not rush. Set your feet and toss." The class then read pass, cliff, and miss on cards and matched each word to its ending sound.'
+    },
+    {
+        title: 'Long Song Campfire',
+        level: 'K-2 · Welded',
+        gradeBand: 'K-2',
+        focus: 'Ng and nk',
+        tags: ['welded'],
+        content: 'At campfire sing time, kids sang a long song and drank warm drinks. Hank had a trunk with string lights and a blank song sheet. Ming found ink for names at the top. They sang, rang bells, and had a calm night.'
+    },
+    {
+        title: 'Trunk and String Tag',
+        level: 'K-2 · Welded',
+        gradeBand: 'K-2',
+        focus: 'Ng and nk',
+        tags: ['welded'],
+        content: 'Each camper had a trunk and a string tag. The teacher said, "Think and then link your tag to the right trunk." Kids checked names, fixed one mix up, and then sat in a ring. They sang one song before bed.'
+    },
+    {
+        title: 'Schwa in Animal Report',
+        level: '3-5 · Schwa',
+        gradeBand: '3-5',
+        focus: 'Unstressed syllables',
+        tags: ['schwa', 'multisyllable'],
+        content: 'Students wrote an animal report and practiced words like animal, habitat, and tropical. They tapped syllables, marked the unstressed sound, and rehearsed each line aloud. The class used a quick schwa check before final sharing.'
+    },
+    {
+        title: 'Camera and Memory',
+        level: '3-5 · Schwa',
+        gradeBand: '3-5',
+        focus: 'Schwa in connected text',
+        tags: ['schwa', 'multisyllable'],
+        content: 'The media club created a memory board from a school trip. In the script, they found schwa sounds in camera, memory, and celebrate. Partners practiced fluent reading with smooth stress patterns, then recorded a final read.'
+    },
+    {
+        title: 'Support for the Team',
+        level: '3-5 · Schwa',
+        gradeBand: '3-5',
+        focus: 'Schwa and fluency',
+        tags: ['schwa', 'multisyllable'],
+        content: 'During a team challenge, students read support plans and highlighted unstressed syllables in difficult words. They practiced chunks, then read full sentences with natural pacing. The final reflection explained how schwa awareness improved decoding speed.'
+    },
+    {
+        title: 'Problem Solver Plan',
+        level: '3-5 · Schwa',
+        gradeBand: '3-5',
+        focus: 'Schwa transfer',
+        tags: ['schwa', 'multisyllable'],
+        content: 'The class solved a design problem and logged each strategy step. They noticed schwa in words like problem, separate, and decimal while reading notes aloud. Each group made a poster of tips for decoding unstressed syllables in content classes.'
+    },
+    {
+        title: 'Preview and Predict',
+        level: '3-5 · Morphology',
+        gradeBand: '3-5',
+        focus: 'Prefix meaning',
+        tags: ['prefix', 'multisyllable'],
+        content: 'Readers previewed a short article and predicted key ideas from headings. They sorted pre words, explained how the prefix changed meaning, and wrote one evidence sentence for each heading. Peer partners checked accuracy and clarity.'
+    },
+    {
+        title: 'Rebuild the Model',
+        level: '3-5 · Morphology',
+        gradeBand: '3-5',
+        focus: 'Re- prefix',
+        tags: ['prefix', 'multisyllable'],
+        content: 'In science, teams rebuilt a storm model after the first test failed. They tracked words such as rebuild, review, and remeasure. Students connected the prefix re to repeated action and used the words in a clear procedure summary.'
+    },
+    {
+        title: 'Misprint Fix Station',
+        level: '3-5 · Morphology',
+        gradeBand: '3-5',
+        focus: 'Mis- and dis-',
+        tags: ['prefix', 'multisyllable'],
+        content: 'At the fix station, students corrected a page with several misprints and disconnected labels. They discussed how mis and dis shifted meaning and then revised sentences for clarity. The class compared first drafts to final corrected versions.'
+    },
+    {
+        title: 'Careful Writers Club',
+        level: '3-5 · Morphology',
+        gradeBand: '3-5',
+        focus: 'Suffixes in writing',
+        tags: ['suffix', 'multisyllable'],
+        content: 'In writers club, students changed base words with suffixes to improve precision. Hope became hopeful, teach became teacher, and care became careful. They read each revision aloud and checked if the new form matched the sentence purpose.'
+    },
+    {
+        title: 'Movement in the Market',
+        level: '3-5 · Morphology',
+        gradeBand: '3-5',
+        focus: 'Noun-forming suffixes',
+        tags: ['suffix', 'multisyllable'],
+        content: 'A class market simulation used words like movement, payment, and shipment. Students identified suffix patterns and grouped words by part of speech. They then wrote a short market report using at least four derived words correctly.'
+    },
+    {
+        title: 'Helpful Partner Notes',
+        level: '3-5 · Morphology',
+        gradeBand: '3-5',
+        focus: 'Adjective and adverb suffixes',
+        tags: ['suffix', 'multisyllable'],
+        content: 'Partners exchanged notes and revised language to sound helpful and specific. Quick became quickly, calm became calmly, and use became useful. Teams shared one revised paragraph and explained why each suffix choice improved meaning.'
+    },
+    {
+        title: 'Sunflower Sketchbook',
+        level: '3-5 · Compounds',
+        gradeBand: '3-5',
+        focus: 'Compound words',
+        tags: ['compound'],
+        content: 'The art class made a sketchbook page with compound words from the school garden: sunflower, beehive, birdhouse, and raincoat. Students split each word into parts, explained meaning, and then wrote a short caption for each sketch.'
+    },
+    {
+        title: 'Backpack Raincheck',
+        level: '3-5 · Compounds',
+        gradeBand: '3-5',
+        focus: 'Compound words in context',
+        tags: ['compound'],
+        content: 'On a rainy field day, students read schedule cards with words like backpack, raincheck, and playground. They decoded each compound quickly and used it in an oral sentence. The class then made a compound word wall for reference.'
+    },
+    {
+        title: 'Syllable Ladder Practice',
+        level: '3-5 · Multisyllabic',
+        gradeBand: '3-5',
+        focus: 'Syllable division',
+        tags: ['multisyllable'],
+        content: 'Students built a syllable ladder from words of increasing length: robot, computer, celebrate, and transportation. They marked vowels, divided syllables, and blended in sequence. The final challenge was reading each word inside a full sentence.'
+    },
+    {
+        title: 'Fantastic Planet Poster',
+        level: '3-5 · Multisyllabic',
+        gradeBand: '3-5',
+        focus: 'Multisyllabic decoding',
+        tags: ['multisyllable'],
+        content: 'For science fair, teams made a fantastic planet poster with many multisyllabic labels. They practiced decoding each label before presenting and adjusted pacing at punctuation. Audience questions showed stronger vocabulary accuracy than before.'
+    },
+    {
+        title: 'Computer Corner Protocol',
+        level: '3-5 · Multisyllabic',
+        gradeBand: '3-5',
+        focus: 'Procedure fluency',
+        tags: ['multisyllable', 'suffix'],
+        content: 'In computer corner, students read a protocol for logging in, organizing files, and submitting work. They decoded multisyllabic verbs and nouns, then paraphrased each step. Partners checked whether the paraphrase kept all key details.'
+    },
+    {
+        title: 'Civic Speech Rehearsal',
+        level: '6-8 · Academic',
+        gradeBand: '6-8',
+        focus: 'Prosody and argument language',
+        tags: ['multisyllable', 'suffix'],
+        content: 'Students rehearsed a civic speech and monitored pace, stress, and pause points. They practiced terms such as participation, responsibility, and representation, then revised sentence phrasing for clarity. Peer feedback focused on credibility and audience comprehension.'
+    },
+    {
+        title: 'Ecosystem Field Notes',
+        level: '6-8 · Academic',
+        gradeBand: '6-8',
+        focus: 'Vocabulary in science context',
+        tags: ['prefix', 'suffix', 'multisyllable'],
+        content: 'In ecosystem field notes, students decoded words like biodiversity, interaction, and decomposition. They identified morphemes, predicted meaning, and confirmed with context from observation notes. Teams then presented one concise claim with evidence.'
+    },
+    {
+        title: 'Media Literacy Roundtable',
+        level: '6-8 · Fluency + Meaning',
+        gradeBand: '6-8',
+        focus: 'Complex sentence reading',
+        tags: ['multisyllable', 'prefix'],
+        content: 'At the roundtable, students read short media claims and evaluated source reliability. They decoded complex words, marked transition phrases, and practiced expressive reading of evidence statements. Discussion quality improved when text reading became more fluent.'
+    },
+    {
+        title: 'Design Brief Walkthrough',
+        level: '6-8 · Academic',
+        gradeBand: '6-8',
+        focus: 'Technical fluency',
+        tags: ['suffix', 'multisyllable'],
+        content: 'Teams completed a design brief walkthrough for a classroom prototype challenge. They decoded technical vocabulary, chunked long sentences, and rehearsed oral delivery with natural phrasing. The final brief was clear, organized, and easier for peers to follow.'
+    },
+    {
+        title: 'Policy Analysis Warmup',
+        level: '9-12 · Advanced',
+        gradeBand: '9-12',
+        focus: 'Academic vocabulary and cadence',
+        tags: ['prefix', 'suffix', 'multisyllable', 'schwa'],
+        content: 'Students completed a policy analysis warmup with targeted vocabulary before seminar. They decoded unfamiliar terms, annotated author claims, and practiced spoken summaries with controlled pacing. The group used a rubric to evaluate precision, coherence, and delivery.'
+    },
+    {
+        title: 'Capstone Presentation Draft',
+        level: '9-12 · Advanced',
+        gradeBand: '9-12',
+        focus: 'Presentation fluency and clarity',
+        tags: ['multisyllable', 'suffix', 'prefix'],
+        content: 'Learners drafted capstone presentation scripts and tested sentence rhythm through repeated read-throughs. They corrected pronunciation of domain-specific terms and revised transitions for audience flow. Final drafts demonstrated stronger confidence and clearer message structure.'
     }
 ];
 
 function ensureDecodableTextsLibrary() {
-    if (Array.isArray(window.DECODABLE_TEXTS) && window.DECODABLE_TEXTS.length) {
+    if (Array.isArray(window.DECODABLE_TEXTS) && window.DECODABLE_TEXTS.length >= DEFAULT_DECODABLE_TEXTS.length) {
         return window.DECODABLE_TEXTS;
     }
-    window.DECODABLE_TEXTS = DEFAULT_DECODABLE_TEXTS.map((entry) => ({ ...entry }));
+
+    const base = DEFAULT_DECODABLE_TEXTS.map((entry) => ({ ...entry }));
+    const expansion = Array.isArray(window.DECODABLE_TEXTS_EXPANSION)
+        ? window.DECODABLE_TEXTS_EXPANSION.map((entry) => ({ ...entry }))
+        : [];
+
+    const merged = [];
+    const seen = new Set();
+    [...base, ...expansion].forEach((entry) => {
+        if (!entry || typeof entry !== 'object') return;
+        const title = String(entry.title || '').trim();
+        const gradeBand = String(entry.gradeBand || '').trim();
+        const content = String(entry.content || '').trim();
+        if (!title || !content) return;
+        const key = `${title.toLowerCase()}|${gradeBand.toLowerCase()}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        merged.push(entry);
+    });
+
+    window.DECODABLE_TEXTS = merged;
     return window.DECODABLE_TEXTS;
 }
 
@@ -7018,7 +7860,7 @@ function populatePhonemeGrid(preselectSound = null) {
     }
 
     const subtitle = document.querySelector('.sound-guide-subtitle');
-    if (subtitle) subtitle.textContent = 'Tap a tile to see a quick tip and example. Sounds are shown like /sh/.';
+    if (subtitle) subtitle.textContent = 'Tap a tile to see a quick tip and example. Each sound can have its own video clip, including teacher-recorded versions.';
 
     if (!soundGuideBuilt) {
         buildVowelRow();
@@ -7373,6 +8215,8 @@ function clearSoundSelection() {
         displayPanel.classList.add('hidden');
     }
     clearPronunciationFeedback();
+    clearSoundVideoPlayer();
+    releaseActiveSoundVideoUrl();
     const layout = document.querySelector('.sound-guide-layout');
     if (layout) layout.classList.add('no-card');
 }
@@ -7843,12 +8687,28 @@ function ensureArticulationCard(phoneme) {
                 ${exampleLine}
             </div>
         </div>
+        <div class="sound-card-actions">
+            <button type="button" id="hear-letter-name">Hear letter</button>
+            <button type="button" id="hear-example-word">Hear example</button>
+            <button type="button" id="pronunciation-check-btn">Pronunciation Check</button>
+            <button type="button" id="play-sound-video">Play sound video</button>
+            <button type="button" id="record-sound-video">Record my video</button>
+            <button type="button" id="upload-sound-video">Upload video</button>
+            <button type="button" id="delete-sound-video">Delete my video</button>
+        </div>
+        <div class="sound-video-panel">
+            <video id="sound-video-player" class="sound-video-player hidden" controls playsinline preload="metadata"></video>
+            <input id="sound-video-file-input" class="hidden" type="file" accept="video/mp4,video/webm,video/quicktime,video/*">
+            <div id="sound-video-status" class="sound-video-status muted">Each sound can use its own short video clip.</div>
+        </div>
     `;
 
     const collapseBtn = document.getElementById('collapse-articulation');
     if (collapseBtn) {
         collapseBtn.onclick = () => clearSoundSelection();
     }
+    initArticulationAudioControls();
+    bindSoundVideoControls();
 }
 
 function ensureSoundLabCollapseControl() {
@@ -7937,6 +8797,8 @@ function selectSound(sound, phoneme, labelOverride = null, tile = null) {
         const existingSoundRecorder = displayPanel.querySelector('.practice-recorder-group');
         if (existingSoundRecorder) existingSoundRecorder.remove();
     }
+    setSoundVideoStatus('Checking available sound video…', 'info');
+    showPhonemeVideoPreview(sound, phoneme, { autoplay: false });
 }
 
 function showLetterSounds(letter) {
@@ -8036,6 +8898,119 @@ function initArticulationAudioControls() {
             btn.onclick = () => startPronunciationCheck();
         }
     });
+}
+
+function getCurrentSoundForVideo() {
+    return normalizePhonemeSoundKey(currentSelectedSound?.sound || '');
+}
+
+async function playSoundVideoForCurrentSelection(options = {}) {
+    const sound = getCurrentSoundForVideo();
+    if (!sound || !currentSelectedSound?.phoneme) {
+        setSoundVideoStatus('Select a sound tile first.', 'warn');
+        return false;
+    }
+    return showPhonemeVideoPreview(sound, currentSelectedSound.phoneme, options);
+}
+
+function openSoundVideoInput(capture = false) {
+    const input = document.getElementById('sound-video-file-input');
+    if (!input) return;
+    if (capture) {
+        input.setAttribute('capture', 'user');
+    } else {
+        input.removeAttribute('capture');
+    }
+    input.click();
+}
+
+async function handleSoundVideoFile(file) {
+    if (!file) return;
+    const sound = getCurrentSoundForVideo();
+    if (!sound) {
+        showToast('Select a sound tile before adding a video.');
+        return;
+    }
+    if (!String(file.type || '').startsWith('video/')) {
+        showToast('Please choose a video file.');
+        return;
+    }
+    const maxBytes = 90 * 1024 * 1024;
+    if (file.size > maxBytes) {
+        showToast('Video is too large (max 90MB).');
+        return;
+    }
+
+    const database = await ensureDBReady();
+    if (!database) {
+        showToast('Unable to save video on this device right now.');
+        return;
+    }
+    saveAudioToDB(getPhonemeVideoRecordingKey(sound), file);
+    setSoundVideoStatus('Teacher video saved for this sound.', 'success');
+    showToast(`Saved teacher video for /${sound}/.`);
+    await playSoundVideoForCurrentSelection({ autoplay: true });
+}
+
+async function deleteSoundVideoForCurrentSelection() {
+    const sound = getCurrentSoundForVideo();
+    if (!sound) {
+        showToast('Select a sound tile first.');
+        return;
+    }
+    if (!confirm(`Delete teacher video for "${sound}"?`)) return;
+    await deleteAudioFromDB(getPhonemeVideoRecordingKey(sound));
+    releaseActiveSoundVideoUrl();
+    setSoundVideoStatus('Teacher video deleted. Checking library clip…', 'info');
+    showToast(`Deleted teacher video for /${sound}/.`);
+    await playSoundVideoForCurrentSelection({ autoplay: false });
+}
+
+function bindSoundVideoControls() {
+    const playBtn = document.getElementById('play-sound-video');
+    const recordBtn = document.getElementById('record-sound-video');
+    const uploadBtn = document.getElementById('upload-sound-video');
+    const deleteBtn = document.getElementById('delete-sound-video');
+    const input = document.getElementById('sound-video-file-input');
+    const player = getSoundVideoPlayer();
+
+    if (playBtn) {
+        playBtn.onclick = () => {
+            playSoundVideoForCurrentSelection({ autoplay: true });
+        };
+    }
+    if (recordBtn) {
+        recordBtn.onclick = () => {
+            openSoundVideoInput(true);
+        };
+    }
+    if (uploadBtn) {
+        uploadBtn.onclick = () => {
+            openSoundVideoInput(false);
+        };
+    }
+    if (deleteBtn) {
+        deleteBtn.onclick = () => {
+            deleteSoundVideoForCurrentSelection();
+        };
+    }
+    if (input) {
+        input.onchange = async () => {
+            const file = input.files && input.files[0] ? input.files[0] : null;
+            await handleSoundVideoFile(file);
+            input.value = '';
+        };
+    }
+    if (player) {
+        player.onended = () => {
+            const source = player.dataset.source || 'library';
+            if (source === 'teacher') {
+                setSoundVideoStatus('Teacher video finished. Tap play to review again.', 'success');
+            } else {
+                setSoundVideoStatus('Library video finished. Tap play to review again.', 'info');
+            }
+        };
+    }
 }
 
 function ensurePronunciationCheckButton() {
