@@ -8,6 +8,12 @@
   const LESSON_KEY = 'decode_teacher_lessons_v1';
   const QUICK_RESPONSES_KEY = 'decode_quick_responses_v1';
   const QUICK_RESPONSES_OPEN_KEY = 'decode_quick_responses_open_v1';
+  const HOME_ROLE_KEY = 'cornerstone_home_role_v1';
+  const HOME_LAST_ADULT_ROLE_KEY = 'cornerstone_home_role_last_adult_v1';
+  const STUDENT_MODE_PIN_KEY = 'cornerstone_student_mode_pin_v1';
+  const STUDENT_MODE_STRICT_KEY = 'cornerstone_student_mode_strict_v1';
+  const STUDENT_MODE_RECOVERY_KEY = 'cornerstone_student_mode_recovery_v1';
+  const DEFAULT_STUDENT_MODE_PIN = '2468';
 
   const LEARNERS_KEY = 'decode_learners_v1';
   const ACTIVE_LEARNER_KEY = 'decode_active_learner_v1';
@@ -193,6 +199,274 @@
       gradeBand: gradeBand || '',
       uiLook
     };
+  }
+
+  function normalizeHomeRolePathway(rawRole) {
+    const raw = String(rawRole || '').trim().toLowerCase();
+    if (!raw) return '';
+    if (raw === 'learner' || raw === 'pupil') return 'student';
+    if (raw === 'administrator' || raw === 'leadership' || raw === 'leader') return 'admin';
+    if (raw === 'learning_support' || raw === 'ls' || raw === 'sped') return 'learning-support';
+    if (raw === 'speech') return 'slp';
+    if (raw === 'ell' || raw === 'esl') return 'eal';
+    if (raw === 'sel-counselor' || raw === 'school-counselor') return 'counselor';
+    if (raw === 'psych' || raw === 'school-psychologist') return 'psychologist';
+    if (raw === 'caregiver' || raw === 'family') return 'parent';
+    return raw;
+  }
+
+  function readHomeRolePathway() {
+    return normalizeHomeRolePathway(localStorage.getItem(HOME_ROLE_KEY) || '');
+  }
+
+  function setHomeRolePathway(roleId) {
+    const normalized = normalizeHomeRolePathway(roleId);
+    if (!normalized) return;
+    if (normalized !== 'student') {
+      localStorage.setItem(HOME_LAST_ADULT_ROLE_KEY, normalized);
+    }
+    localStorage.setItem(HOME_ROLE_KEY, normalized);
+    window.dispatchEvent(new CustomEvent('decode:home-role-changed', { detail: { role: normalized } }));
+  }
+
+  function readLastAdultRolePathway() {
+    const fromStored = normalizeHomeRolePathway(localStorage.getItem(HOME_LAST_ADULT_ROLE_KEY) || '');
+    if (fromStored && fromStored !== 'student') return fromStored;
+    const current = readHomeRolePathway();
+    if (current && current !== 'student') return current;
+    return 'teacher';
+  }
+
+  function normalizeStudentPin(rawPin) {
+    return String(rawPin || '')
+      .replace(/[^\d]/g, '')
+      .slice(0, 8);
+  }
+
+  function isValidStudentPin(rawPin) {
+    const normalized = normalizeStudentPin(rawPin);
+    return normalized.length >= 4 && normalized.length <= 8;
+  }
+
+  function readCustomStudentModePin() {
+    const stored = String(localStorage.getItem(STUDENT_MODE_PIN_KEY) || '').trim();
+    if (!isValidStudentPin(stored)) return '';
+    return normalizeStudentPin(stored);
+  }
+
+  function hasCustomStudentModePin() {
+    return !!readCustomStudentModePin();
+  }
+
+  function readStudentModeStrictMode() {
+    return localStorage.getItem(STUDENT_MODE_STRICT_KEY) === '1';
+  }
+
+  function writeStudentModeStrictMode(enabled) {
+    if (enabled) {
+      localStorage.setItem(STUDENT_MODE_STRICT_KEY, '1');
+    } else {
+      localStorage.removeItem(STUDENT_MODE_STRICT_KEY);
+    }
+  }
+
+  function normalizeRecoveryPhrase(rawPhrase) {
+    return String(rawPhrase || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function buildRecoveryPhrase() {
+    const words = [
+      'anchor', 'maple', 'harbor', 'cedar', 'sunrise', 'canvas', 'ridge', 'meadow', 'spark', 'beacon',
+      'silver', 'amber', 'summit', 'ribbon', 'ocean', 'river', 'forest', 'comet', 'planet', 'signal',
+      'orchid', 'ember', 'granite', 'lumen', 'fable', 'horizon', 'orbit', 'jungle', 'keeper', 'lantern'
+    ];
+    const pick = () => words[Math.floor(Math.random() * words.length)];
+    return `${pick()}-${pick()}-${pick()}-${pick()}`;
+  }
+
+  function readStudentModeRecoveryPhrase() {
+    const stored = normalizeRecoveryPhrase(localStorage.getItem(STUDENT_MODE_RECOVERY_KEY) || '');
+    return stored || '';
+  }
+
+  function ensureStudentModeRecoveryPhrase() {
+    const existing = readStudentModeRecoveryPhrase();
+    if (existing) return existing;
+    const generated = normalizeRecoveryPhrase(buildRecoveryPhrase());
+    localStorage.setItem(STUDENT_MODE_RECOVERY_KEY, generated);
+    return generated;
+  }
+
+  function verifyStudentModeRecoveryPhrase(rawPhrase) {
+    const submitted = normalizeRecoveryPhrase(rawPhrase);
+    if (!submitted) return false;
+    const stored = ensureStudentModeRecoveryPhrase();
+    return submitted === stored;
+  }
+
+  function verifyStudentModePin(rawPin) {
+    const submitted = normalizeStudentPin(rawPin);
+    if (!submitted) return false;
+    const customPin = readCustomStudentModePin();
+    if (customPin) {
+      if (submitted === customPin) return true;
+      if (!readStudentModeStrictMode() && submitted === DEFAULT_STUDENT_MODE_PIN) return true;
+      return false;
+    }
+    return submitted === DEFAULT_STUDENT_MODE_PIN;
+  }
+
+  function getStudentModePinState() {
+    const hasCustomPin = hasCustomStudentModePin();
+    const strictMode = hasCustomPin ? readStudentModeStrictMode() : false;
+    return {
+      hasCustomPin,
+      strictMode,
+      fallbackDefaultEnabled: !strictMode,
+      defaultPin: DEFAULT_STUDENT_MODE_PIN,
+      hasRecoveryPhrase: !!readStudentModeRecoveryPhrase()
+    };
+  }
+
+  function getStudentModeRecoveryState() {
+    return {
+      phrase: ensureStudentModeRecoveryPhrase()
+    };
+  }
+
+  function updateStudentModePin({ currentPin = '', newPin = '' } = {}) {
+    if (!verifyStudentModePin(currentPin)) {
+      return { ok: false, reason: 'current-pin' };
+    }
+    if (!isValidStudentPin(newPin)) {
+      return { ok: false, reason: 'pin-format' };
+    }
+    const normalizedNew = normalizeStudentPin(newPin);
+    if (normalizedNew === DEFAULT_STUDENT_MODE_PIN) {
+      localStorage.removeItem(STUDENT_MODE_PIN_KEY);
+      localStorage.removeItem(STUDENT_MODE_STRICT_KEY);
+      return { ok: true, customPinEnabled: false, pinLength: DEFAULT_STUDENT_MODE_PIN.length };
+    }
+    localStorage.setItem(STUDENT_MODE_PIN_KEY, normalizedNew);
+    return { ok: true, customPinEnabled: true, pinLength: normalizedNew.length };
+  }
+
+  function resetStudentModePinToDefault(currentPin = '') {
+    if (!verifyStudentModePin(currentPin)) {
+      return { ok: false, reason: 'current-pin' };
+    }
+    localStorage.removeItem(STUDENT_MODE_PIN_KEY);
+    localStorage.removeItem(STUDENT_MODE_STRICT_KEY);
+    return { ok: true, customPinEnabled: false, pinLength: DEFAULT_STUDENT_MODE_PIN.length };
+  }
+
+  function setStudentModeStrict({ currentPin = '', strictMode = false } = {}) {
+    if (!verifyStudentModePin(currentPin)) {
+      return { ok: false, reason: 'current-pin' };
+    }
+    const enabled = !!strictMode;
+    if (enabled && !hasCustomStudentModePin()) {
+      return { ok: false, reason: 'custom-required' };
+    }
+    writeStudentModeStrictMode(enabled);
+    return { ok: true, strictMode: enabled };
+  }
+
+  function rotateStudentModeRecoveryPhrase({ currentPin = '' } = {}) {
+    if (!verifyStudentModePin(currentPin)) {
+      return { ok: false, reason: 'current-pin' };
+    }
+    const nextPhrase = normalizeRecoveryPhrase(buildRecoveryPhrase());
+    localStorage.setItem(STUDENT_MODE_RECOVERY_KEY, nextPhrase);
+    return { ok: true, phrase: nextPhrase };
+  }
+
+  function recoverStudentModePinWithPhrase({ phrase = '' } = {}) {
+    if (!verifyStudentModeRecoveryPhrase(phrase)) {
+      return { ok: false, reason: 'phrase' };
+    }
+    localStorage.removeItem(STUDENT_MODE_PIN_KEY);
+    localStorage.removeItem(STUDENT_MODE_STRICT_KEY);
+    return { ok: true, pinResetToDefault: true };
+  }
+
+  function attemptExitStudentMode() {
+    const hasCustomPin = hasCustomStudentModePin();
+    const strictMode = hasCustomPin && readStudentModeStrictMode();
+    const hint = strictMode
+      ? 'Enter adult PIN or recovery phrase to exit Student Mode.'
+      : hasCustomPin
+        ? `Enter adult PIN or recovery phrase to exit Student Mode.\nFallback default PIN: ${DEFAULT_STUDENT_MODE_PIN}`
+        : `Enter adult PIN or recovery phrase to exit Student Mode.\nDefault PIN: ${DEFAULT_STUDENT_MODE_PIN}`;
+    const entry = window.prompt(hint);
+    if (entry === null) return;
+    const normalizedEntry = String(entry || '').trim();
+    if (!verifyStudentModePin(normalizedEntry)) {
+      const recovery = recoverStudentModePinWithPhrase({ phrase: normalizedEntry });
+      if (recovery.ok) {
+        window.alert(`Recovery phrase accepted. PIN reset to default ${DEFAULT_STUDENT_MODE_PIN}.`);
+      } else if (strictMode) {
+        window.alert('Incorrect PIN. Strict mode is on and fallback is disabled.');
+        return;
+      } else if (hasCustomPin) {
+        window.alert(`Incorrect PIN. Try your custom PIN, fallback default ${DEFAULT_STUDENT_MODE_PIN}, or recovery phrase.`);
+        return;
+      } else {
+        window.alert(`Incorrect PIN. Default PIN is ${DEFAULT_STUDENT_MODE_PIN}.`);
+        return;
+      }
+    }
+    if (!verifyStudentModePin(normalizedEntry) && !verifyStudentModeRecoveryPhrase(normalizedEntry)) {
+      return;
+    }
+
+    const nextRole = readLastAdultRolePathway();
+    setHomeRolePathway(nextRole);
+    window.location.reload();
+  }
+
+  function applyStudentModeState() {
+    const rolePathway = readHomeRolePathway();
+    const isStudent = rolePathway === 'student';
+    document.body.classList.toggle('student-mode', isStudent);
+    if (rolePathway) {
+      document.body.dataset.rolePathway = rolePathway;
+    } else {
+      delete document.body.dataset.rolePathway;
+    }
+  }
+
+  function renderStudentModeExitControl() {
+    const isStudent = readHomeRolePathway() === 'student';
+    const containers = Array.from(document.querySelectorAll('.header-actions'));
+    if (!containers.length) return;
+
+    containers.forEach((container) => {
+      let exitBtn = container.querySelector('.student-mode-exit-btn');
+
+      if (!isStudent) {
+        if (exitBtn) exitBtn.remove();
+        return;
+      }
+
+      if (!exitBtn) {
+        exitBtn = document.createElement('button');
+        exitBtn.type = 'button';
+        exitBtn.className = 'link-btn student-mode-exit-btn';
+        exitBtn.textContent = 'Adult Exit';
+        exitBtn.title = 'Adult PIN required';
+        container.appendChild(exitBtn);
+      }
+
+      if (exitBtn.dataset.bound !== 'true') {
+        exitBtn.dataset.bound = 'true';
+        exitBtn.addEventListener('click', attemptExitStudentMode);
+      }
+    });
   }
 
   function readScopedSettings() {
@@ -552,6 +826,27 @@
     const saved = writeQuickResponses(items);
     window.dispatchEvent(new CustomEvent('decode:quick-responses-changed', { detail: saved }));
     return saved;
+  };
+  platform.getStudentModePinState = function getStudentModePinStatePublic() {
+    return getStudentModePinState();
+  };
+  platform.getStudentModeRecoveryState = function getStudentModeRecoveryStatePublic() {
+    return getStudentModeRecoveryState();
+  };
+  platform.updateStudentModePin = function updateStudentModePinPublic(input = {}) {
+    return updateStudentModePin(input);
+  };
+  platform.resetStudentModePinToDefault = function resetStudentModePinToDefaultPublic(currentPin = '') {
+    return resetStudentModePinToDefault(currentPin);
+  };
+  platform.setStudentModeStrict = function setStudentModeStrictPublic(input = {}) {
+    return setStudentModeStrict(input);
+  };
+  platform.rotateStudentModeRecoveryPhrase = function rotateStudentModeRecoveryPhrasePublic(input = {}) {
+    return rotateStudentModeRecoveryPhrase(input);
+  };
+  platform.recoverStudentModePinWithPhrase = function recoverStudentModePinWithPhrasePublic(input = {}) {
+    return recoverStudentModePinWithPhrase(input);
   };
 
   platform.getProfile = platform.getProfile || function getProfile() {
@@ -1121,6 +1416,8 @@
         nav.appendChild(link);
       });
     });
+
+    renderStudentModeExitControl();
   }
 
   function buildLearnerOptions(selectEl) {
@@ -1162,6 +1459,8 @@
         });
       }
     });
+
+    renderStudentModeExitControl();
   }
 
   platform.refreshLearnerSwitchers = function refreshLearnerSwitchersPublic() {
@@ -1179,6 +1478,7 @@
   };
 
   renderPrimaryNav();
+  applyStudentModeState();
   renderLearnerSwitchers();
   renderBreadcrumbTrail();
   renderAccessibilityPanel();
@@ -1189,6 +1489,18 @@
   window.addEventListener('decode:settings-changed', () => {
     renderAccessibilityPanel();
     applyFocusModeLayout();
+  });
+
+  window.addEventListener('decode:home-role-changed', () => {
+    applyStudentModeState();
+    renderStudentModeExitControl();
+  });
+
+  window.addEventListener('storage', (event) => {
+    if (!event || event.key === HOME_ROLE_KEY) {
+      applyStudentModeState();
+      renderStudentModeExitControl();
+    }
   });
 
   window.addEventListener('decode:quick-responses-changed', () => {

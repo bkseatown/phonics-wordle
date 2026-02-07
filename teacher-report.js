@@ -285,6 +285,39 @@
   };
 
   const ROLE_PATHWAY_LIBRARY = {
+    teacher: {
+      label: 'Teacher',
+      fit: 'Tier 1 core + classroom differentiation',
+      goal: 'Run a daily high-impact core routine and tighten support for students who are below benchmark.',
+      focusId: 'comprehension-evidence',
+      steps: [
+        { activity: 'word-quest', minutes: '5-7', move: 'Open with explicit decoding or vocabulary preview tied to today\'s target.' },
+        { activity: 'comprehension', minutes: '8-10', move: 'Use evidence stems and turn-and-talk to reinforce language + meaning.' },
+        { activity: 'teacher-report', label: 'Classroom Signal Snapshot', anchor: '#report-pulse', minutes: '2-3', move: 'Check red/yellow/green priorities and set tomorrow\'s regroup plan.' }
+      ]
+    },
+    admin: {
+      label: 'Administrator',
+      fit: 'Leadership · implementation coherence',
+      goal: 'See whether intervention cycles are consistent, data-rich, and producing growth that can scale across teams.',
+      focusId: 'comprehension-evidence',
+      steps: [
+        { activity: 'teacher-report', label: 'Outcome Proof Snapshot', anchor: '#report-outcomes', minutes: '2-3', move: 'Review momentum, implementation depth, and support intensity match.' },
+        { activity: 'teacher-report', label: 'Timeline + IESP Workflow', anchor: '#report-intervention-timeline', minutes: '3-4', move: 'Check documentation quality and whether action follows data.' },
+        { activity: 'teacher-report', label: 'Framework + Benchmark View', anchor: '#report-framework-crosswalk', minutes: '2-3', move: 'Verify alignment and benchmark fit before staffing decisions.' }
+      ]
+    },
+    dean: {
+      label: 'Dean',
+      fit: 'Instructional leadership · team coordination',
+      goal: 'Coordinate specialist and classroom actions so interventions stay coherent and measurable each cycle.',
+      focusId: 'comprehension-evidence',
+      steps: [
+        { activity: 'teacher-report', label: 'Role Dashboard', anchor: '#report-role-pathway', minutes: '2-3', move: 'Confirm priorities, owner, and handoff responsibilities.' },
+        { activity: 'plan-it', minutes: '6-8', move: 'Align classroom routines to intervention priorities and daily accountability checks.' },
+        { activity: 'teacher-report', label: 'Timeline Review', anchor: '#report-intervention-timeline', minutes: '2-3', move: 'Use timeline evidence to prepare weekly case review.' }
+      ]
+    },
     'learning-support': {
       label: 'Learning Support / SPED',
       fit: 'MTSS · SPED · Intervention',
@@ -316,6 +349,28 @@
         { activity: 'word-quest', minutes: '6-8', move: 'Warm up with targeted phoneme patterns and repeated production.' },
         { activity: 'fluency', minutes: '8-10', move: 'Practice paced oral reading with phrasing and punctuation cues.' },
         { activity: 'writing', minutes: '4-6', move: 'Use a short written output to reinforce expressive language transfer.' }
+      ]
+    },
+    counselor: {
+      label: 'School Counselor',
+      fit: 'Counselor · SEL · executive function',
+      goal: 'Use short literacy and planning routines to strengthen regulation language, persistence, and self-advocacy.',
+      focusId: 'sel-executive',
+      steps: [
+        { activity: 'plan-it', minutes: '8-10', move: 'Model planning and coping checkpoints before task execution.' },
+        { activity: 'writing', minutes: '6-8', move: 'Capture reflection language for thoughts, emotions, actions, and next move.' },
+        { activity: 'teacher-report', label: 'Family Bridge Snapshot', anchor: '#report-parent-communication', minutes: '2-3', move: 'Draft one concrete home strategy and share in plain language.' }
+      ]
+    },
+    psychologist: {
+      label: 'School Psychologist',
+      fit: 'Assessment interpretation · intervention planning',
+      goal: 'Use short-cycle evidence to identify likely barriers and tighten referral/intervention decisions early.',
+      focusId: 'comprehension-evidence',
+      steps: [
+        { activity: 'teacher-report', label: 'Evidence Quality + Tier View', anchor: '#report-pulse', minutes: '3-4', move: 'Check confidence, readiness, and tier rationale before making high-stakes recommendations.' },
+        { activity: 'teacher-report', label: 'Numeracy Data Intake', anchor: '#report-numeracy-import-preview', minutes: '3-4', move: 'Cross-check classroom data against screener signals and benchmark risk levels.' },
+        { activity: 'teacher-report', label: 'IESP Auto-Draft', anchor: '#report-iesp-output', minutes: '3-4', move: 'Export draft present levels, goals, and monitoring plan for team review.' }
       ]
     },
     'sel-counselor': {
@@ -354,6 +409,21 @@
   };
 
   const ROLE_PROTOCOL_GUIDANCE = {
+    teacher: {
+      progressLens: 'Track whether core instruction is preventing new gaps while targeted supports accelerate students already behind.',
+      handoff: 'Bring top red/yellow domains and next-day regroup plan to PLC/grade-level check-ins.',
+      familyBridge: 'Share one sentence starter for reading and one for math that families can use tonight.'
+    },
+    admin: {
+      progressLens: 'Monitor cycle fidelity, evidence confidence, and whether staffing intensity matches learner need.',
+      handoff: 'Use role dashboards and timeline entries in leadership meetings to unblock implementation bottlenecks.',
+      familyBridge: 'Ensure communication is plain-language, consistent, and linked to measurable checkpoints.'
+    },
+    dean: {
+      progressLens: 'Look for coherence across classroom routines, specialist plans, and intervention documentation.',
+      handoff: 'Set weekly owner + deadline for every red-domain action and verify follow-through in the timeline.',
+      familyBridge: 'Coordinate one aligned message across specialists so families get a single clear plan.'
+    },
     'learning-support': {
       progressLens: 'Prioritize explicit error analysis (substitution, omission, phoneme confusion) and short-cycle mastery checks.',
       handoff: 'Coordinate with classroom teacher on carryover targets and document progress for MTSS/IEP reviews.',
@@ -368,6 +438,16 @@
       progressLens: 'Monitor articulation/phonology, pacing, and expressive carryover while tracking literacy accuracy.',
       handoff: 'Coordinate sound targets with classroom reading tasks so speech goals transfer into academic text.',
       familyBridge: 'Share short oral rehearsal scripts matched to the current phoneme or prosody focus.'
+    },
+    counselor: {
+      progressLens: 'Track regulation language, task persistence, and ability to recover after errors during academic tasks.',
+      handoff: 'Align behavior-support language with classroom and specialist routines so students hear one shared script.',
+      familyBridge: 'Send one short check-in script families can use before homework and one debrief script after.'
+    },
+    psychologist: {
+      progressLens: 'Separate skill deficit, language load, and performance variability before escalating to deeper testing.',
+      handoff: 'Use converging evidence (classroom + intervention + screener) to guide referral confidence.',
+      familyBridge: 'Frame findings around strengths, barriers, and actionable next supports rather than labels alone.'
     },
     'sel-counselor': {
       progressLens: 'Track planning stamina, self-monitoring language, and emotional regulation during literacy tasks.',
@@ -902,6 +982,7 @@
     'numeracy-import': { label: 'Numeracy Data Intake' },
     'goal-draft': { label: 'Tiered Goal Draft' },
     'literacy-protocol': { label: 'Intervention Protocol' },
+    'timeline-iesp': { label: 'Timeline + IESP Auto-Draft' },
     'role-pathway': { label: 'Role Pathway' },
     'parent-pathway': { label: 'Parent Partnership Pathway' },
     'lesson-builder': { label: 'One-Tap Lesson Builder' }
@@ -950,6 +1031,10 @@
     'literacy-protocol': {
       teacher: 'Walk through the intervention routine: explicit teach, guided practice, and transfer.',
       student: 'Share how you feel during each step and where you need support.'
+    },
+    'timeline-iesp': {
+      teacher: 'Summarize the latest timeline evidence and next IESP action in family-friendly language.',
+      student: 'Share one strategy that helped this week and one support you need next.'
     },
     'role-pathway': {
       teacher: 'Summarize role-specific priorities and one actionable handoff for the team.',
@@ -1055,17 +1140,31 @@
   const reportMediaFilterCategoryEl = document.getElementById('report-media-filter-category');
   const reportMediaSlotEls = Array.from(document.querySelectorAll('[data-media-slot]'));
   const roleSelectEl = document.getElementById('report-role-select');
+  const roleDashboardEl = document.getElementById('report-role-dashboard');
   const rolePathwayEl = document.getElementById('report-role-pathway');
   const roleCopyBtn = document.getElementById('report-role-copy');
   const roleStatusEl = document.getElementById('report-role-status');
   const parentIntentEl = document.getElementById('report-parent-intent');
+  const parentLanguageEl = document.getElementById('report-parent-language');
   const parentReadingLevelEl = document.getElementById('report-parent-reading-level');
+  const parentTemplateEl = document.getElementById('report-parent-template');
+  const parentTemplateBtn = document.getElementById('report-parent-template-btn');
   const parentMessageInputEl = document.getElementById('report-parent-message-input');
   const parentGenerateBtn = document.getElementById('report-parent-generate');
   const parentSaveBtn = document.getElementById('report-parent-save');
   const parentCopyBtn = document.getElementById('report-parent-copy');
   const parentMessageOutputEl = document.getElementById('report-parent-message-output');
   const parentMessageStatusEl = document.getElementById('report-parent-message-status');
+  const interventionTimelineEl = document.getElementById('report-intervention-timeline');
+  const iespTrackEl = document.getElementById('report-iesp-track');
+  const iespCycleEl = document.getElementById('report-iesp-cycle');
+  const iespOwnerEl = document.getElementById('report-iesp-owner');
+  const iespGenerateBtn = document.getElementById('report-iesp-generate');
+  const iespCopyBtn = document.getElementById('report-iesp-copy');
+  const iespExportTeamBtn = document.getElementById('report-iesp-export-team');
+  const iespExportParentBtn = document.getElementById('report-iesp-export-parent');
+  const iespOutputEl = document.getElementById('report-iesp-output');
+  const iespStatusEl = document.getElementById('report-iesp-status');
 
   let latestBuilderText = '';
   let latestShareText = '';
@@ -1074,17 +1173,82 @@
   let latestNumeracyText = '';
   let latestRolePathwayText = '';
   let latestParentMessageText = '';
+  let latestIespText = '';
+  let latestIespParentText = '';
+  let latestTimelineText = '';
   let latestGoalContext = null;
   let latestProtocolContext = null;
   let latestNumeracyContext = null;
   let latestRoleContext = null;
   let latestParentContext = null;
+  let latestIespContext = null;
   let pendingNumeracyImport = null;
   let reportMediaDbPromise = null;
   let reportMediaRecorderState = null;
   let reportMediaDraft = null;
   let reportMediaClips = [];
   let reportMediaObjectUrls = [];
+  const HOME_ROLE_KEY = 'cornerstone_home_role_v1';
+
+  function normalizeHomeRolePathway(rawRole) {
+    const raw = String(rawRole || '').trim().toLowerCase();
+    if (!raw) return '';
+    if (raw === 'learner' || raw === 'pupil') return 'student';
+    if (raw === 'administrator' || raw === 'leadership' || raw === 'leader') return 'admin';
+    if (raw === 'learning_support' || raw === 'ls' || raw === 'sped') return 'learning-support';
+    if (raw === 'speech') return 'slp';
+    if (raw === 'ell' || raw === 'esl') return 'eal';
+    if (raw === 'sel-counselor' || raw === 'school-counselor') return 'counselor';
+    if (raw === 'psych' || raw === 'school-psychologist') return 'psychologist';
+    if (raw === 'caregiver' || raw === 'family') return 'parent';
+    return raw;
+  }
+
+  function isStudentModeActive() {
+    const role = normalizeHomeRolePathway(localStorage.getItem(HOME_ROLE_KEY) || '');
+    return role === 'student';
+  }
+
+  function renderStudentModeReportLock() {
+    document.body.classList.add('student-mode');
+    const cards = Array.from(document.querySelectorAll('.report-card'));
+    cards.forEach((card) => {
+      card.setAttribute('data-student-hidden', 'true');
+      card.hidden = true;
+      card.setAttribute('aria-hidden', 'true');
+    });
+
+    const reportMain = document.querySelector('.report-main');
+    if (!reportMain) return;
+
+    let lockCard = document.getElementById('report-student-lock-card');
+    if (!lockCard) {
+      lockCard = document.createElement('section');
+      lockCard.id = 'report-student-lock-card';
+      lockCard.className = 'report-card report-student-lock';
+      reportMain.prepend(lockCard);
+    }
+
+    lockCard.hidden = false;
+    lockCard.removeAttribute('aria-hidden');
+    lockCard.innerHTML = `
+      <div class="report-card-header">
+        <h2>Student Mode is On</h2>
+      </div>
+      <p class="report-focus-note">This report view is locked for learners. Use student practice pathways or ask an adult to use <strong>Adult Exit</strong> in the top bar.</p>
+      <div class="home-cta-row">
+        <a class="home-cta primary" href="word-quest.html">Start Word Quest</a>
+        <a class="home-cta ghost" href="number-sense.html">Start Number Sense</a>
+        <a class="home-cta ghost" href="plan-it.html">Open Plan-It</a>
+        <a class="home-cta ghost" href="index.html?role=student">Go to Student Home</a>
+      </div>
+    `;
+  }
+
+  if (isStudentModeActive()) {
+    renderStudentModeReportLock();
+    return;
+  }
 
   function safeParse(json) {
     try {
@@ -1407,7 +1571,7 @@
     });
 
     const readme = [
-      'Decode the Word - Numeracy CSV Template Bundle',
+      'CORNERSTONE MTSS - Numeracy CSV Template Bundle',
       `Generated: ${new Date().toLocaleString()}`,
       '',
       'Files:',
@@ -2848,7 +3012,7 @@
   function exportPdf() {
     const learner = window.DECODE_PLATFORM?.getActiveLearner?.();
     const today = new Date();
-    const fileStem = `decode-report-${slugify(learner?.name || 'learner')}-${buildDateSlug(today)}`;
+    const fileStem = `cornerstone-mtss-report-${slugify(learner?.name || 'learner')}-${buildDateSlug(today)}`;
     const previousTitle = document.title;
     document.title = fileStem;
     window.print();
@@ -3640,8 +3804,11 @@
 
   function resolveProtocolRole(pulse) {
     const selected = String(protocolRoleEl?.value || 'auto');
-    if (selected !== 'auto' && ROLE_PATHWAY_LIBRARY[selected]) return selected;
-    return recommendRolePathwayId(pulse);
+    if (selected !== 'auto') {
+      const normalized = normalizeRoleId(selected);
+      if (ROLE_PATHWAY_LIBRARY[normalized]) return normalized;
+    }
+    return normalizeRoleId(recommendRolePathwayId(pulse));
   }
 
   function resolveProtocolCycleWeeks() {
@@ -5103,6 +5270,8 @@
       learnerName: learner?.name || '',
       intent: payload.intent || 'balanced',
       readingLevel: payload.readingLevel || 'standard',
+      language: payload.language || 'en',
+      template: payload.template || 'progress',
       text: String(payload.text || '').trim()
     };
     store[key] = [next, ...rows].slice(0, 20);
@@ -5123,12 +5292,22 @@
     return 'Standard';
   }
 
-  function generateParentMessage(context = {}) {
+  function parentLanguageLabel(languageId) {
+    if (languageId === 'es') return 'Spanish (ES)';
+    if (languageId === 'zh') return 'Chinese (ZH)';
+    return 'English (EN)';
+  }
+
+  function parentTemplateLabel(templateId) {
+    if (templateId === 'home-routine') return 'Home routine prompt';
+    if (templateId === 'celebration') return 'Celebrate and encourage';
+    return 'Progress snapshot';
+  }
+
+  function buildParentMessageModel(context = {}) {
     const learner = context.learner || null;
     const pulse = context.pulse || null;
     const numeracyPulse = context.numeracyPulse || null;
-    const intent = String(parentIntentEl?.value || 'balanced');
-    const readingLevel = String(parentReadingLevelEl?.value || 'standard');
     const learnerName = learner?.name || 'your child';
     const literacyGap = pulse?.gaps?.[0] || null;
     const literacyStrength = pulse?.strengths?.[0] || null;
@@ -5150,9 +5329,56 @@
     const numeracyTier = numeracyPulse?.engine?.tierRecommendation?.tierLabel || 'Tier 2';
     const literacyConfidence = pulse?.engine?.evidence?.confidenceLabel || 'Emerging signal';
     const numeracyConfidence = numeracyPulse?.engine?.evidence?.confidenceLabel || 'Emerging signal';
+    return {
+      learnerName,
+      literacyGap,
+      literacyStrength,
+      numeracyGap,
+      numeracyStrength,
+      literacyFocus,
+      numeracyFocus,
+      literacyStrengthText,
+      numeracyStrengthText,
+      intro,
+      literacyLine,
+      numeracyLine,
+      strengthLine,
+      homeRoutine,
+      confidenceLine,
+      close,
+      literacyTier,
+      numeracyTier,
+      literacyConfidence,
+      numeracyConfidence
+    };
+  }
+
+  function generateEnglishParentMessage(model, intent, readingLevel) {
+    const {
+      learnerName,
+      literacyGap,
+      numeracyGap,
+      literacyStrength,
+      numeracyStrength,
+      literacyFocus,
+      numeracyFocus,
+      literacyStrengthText,
+      numeracyStrengthText,
+      intro,
+      literacyLine,
+      numeracyLine,
+      strengthLine,
+      homeRoutine,
+      confidenceLine,
+      close,
+      literacyTier,
+      numeracyTier,
+      literacyConfidence,
+      numeracyConfidence
+    } = model;
 
     if (readingLevel === 'plain') {
-      const plainIntro = `Hello family. Here is this week’s short learning update for ${learnerName}.`;
+      const plainIntro = `Hello family. Here is this week's short learning update for ${learnerName}.`;
       const plainLiteracy = `Reading focus: ${literacyFocus.toLowerCase()}. We teach, practice together, then your child tries independently.`;
       const plainNumeracy = `Math focus: ${numeracyFocus.toLowerCase()}. We use strategy talk, drawings, and explanation steps.`;
       const plainStrength = `Strengths to celebrate: ${literacyStrengthText.toLowerCase()} and ${numeracyStrengthText.toLowerCase()}.`;
@@ -5187,6 +5413,193 @@
     return [intro, literacyLine, numeracyLine, strengthLine, homeRoutine, close].join('\n\n');
   }
 
+  function generateSpanishParentMessage(model, intent, readingLevel) {
+    const {
+      learnerName,
+      literacyGap,
+      numeracyGap,
+      literacyStrength,
+      numeracyStrength,
+      literacyFocus,
+      numeracyFocus,
+      literacyStrengthText,
+      numeracyStrengthText,
+      literacyTier,
+      numeracyTier,
+      literacyConfidence,
+      numeracyConfidence
+    } = model;
+    const intro = `Hola familia. Este es un resumen breve del progreso de ${learnerName} en este ciclo.`;
+    const literacyLine = `En lectura y escritura estamos trabajando ${literacyFocus.toLowerCase()} con rutina explicita: modelo, practica guiada y transferencia corta.`;
+    const numeracyLine = `En matematicas estamos trabajando ${numeracyFocus.toLowerCase()} con estrategias conceptuales, no solo memorizacion.`;
+    const strengthLine = `Fortalezas actuales: ${literacyStrengthText.toLowerCase()} y ${numeracyStrengthText.toLowerCase()}.`;
+    const homeRoutine = 'Rutina en casa (5-10 minutos): pida que su hijo explique una estrategia de lectura y una de matematicas, luego practiquen un ejemplo.';
+    const confidenceLine = 'Si hay bloqueo, use la frase: "Muestrame primero lo que ya sabes."';
+    const close = 'Gracias por su apoyo. Compartiremos una nueva actualizacion en el siguiente punto de control.';
+
+    if (readingLevel === 'plain') {
+      const plainIntro = `Hola familia. Actualizacion corta de esta semana para ${learnerName}.`;
+      const plainLiteracy = `Lectura: ${literacyFocus.toLowerCase()}. Primero modelamos, luego practicamos juntos y despues practica independiente.`;
+      const plainNumeracy = `Matematicas: ${numeracyFocus.toLowerCase()}. Usamos dibujos, lenguaje matematico y explicaciones.`;
+      const plainClose = 'Gracias por apoyar este proceso en casa.';
+      if (intent === 'literacy') return [plainIntro, plainLiteracy, strengthLine, homeRoutine, plainClose].join('\n\n');
+      if (intent === 'numeracy') return [plainIntro, plainNumeracy, strengthLine, homeRoutine, plainClose].join('\n\n');
+      if (intent === 'confidence') return [plainIntro, strengthLine, homeRoutine, confidenceLine, plainClose].join('\n\n');
+      return [plainIntro, plainLiteracy, plainNumeracy, strengthLine, homeRoutine, plainClose].join('\n\n');
+    }
+
+    if (readingLevel === 'detailed') {
+      const literacyData = `Senal de lectura: ${literacyFocus.toLowerCase()} (${formatPercent(literacyGap?.avg)} de dominio estimado, intensidad: ${literacyTier}, confianza: ${literacyConfidence}).`;
+      const numeracyData = `Senal de matematicas: ${numeracyFocus.toLowerCase()} (${formatPercent(numeracyGap?.avg)} de dominio estimado, intensidad: ${numeracyTier}, confianza: ${numeracyConfidence}).`;
+      const detailStrength = `Fortalezas: ${literacyStrengthText} (${formatPercent(literacyStrength?.avg)}) y ${numeracyStrengthText} (${formatPercent(numeracyStrength?.avg)}).`;
+      if (intent === 'literacy') return [intro, literacyData, detailStrength, homeRoutine, close].join('\n\n');
+      if (intent === 'numeracy') return [intro, numeracyData, detailStrength, homeRoutine, close].join('\n\n');
+      if (intent === 'confidence') return [intro, detailStrength, homeRoutine, confidenceLine, close].join('\n\n');
+      return [intro, literacyData, numeracyData, detailStrength, homeRoutine, close].join('\n\n');
+    }
+
+    if (intent === 'literacy') return [intro, literacyLine, strengthLine, homeRoutine, close].join('\n\n');
+    if (intent === 'numeracy') return [intro, numeracyLine, strengthLine, homeRoutine, close].join('\n\n');
+    if (intent === 'confidence') return [intro, strengthLine, homeRoutine, confidenceLine, close].join('\n\n');
+    return [intro, literacyLine, numeracyLine, strengthLine, homeRoutine, close].join('\n\n');
+  }
+
+  function generateChineseParentMessage(model, intent, readingLevel) {
+    const {
+      learnerName,
+      literacyGap,
+      numeracyGap,
+      literacyStrength,
+      numeracyStrength,
+      literacyFocus,
+      numeracyFocus,
+      literacyStrengthText,
+      numeracyStrengthText,
+      literacyTier,
+      numeracyTier,
+      literacyConfidence,
+      numeracyConfidence
+    } = model;
+    const intro = `家长您好，这是${learnerName}本周期的学习简报。`;
+    const literacyLine = `读写重点：${literacyFocus.toLowerCase()}。课堂流程是“教师示范-共同练习-独立迁移”。`;
+    const numeracyLine = `数学重点：${numeracyFocus.toLowerCase()}。我们强调概念策略与表达，不只记忆步骤。`;
+    const strengthLine = `当前优势：${literacyStrengthText.toLowerCase()}，以及${numeracyStrengthText.toLowerCase()}。`;
+    const homeRoutine = '家庭练习（5-10分钟）：请孩子口头说明一个阅读策略和一个数学策略，再一起做一个例题。';
+    const confidenceLine = '当孩子卡住时，可以先问：“你先告诉我你已经知道什么？”';
+    const close = '感谢配合。我们会在下一个进度检查后再次更新。';
+
+    if (readingLevel === 'plain') {
+      const plainIntro = `${learnerName}本周学习更新如下。`;
+      const plainLiteracy = `读写：${literacyFocus.toLowerCase()}。先示范，再一起练习，最后独立完成。`;
+      const plainNumeracy = `数学：${numeracyFocus.toLowerCase()}。用图示、语言和步骤解释来解决问题。`;
+      if (intent === 'literacy') return [plainIntro, plainLiteracy, strengthLine, homeRoutine, close].join('\n\n');
+      if (intent === 'numeracy') return [plainIntro, plainNumeracy, strengthLine, homeRoutine, close].join('\n\n');
+      if (intent === 'confidence') return [plainIntro, strengthLine, homeRoutine, confidenceLine, close].join('\n\n');
+      return [plainIntro, plainLiteracy, plainNumeracy, strengthLine, homeRoutine, close].join('\n\n');
+    }
+
+    if (readingLevel === 'detailed') {
+      const literacyData = `读写信号：${literacyFocus.toLowerCase()}（当前掌握度估计${formatPercent(literacyGap?.avg)}，支持强度${literacyTier}，置信度${literacyConfidence}）。`;
+      const numeracyData = `数学信号：${numeracyFocus.toLowerCase()}（当前掌握度估计${formatPercent(numeracyGap?.avg)}，支持强度${numeracyTier}，置信度${numeracyConfidence}）。`;
+      const detailStrength = `优势表现：${literacyStrengthText}（${formatPercent(literacyStrength?.avg)}）和${numeracyStrengthText}（${formatPercent(numeracyStrength?.avg)}）。`;
+      if (intent === 'literacy') return [intro, literacyData, detailStrength, homeRoutine, close].join('\n\n');
+      if (intent === 'numeracy') return [intro, numeracyData, detailStrength, homeRoutine, close].join('\n\n');
+      if (intent === 'confidence') return [intro, detailStrength, homeRoutine, confidenceLine, close].join('\n\n');
+      return [intro, literacyData, numeracyData, detailStrength, homeRoutine, close].join('\n\n');
+    }
+
+    if (intent === 'literacy') return [intro, literacyLine, strengthLine, homeRoutine, close].join('\n\n');
+    if (intent === 'numeracy') return [intro, numeracyLine, strengthLine, homeRoutine, close].join('\n\n');
+    if (intent === 'confidence') return [intro, strengthLine, homeRoutine, confidenceLine, close].join('\n\n');
+    return [intro, literacyLine, numeracyLine, strengthLine, homeRoutine, close].join('\n\n');
+  }
+
+  function generateParentMessage(context = {}) {
+    const intent = String(parentIntentEl?.value || 'balanced');
+    const readingLevel = String(parentReadingLevelEl?.value || 'standard');
+    const language = String(parentLanguageEl?.value || 'en');
+    const model = buildParentMessageModel(context);
+    if (language === 'es') return generateSpanishParentMessage(model, intent, readingLevel);
+    if (language === 'zh') return generateChineseParentMessage(model, intent, readingLevel);
+    return generateEnglishParentMessage(model, intent, readingLevel);
+  }
+
+  function generateParentStarterTemplate(context = {}) {
+    const model = buildParentMessageModel(context);
+    const language = String(parentLanguageEl?.value || 'en');
+    const templateId = String(parentTemplateEl?.value || 'progress');
+
+    if (templateId === 'home-routine') {
+      if (language === 'es') {
+        return [
+          `Hola familia, esta semana estamos reforzando ${model.literacyFocus.toLowerCase()} en lectura y ${model.numeracyFocus.toLowerCase()} en matematicas.`,
+          'Rutina sugerida (5-10 minutos):',
+          '1) Lean una frase corta y expliquen la estrategia de lectura.',
+          '2) Resuelvan un problema corto de matematicas y expliquen la estrategia en voz alta.',
+          '3) Cierre con una celebracion especifica del esfuerzo.'
+        ].join('\n');
+      }
+      if (language === 'zh') {
+        return [
+          `家长您好，本周我们在读写上强化${model.literacyFocus.toLowerCase()}，在数学上强化${model.numeracyFocus.toLowerCase()}。`,
+          '建议家庭练习（5-10分钟）：',
+          '1）读一句短文本，并说出所用阅读策略。',
+          '2）做一道短数学题，并口头解释策略。',
+          '3）最后具体表扬一次努力与坚持。'
+        ].join('\n');
+      }
+      return [
+        `Hello family, this week we are reinforcing ${model.literacyFocus.toLowerCase()} in literacy and ${model.numeracyFocus.toLowerCase()} in math.`,
+        'Suggested home routine (5-10 minutes):',
+        '1) Read one short line and name the reading strategy.',
+        '2) Solve one short math item and explain the strategy out loud.',
+        '3) End with one specific celebration of effort.'
+      ].join('\n');
+    }
+
+    if (templateId === 'celebration') {
+      if (language === 'es') {
+        return [
+          `Fortalezas para celebrar: ${model.literacyStrengthText.toLowerCase()} y ${model.numeracyStrengthText.toLowerCase()}.`,
+          'Gracias por apoyar la practica diaria.',
+          'Siguiente enfoque: mantener constancia y explicar estrategias con lenguaje claro.'
+        ].join('\n');
+      }
+      if (language === 'zh') {
+        return [
+          `值得庆祝的优势：${model.literacyStrengthText.toLowerCase()}，以及${model.numeracyStrengthText.toLowerCase()}。`,
+          '感谢您持续支持日常练习。',
+          '下一步重点：保持练习频率，并用清晰语言解释策略。'
+        ].join('\n');
+      }
+      return [
+        `Strengths to celebrate: ${model.literacyStrengthText.toLowerCase()} and ${model.numeracyStrengthText.toLowerCase()}.`,
+        'Thank you for supporting daily practice.',
+        'Next focus: maintain consistency and strategy explanation language.'
+      ].join('\n');
+    }
+
+    if (language === 'es') {
+      return [
+        `Resumen de progreso: ${model.learnerName} muestra avances en ${model.literacyStrengthText.toLowerCase()} y ${model.numeracyStrengthText.toLowerCase()}.`,
+        `Foco actual: ${model.literacyFocus.toLowerCase()} + ${model.numeracyFocus.toLowerCase()}.`,
+        'Siguiente paso: continuar practica corta, explicita y frecuente.'
+      ].join('\n');
+    }
+    if (language === 'zh') {
+      return [
+        `进度概览：${model.learnerName}在${model.literacyStrengthText.toLowerCase()}和${model.numeracyStrengthText.toLowerCase()}方面有明显进展。`,
+        `当前重点：${model.literacyFocus.toLowerCase()} + ${model.numeracyFocus.toLowerCase()}。`,
+        '下一步：继续短时、高频、明确示范的练习。'
+      ].join('\n');
+    }
+    return [
+      `Progress snapshot: ${model.learnerName} is showing gains in ${model.literacyStrengthText.toLowerCase()} and ${model.numeracyStrengthText.toLowerCase()}.`,
+      `Current focus: ${model.literacyFocus.toLowerCase()} + ${model.numeracyFocus.toLowerCase()}.`,
+      'Next move: keep short, explicit, high-frequency practice.'
+    ].join('\n');
+  }
+
   function setParentMessageStatus(message, isError = false) {
     if (!parentMessageStatusEl) return;
     parentMessageStatusEl.textContent = message || '';
@@ -5210,14 +5623,14 @@
 
     const recentItems = messages.slice(0, 5).map((item) => `
       <li>
-        <strong>${escapeHtml(parentIntentLabel(item.intent))}</strong> · ${escapeHtml(parentReadingLevelLabel(item.readingLevel || 'standard'))} · ${escapeHtml(new Date(Number(item.createdAt || Date.now())).toLocaleString())}
+        <strong>${escapeHtml(parentIntentLabel(item.intent))}</strong> · ${escapeHtml(parentLanguageLabel(item.language || 'en'))} · ${escapeHtml(parentReadingLevelLabel(item.readingLevel || 'standard'))} · ${escapeHtml(new Date(Number(item.createdAt || Date.now())).toLocaleString())}
         <button class="secondary-btn report-parent-load-btn" type="button" data-parent-load="${escapeHtml(item.id)}">Load</button>
       </li>
     `).join('');
 
     parentMessageOutputEl.innerHTML = `
       <div class="report-builder-summary">
-        <div><strong>Current parent-ready message (${escapeHtml(parentIntentLabel(parentIntentEl?.value || 'balanced'))} · ${escapeHtml(parentReadingLevelLabel(parentReadingLevelEl?.value || 'standard'))}):</strong></div>
+        <div><strong>Current parent-ready message (${escapeHtml(parentIntentLabel(parentIntentEl?.value || 'balanced'))} · ${escapeHtml(parentLanguageLabel(parentLanguageEl?.value || 'en'))} · ${escapeHtml(parentReadingLevelLabel(parentReadingLevelEl?.value || 'standard'))}):</strong></div>
         <div>${escapeHtml(draft).replace(/\n/g, '<br />')}</div>
       </div>
       <div class="report-bench-note"><strong>Tip:</strong> Pair this text with a short recording clip in the Parent Partnership section.</div>
@@ -5234,7 +5647,9 @@
     if (!message) return;
     if (parentMessageInputEl) parentMessageInputEl.value = message.text || '';
     if (parentIntentEl) parentIntentEl.value = message.intent || 'balanced';
+    if (parentLanguageEl) parentLanguageEl.value = message.language || 'en';
     if (parentReadingLevelEl) parentReadingLevelEl.value = message.readingLevel || 'standard';
+    if (parentTemplateEl) parentTemplateEl.value = message.template || 'progress';
     latestParentMessageText = message.text || '';
     if (latestParentContext) renderParentMessagePanel(latestParentContext);
     setParentMessageStatus('Loaded saved parent message.');
@@ -5252,6 +5667,18 @@
     setParentMessageStatus('Generated parent message draft.');
   }
 
+  function applyParentStarterTemplate() {
+    if (!latestParentContext) {
+      setParentMessageStatus('Refresh the report first, then apply a starter template.', true);
+      return;
+    }
+    const draft = generateParentStarterTemplate(latestParentContext);
+    if (parentMessageInputEl) parentMessageInputEl.value = draft;
+    latestParentMessageText = draft;
+    renderParentMessagePanel(latestParentContext);
+    setParentMessageStatus(`Applied ${parentTemplateLabel(parentTemplateEl?.value || 'progress')} in ${parentLanguageLabel(parentLanguageEl?.value || 'en')}.`);
+  }
+
   function saveParentMessageDraft() {
     if (!latestParentContext) {
       setParentMessageStatus('Refresh the report first, then save a parent message.', true);
@@ -5265,6 +5692,8 @@
     const saved = saveParentMessageForLearner(latestParentContext.learner, {
       intent: String(parentIntentEl?.value || 'balanced'),
       readingLevel: String(parentReadingLevelEl?.value || 'standard'),
+      language: String(parentLanguageEl?.value || 'en'),
+      template: String(parentTemplateEl?.value || 'progress'),
       text
     });
     latestParentMessageText = saved.text || text;
@@ -5292,8 +5721,9 @@
 
   function recommendRolePathwayId(pulse) {
     const topDomain = pulse?.gaps?.[0]?.domain || '';
+    if (topDomain === 'general') return 'teacher';
     if (topDomain === 'fluency') return 'slp';
-    if (topDomain === 'executive-function') return 'sel-counselor';
+    if (topDomain === 'executive-function') return 'counselor';
     if (topDomain === 'comprehension' || topDomain === 'written-language') return 'eal';
     return 'learning-support';
   }
@@ -5309,13 +5739,23 @@
       eal: 'eal',
       ell: 'eal',
       esl: 'eal',
+      teacher: 'teacher',
+      classroom: 'teacher',
+      admin: 'admin',
+      administrator: 'admin',
+      dean: 'dean',
       slp: 'slp',
       speech: 'slp',
-      counselor: 'sel-counselor',
-      counselling: 'sel-counselor',
+      counselor: 'counselor',
+      counselling: 'counselor',
+      psych: 'psychologist',
+      psychologist: 'psychologist',
+      schoolpsych: 'psychologist',
+      'school-psychologist': 'psychologist',
+      'school-counselor': 'counselor',
       'sel-counselor': 'sel-counselor',
-      leadership: 'leadership',
-      admin: 'leadership',
+      leadership: 'admin',
+      leader: 'admin',
       parent: 'parent',
       caregiver: 'parent',
       family: 'parent'
@@ -5344,19 +5784,28 @@
     return getActivityHref(step.activity, context);
   }
 
+  function normalizeRoleId(roleId) {
+    if (roleId === 'leadership') return 'admin';
+    if (roleId === 'sel-counselor') return 'counselor';
+    return roleId;
+  }
+
   function renderRolePathway(context = {}) {
     if (!rolePathwayEl || !roleSelectEl) return;
     const learner = context.learner || null;
     const pulse = context.pulse || null;
+    const numeracyPulse = context.numeracyPulse || null;
     const placementRec = context.placementRec || null;
-    const weakestRow = context.weakestRow || null;
+    const logs = Array.isArray(context.logs) ? context.logs : [];
+    const numeracyLogs = Array.isArray(context.numeracyLogs) ? context.numeracyLogs : [];
     const preferredRoleId = recommendRolePathwayId(pulse);
 
     if (!roleSelectEl.value || !ROLE_PATHWAY_LIBRARY[roleSelectEl.value]) {
       roleSelectEl.value = preferredRoleId;
     }
 
-    const roleId = roleSelectEl.value || preferredRoleId;
+    const roleIdRaw = roleSelectEl.value || preferredRoleId;
+    const roleId = normalizeRoleId(roleIdRaw);
     const pathway = ROLE_PATHWAY_LIBRARY[roleId] || ROLE_PATHWAY_LIBRARY['learning-support'];
     const gradeBand = normalizeGradeBand(learner?.gradeBand || builderGradeEl?.value || '3-5');
     const focusProfile = FOCUS_LIBRARY[pathway.focusId] || FOCUS_LIBRARY['comprehension-evidence'];
@@ -5369,6 +5818,17 @@
     const parentMessagePreview = latestParentMessage?.text
       ? latestParentMessage.text.slice(0, 220)
       : '';
+    const literacyTier = pulse?.engine?.tierRecommendation?.tierLabel || 'Tier recommendation pending';
+    const numeracyTier = numeracyPulse?.engine?.tierRecommendation?.tierLabel || 'Tier recommendation pending';
+    const literacyConfidence = pulse?.engine?.evidence?.confidenceLabel || 'Early signal';
+    const numeracyConfidence = numeracyPulse?.engine?.evidence?.confidenceLabel || 'Early signal';
+    const recentLiteracy = logs.filter((entry) => Number(entry?.ts || 0) >= (Date.now() - (7 * 24 * 60 * 60 * 1000))).length;
+    const recentNumeracy = numeracyLogs.filter((entry) => Number(entry?.ts || 0) >= (Date.now() - (7 * 24 * 60 * 60 * 1000))).length;
+    const topLiteracyGap = pulse?.gaps?.[0]?.label || 'Need more literacy evidence';
+    const topNumeracyGap = numeracyPulse?.gaps?.[0]?.label || 'Need more numeracy evidence';
+    const topLiteracyStrength = pulse?.strengths?.[0]?.label || 'No clear literacy strength yet';
+    const topNumeracyStrength = numeracyPulse?.strengths?.[0]?.label || 'No clear numeracy strength yet';
+    const guidance = ROLE_PROTOCOL_GUIDANCE[roleId] || ROLE_PROTOCOL_GUIDANCE['learning-support'];
 
     const baseContext = {
       wordQuestFocus,
@@ -5397,6 +5857,53 @@
       `;
     }).join('');
 
+    const dashboardCards = [
+      {
+        title: 'Signal Snapshot',
+        lines: [
+          `Top literacy gap: ${topLiteracyGap}`,
+          `Top numeracy gap: ${topNumeracyGap}`,
+          `Urgent lane: ${urgentDomain}`
+        ]
+      },
+      {
+        title: 'Intensity + Confidence',
+        lines: [
+          `Literacy intensity: ${literacyTier}`,
+          `Numeracy intensity: ${numeracyTier}`,
+          `Confidence: ${literacyConfidence} / ${numeracyConfidence}`
+        ]
+      },
+      {
+        title: 'Weekly Evidence',
+        lines: [
+          `Literacy logs (7 days): ${recentLiteracy}`,
+          `Numeracy logs (7 days): ${recentNumeracy}`,
+          `Grade band: ${gradeBand}`
+        ]
+      },
+      {
+        title: 'Team Handoff',
+        lines: [
+          `Progress lens: ${guidance.progressLens}`,
+          `Handoff: ${guidance.handoff}`,
+          `Family bridge: ${guidance.familyBridge}`
+        ]
+      }
+    ];
+
+    const dashboardHtml = dashboardCards
+      .map((card) => `
+        <article class="report-role-dashboard-card">
+          <h3>${escapeHtml(card.title)}</h3>
+          <ul>${card.lines.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul>
+        </article>
+      `)
+      .join('');
+    if (roleDashboardEl) {
+      roleDashboardEl.innerHTML = `<div class="report-role-dashboard-grid">${dashboardHtml}</div>`;
+    }
+
     latestRolePathwayText = [
       `${pathway.label} Launch Pathway`,
       `Grade band: ${gradeBand}`,
@@ -5404,6 +5911,10 @@
       `Goal: ${pathway.goal}`,
       `Top priority: ${topPriority}`,
       `Urgent lane: ${urgentDomain}`,
+      `Literacy intensity/confidence: ${literacyTier} / ${literacyConfidence}`,
+      `Numeracy intensity/confidence: ${numeracyTier} / ${numeracyConfidence}`,
+      `Top strengths: ${topLiteracyStrength}; ${topNumeracyStrength}`,
+      `Evidence (7 days): literacy ${recentLiteracy}, numeracy ${recentNumeracy}`,
       ...(roleId === 'parent'
         ? [
           `Latest parent message: ${parentMessagePreview || 'No saved parent message yet. Open Parent Partnership Pathway to draft one.'}`
@@ -5419,6 +5930,7 @@
         <div>${escapeHtml(pathway.goal)}</div>
         <div><strong>Current top priority:</strong> ${escapeHtml(topPriority)}</div>
         <div><strong>Urgent lane from R/Y/G:</strong> ${escapeHtml(urgentDomain)}</div>
+        <div><strong>Top strengths:</strong> ${escapeHtml(topLiteracyStrength)} · ${escapeHtml(topNumeracyStrength)}</div>
         ${roleId === 'parent'
           ? `<div><strong>Latest parent message:</strong> ${escapeHtml(parentMessagePreview || 'No saved parent message yet. Use Parent Partnership Pathway to create one.')}</div>`
           : ''}
@@ -5444,6 +5956,328 @@
     } catch {
       if (roleStatusEl) roleStatusEl.textContent = 'Clipboard unavailable. Copy directly from the pathway cards.';
     }
+  }
+
+  function resolveIespTrack() {
+    const selected = String(iespTrackEl?.value || 'integrated');
+    if (selected === 'literacy' || selected === 'numeracy' || selected === 'integrated') return selected;
+    return 'integrated';
+  }
+
+  function resolveIespCycleWeeks() {
+    const cycle = Number(iespCycleEl?.value || 6);
+    if (cycle === 4 || cycle === 6 || cycle === 8 || cycle === 12) return cycle;
+    return 6;
+  }
+
+  function resolveIespOwnerRole() {
+    const selected = String(iespOwnerEl?.value || 'teacher');
+    const normalized = normalizeRoleId(selected);
+    return ROLE_PATHWAY_LIBRARY[normalized] ? normalized : 'teacher';
+  }
+
+  function timelineTrackLabel(track) {
+    if (track === 'numeracy') return 'Numeracy';
+    return 'Literacy';
+  }
+
+  function buildInterventionTimelineEntries(context = {}) {
+    const literacyLogs = Array.isArray(context.logs) ? context.logs : [];
+    const numeracyLogs = Array.isArray(context.numeracyLogs) ? context.numeracyLogs : [];
+
+    const mappedLiteracy = literacyLogs.map((entry) => {
+      const score = scoreEntry(entry);
+      const domain = activityDomain(entry?.activity || '');
+      const domainName = domainLabel(domain);
+      return {
+        ts: Number(entry?.ts || 0),
+        track: 'literacy',
+        label: entry?.label || ACTIVITY_LABELS[entry?.activity] || 'Literacy activity',
+        event: String(entry?.event || 'Logged update'),
+        note: `${domainName}${typeof score === 'number' && !Number.isNaN(score) ? ` · ${formatPercent(score)}` : ''}`
+      };
+    });
+
+    const mappedNumeracy = numeracyLogs.map((entry) => {
+      const score = numeracyScoreEntry(entry);
+      const domain = String(entry?.detail?.domain || numeracyActivityDomain(entry?.activity || ''));
+      const domainName = numeracyDomainLabel(domain);
+      return {
+        ts: Number(entry?.ts || 0),
+        track: 'numeracy',
+        label: entry?.label || NUMERACY_ACTIVITY_LABELS[entry?.activity] || 'Numeracy activity',
+        event: String(entry?.event || 'Logged update'),
+        note: `${domainName}${typeof score === 'number' && !Number.isNaN(score) ? ` · ${formatPercent(score)}` : ''}`
+      };
+    });
+
+    return [...mappedLiteracy, ...mappedNumeracy]
+      .filter((row) => row.ts > 0)
+      .sort((a, b) => b.ts - a.ts)
+      .slice(0, 16);
+  }
+
+  function renderInterventionTimeline(context = {}) {
+    if (!interventionTimelineEl) return;
+    const rows = buildInterventionTimelineEntries(context);
+    if (!rows.length) {
+      interventionTimelineEl.innerHTML = '<div class="report-bench-note">No intervention evidence yet. Run activities, then refresh this report.</div>';
+      latestTimelineText = '';
+      return;
+    }
+
+    const itemsHtml = rows.map((row) => `
+      <article class="report-timeline-item">
+        <div class="report-timeline-item-head">
+          <span class="report-timeline-track ${row.track === 'numeracy' ? 'numeracy' : 'literacy'}">${escapeHtml(timelineTrackLabel(row.track))}</span>
+          <span>${escapeHtml(new Date(row.ts).toLocaleString())}</span>
+        </div>
+        <div class="report-timeline-event">${escapeHtml(row.label)}: ${escapeHtml(row.event)}</div>
+        <div class="report-timeline-note">${escapeHtml(row.note)}</div>
+      </article>
+    `).join('');
+
+    interventionTimelineEl.innerHTML = `
+      <div class="report-builder-summary">
+        <div><strong>Live intervention timeline:</strong> latest literacy + numeracy evidence for team review.</div>
+      </div>
+      <div class="report-timeline-list">${itemsHtml}</div>
+    `;
+
+    latestTimelineText = rows.map((row) => {
+      const stamp = new Date(row.ts).toLocaleString();
+      return `[${stamp}] ${timelineTrackLabel(row.track)} · ${row.label}: ${row.event} (${row.note})`;
+    }).join('\n');
+  }
+
+  function setIespStatus(message, isError = false) {
+    if (!iespStatusEl) return;
+    iespStatusEl.textContent = message || '';
+    iespStatusEl.classList.toggle('error', !!isError);
+    iespStatusEl.classList.toggle('success', !isError && !!message);
+  }
+
+  function buildIespDraft(context = {}) {
+    const learner = context.learner || null;
+    const pulse = context.pulse || null;
+    const numeracyPulse = context.numeracyPulse || null;
+    const track = resolveIespTrack();
+    const cycleWeeks = resolveIespCycleWeeks();
+    const ownerRole = resolveIespOwnerRole();
+    const ownerLabel = ROLE_PATHWAY_LIBRARY[ownerRole]?.label || 'Teacher';
+    const gradeBand = normalizeGradeBand(learner?.gradeBand || builderGradeEl?.value || '3-5');
+    const learnerName = learner?.name || 'Learner';
+    const litGap = pulse?.gaps?.[0] || null;
+    const numGap = numeracyPulse?.gaps?.[0] || null;
+    const litStrength = pulse?.strengths?.[0] || null;
+    const numStrength = numeracyPulse?.strengths?.[0] || null;
+    const litTier = pulse?.engine?.tierRecommendation?.tierLabel || 'Tier 2';
+    const numTier = numeracyPulse?.engine?.tierRecommendation?.tierLabel || 'Tier 2';
+    const litBaseline = litGap?.avg;
+    const numBaseline = numGap?.avg;
+    const litTarget = typeof litBaseline === 'number' ? clamp(litBaseline + 0.12, 0.15, 0.97) : null;
+    const numTarget = typeof numBaseline === 'number' ? clamp(numBaseline + 0.12, 0.15, 0.97) : null;
+    const reviewDate = new Date(Date.now() + (cycleWeeks * 7 * 24 * 60 * 60 * 1000));
+    const timelineRows = buildInterventionTimelineEntries(context).slice(0, 5);
+    const ownerGuidance = ROLE_PROTOCOL_GUIDANCE[ownerRole] || ROLE_PROTOCOL_GUIDANCE['learning-support'];
+
+    const presentLevels = [];
+    if (track !== 'numeracy') {
+      presentLevels.push(`Literacy present level: ${litGap?.label || 'Need baseline literacy evidence'} (${formatPercent(litBaseline)}), support intensity ${litTier}.`);
+    }
+    if (track !== 'literacy') {
+      presentLevels.push(`Numeracy present level: ${numGap?.label || 'Need baseline numeracy evidence'} (${formatPercent(numBaseline)}), support intensity ${numTier}.`);
+    }
+
+    const strengths = [];
+    if (track !== 'numeracy') strengths.push(`Literacy strength: ${litStrength?.label || 'Collect more literacy sessions to confirm strengths'}.`);
+    if (track !== 'literacy') strengths.push(`Numeracy strength: ${numStrength?.label || 'Collect more numeracy sessions to confirm strengths'}.`);
+
+    const goals = [];
+    if (track !== 'numeracy') {
+      goals.push(`Literacy goal (${cycleWeeks} weeks): improve from ${formatPercent(litBaseline)} to ${formatPercent(litTarget)} in ${litGap?.label || 'priority literacy domain'} with explicit teach-guided practice-transfer routines.`);
+    }
+    if (track !== 'literacy') {
+      goals.push(`Numeracy goal (${cycleWeeks} weeks): improve from ${formatPercent(numBaseline)} to ${formatPercent(numTarget)} in ${numGap?.label || 'priority numeracy domain'} using conceptual strategy instruction and explanation checks.`);
+    }
+    if (track === 'integrated') {
+      goals.push('Integrated transfer goal: apply one reading strategy and one math strategy independently in classroom tasks each week.');
+    }
+
+    const monitoring = [
+      'Collect at least 2 scored probes per target domain each week.',
+      'Use red/yellow/green lane updates every Friday to adjust groups and intensity.',
+      'Review family message + team handoff language each cycle to maintain coherence.'
+    ];
+
+    const timelineHighlights = timelineRows.length
+      ? timelineRows.map((row) => `${new Date(row.ts).toLocaleDateString()} - ${timelineTrackLabel(row.track)}: ${row.label} (${row.event})`)
+      : ['No timeline entries yet. Run activities to generate progress evidence.'];
+
+    const textLines = [
+      `IESP Auto-Draft`,
+      `Learner: ${learnerName}`,
+      `Grade band: ${gradeBand}`,
+      `Track: ${track}`,
+      `Case lead: ${ownerLabel}`,
+      `Cycle length: ${cycleWeeks} weeks`,
+      `Next review date: ${reviewDate.toLocaleDateString()}`,
+      '',
+      'Present levels:',
+      ...presentLevels.map((line) => `- ${line}`),
+      '',
+      'Strengths:',
+      ...strengths.map((line) => `- ${line}`),
+      '',
+      'Goals:',
+      ...goals.map((line) => `- ${line}`),
+      '',
+      'Progress monitoring and service plan:',
+      ...monitoring.map((line) => `- ${line}`),
+      '',
+      'Team handoff:',
+      `- ${ownerGuidance.handoff}`,
+      `- ${ownerGuidance.progressLens}`,
+      `- ${ownerGuidance.familyBridge}`,
+      '',
+      'Timeline highlights:',
+      ...timelineHighlights.map((line) => `- ${line}`)
+    ];
+
+    const html = `
+      <div class="report-goal-card">
+        <h3>IESP Draft · ${escapeHtml(learnerName)} · ${escapeHtml(track)}</h3>
+        <p><strong>Case lead:</strong> ${escapeHtml(ownerLabel)} · <strong>Cycle:</strong> ${escapeHtml(String(cycleWeeks))} weeks · <strong>Review date:</strong> ${escapeHtml(reviewDate.toLocaleDateString())}</p>
+        <ul>
+          ${presentLevels.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}
+          ${strengths.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}
+          ${goals.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}
+        </ul>
+        <div class="report-protocol-note"><strong>Progress monitoring:</strong></div>
+        <ul>${monitoring.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul>
+        <div class="report-protocol-note"><strong>Team handoff:</strong> ${escapeHtml(ownerGuidance.handoff)}</div>
+        <div class="report-protocol-note"><strong>Timeline highlights:</strong></div>
+        <ul>${timelineHighlights.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul>
+      </div>
+    `;
+
+    return {
+      text: textLines.join('\n'),
+      html
+    };
+  }
+
+  function renderIespDraft(context = {}) {
+    if (!iespOutputEl) return;
+    const draft = buildIespDraft(context);
+    latestIespText = draft.text;
+    latestIespParentText = buildIespParentSnapshot(context);
+    iespOutputEl.innerHTML = draft.html;
+    setIespStatus('');
+  }
+
+  async function copyIespDraft() {
+    if (!latestIespText) {
+      setIespStatus('Generate an IESP draft first, then copy.', true);
+      return;
+    }
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(latestIespText);
+      } else {
+        throw new Error('clipboard-unavailable');
+      }
+      setIespStatus('IESP draft copied.');
+    } catch {
+      setIespStatus('Clipboard unavailable. Copy directly from the IESP card.', true);
+    }
+  }
+
+  function buildIespParentSnapshot(context = {}) {
+    const learner = context.learner || null;
+    const pulse = context.pulse || null;
+    const numeracyPulse = context.numeracyPulse || null;
+    const track = resolveIespTrack();
+    const cycleWeeks = resolveIespCycleWeeks();
+    const ownerRole = resolveIespOwnerRole();
+    const ownerLabel = ROLE_PATHWAY_LIBRARY[ownerRole]?.label || 'Teacher';
+    const learnerName = learner?.name || 'Learner';
+    const litGap = pulse?.gaps?.[0] || null;
+    const numGap = numeracyPulse?.gaps?.[0] || null;
+    const litStrength = pulse?.strengths?.[0] || null;
+    const numStrength = numeracyPulse?.strengths?.[0] || null;
+
+    const focusLines = [];
+    if (track !== 'numeracy') {
+      focusLines.push(`- Reading focus: ${litGap?.label || 'Reading baseline is still being established'}.`);
+    }
+    if (track !== 'literacy') {
+      focusLines.push(`- Math focus: ${numGap?.label || 'Math baseline is still being established'}.`);
+    }
+
+    const strengthLines = [];
+    if (track !== 'numeracy') {
+      strengthLines.push(`- Reading strength: ${litStrength?.label || 'Collecting more reading evidence'}.`);
+    }
+    if (track !== 'literacy') {
+      strengthLines.push(`- Math strength: ${numStrength?.label || 'Collecting more math evidence'}.`);
+    }
+
+    const nextStepLines = [];
+    if (track !== 'numeracy') {
+      nextStepLines.push('- Read together for 5-10 minutes and ask your child to explain one word-solving strategy.');
+    }
+    if (track !== 'literacy') {
+      nextStepLines.push('- Use one short mental-math routine (make 10, friendly numbers, or number-line jumps) and explain thinking out loud.');
+    }
+    nextStepLines.push('- Celebrate effort first, then name one clear goal for the next week.');
+
+    const reviewDate = new Date(Date.now() + (cycleWeeks * 7 * 24 * 60 * 60 * 1000));
+    const lines = [
+      'CORNERSTONE MTSS Parent Snapshot',
+      `Learner: ${learnerName}`,
+      `Support cycle: ${cycleWeeks} weeks`,
+      `Case lead: ${ownerLabel}`,
+      `Next team review: ${reviewDate.toLocaleDateString()}`,
+      '',
+      'Current focus:',
+      ...focusLines,
+      '',
+      'Current strengths:',
+      ...strengthLines,
+      '',
+      'At-home next steps:',
+      ...nextStepLines,
+      '',
+      'How progress is checked:',
+      '- We collect short learning checks each week and update supports when needed.',
+      '- If progress is slower than expected, support intensity is adjusted quickly.'
+    ];
+    return lines.join('\n');
+  }
+
+  function exportIespDraft(kind = 'team') {
+    if (!latestIespContext) {
+      setIespStatus('Refresh report first to build IESP exports.', true);
+      return;
+    }
+
+    const learnerName = latestIespContext.learner?.name || 'learner';
+    const learnerSlug = slugify(learnerName || 'learner');
+    const dateSlug = buildDateSlug(new Date());
+
+    if (kind === 'parent') {
+      const parentText = latestIespParentText || buildIespParentSnapshot(latestIespContext);
+      const fileName = `iesp-parent-snapshot-${learnerSlug}-${dateSlug}.txt`;
+      downloadBlobFile(fileName, new Blob([parentText], { type: 'text/plain;charset=utf-8' }));
+      setIespStatus('Parent snapshot exported.');
+      return;
+    }
+
+    const teamText = latestIespText || buildIespDraft(latestIespContext).text;
+    const fileName = `iesp-team-brief-${learnerSlug}-${dateSlug}.txt`;
+    downloadBlobFile(fileName, new Blob([teamText], { type: 'text/plain;charset=utf-8' }));
+    setIespStatus('Team brief exported.');
   }
 
   function renderBuilderFocusOptions() {
@@ -5768,6 +6602,9 @@
     latestRoleContext = {
       learner,
       pulse,
+      numeracyPulse,
+      logs,
+      numeracyLogs,
       placementRec,
       weakestRow: weakest
     };
@@ -5781,6 +6618,15 @@
       pulse,
       numeracyPulse
     };
+    latestIespContext = {
+      learner,
+      pulse,
+      numeracyPulse,
+      logs,
+      numeracyLogs
+    };
+    renderInterventionTimeline(latestIespContext);
+    renderIespDraft(latestIespContext);
     renderParentMessagePanel(latestParentContext);
     renderReportMediaViewsFromCache();
   }
@@ -5921,6 +6767,11 @@
   });
   roleSelectEl?.addEventListener('change', () => {
     roleSelectEl.dataset.manualRole = 'true';
+    if (protocolRoleEl) {
+      const normalized = normalizeRoleId(roleSelectEl.value || '');
+      const hasProtocolRole = Array.from(protocolRoleEl.options || []).some((option) => option.value === normalized);
+      if (hasProtocolRole) protocolRoleEl.value = normalized;
+    }
     if (latestRoleContext) {
       renderRolePathway(latestRoleContext);
     }
@@ -5934,10 +6785,18 @@
   parentSaveBtn?.addEventListener('click', () => {
     saveParentMessageDraft();
   });
+  parentTemplateBtn?.addEventListener('click', () => {
+    applyParentStarterTemplate();
+  });
   parentCopyBtn?.addEventListener('click', () => {
     copyParentMessageDraft();
   });
   parentIntentEl?.addEventListener('change', () => {
+    if (latestParentContext) {
+      generateParentMessageDraft();
+    }
+  });
+  parentLanguageEl?.addEventListener('change', () => {
     if (latestParentContext) {
       generateParentMessageDraft();
     }
@@ -5947,9 +6806,38 @@
       generateParentMessageDraft();
     }
   });
+  parentTemplateEl?.addEventListener('change', () => {
+    setParentMessageStatus(`Starter template selected: ${parentTemplateLabel(parentTemplateEl.value || 'progress')}.`);
+  });
   parentMessageInputEl?.addEventListener('input', () => {
     latestParentMessageText = String(parentMessageInputEl.value || '').trim();
     if (latestParentContext) renderParentMessagePanel(latestParentContext);
+  });
+  iespGenerateBtn?.addEventListener('click', () => {
+    if (!latestIespContext) {
+      setIespStatus('Refresh report first to build an IESP draft.', true);
+      return;
+    }
+    renderIespDraft(latestIespContext);
+    setIespStatus('IESP draft generated.');
+  });
+  iespCopyBtn?.addEventListener('click', () => {
+    copyIespDraft();
+  });
+  iespExportTeamBtn?.addEventListener('click', () => {
+    exportIespDraft('team');
+  });
+  iespExportParentBtn?.addEventListener('click', () => {
+    exportIespDraft('parent');
+  });
+  iespTrackEl?.addEventListener('change', () => {
+    if (latestIespContext) renderIespDraft(latestIespContext);
+  });
+  iespCycleEl?.addEventListener('change', () => {
+    if (latestIespContext) renderIespDraft(latestIespContext);
+  });
+  iespOwnerEl?.addEventListener('change', () => {
+    if (latestIespContext) renderIespDraft(latestIespContext);
   });
   reportMediaOpenBtn?.addEventListener('click', () => {
     openReportMediaModal(reportMediaFilterSectionEl?.value && reportMediaFilterSectionEl.value !== 'all'

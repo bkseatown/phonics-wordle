@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Decode the Word — Teacher Report</title>
+    <title>CORNERSTONE MTSS — Teacher Report</title>
     <link rel="stylesheet" href="style.css" />
     <script src="platform.js" defer></script>
     <script src="teacher-report.js" defer></script>
@@ -13,7 +13,7 @@
     <header>
       <div class="header-top">
         <h1>
-          <a href="index.html">Decode the Word</a>
+          <a href="index.html">CORNERSTONE MTSS</a>
         </h1>
         <nav class="header-actions" aria-label="Primary"></nav>
       </div>
@@ -24,6 +24,7 @@
         <div class="report-card-header">
           <div>
             <h2>Teacher Report</h2>
+            <p class="home-subtitle"><strong>CORNERSTONE MTSS:</strong> Strong foundations across every tier.</p>
             <p class="home-subtitle">Printable learner progress summary with standards-based mastery heatmap.</p>
           </div>
           <div class="report-actions">
@@ -301,11 +302,16 @@
             Team role
             <select id="report-protocol-role" aria-label="Protocol team role">
               <option value="auto">Auto from learner profile</option>
+              <option value="teacher">Teacher</option>
+              <option value="admin">Administrator</option>
+              <option value="dean">Dean</option>
               <option value="learning-support">Learning Support / SPED</option>
               <option value="eal">EAL</option>
               <option value="slp">Speech-Language (SLP)</option>
-              <option value="sel-counselor">SEL / School Counselor</option>
-              <option value="leadership">Leadership / Admin</option>
+              <option value="counselor">School Counselor</option>
+              <option value="psychologist">School Psychologist</option>
+              <option value="sel-counselor">SEL / School Counselor (Legacy)</option>
+              <option value="leadership">Leadership / Admin (Legacy)</option>
               <option value="parent">Parent / Caregiver</option>
             </select>
           </label>
@@ -324,11 +330,63 @@
         <div id="report-protocol-status" class="muted"></div>
       </section>
 
+      <section class="report-card" aria-label="Intervention timeline and IESP auto-draft">
+        <div class="report-card-header">
+          <div>
+            <h2>Live Intervention Timeline + IESP Auto-Draft</h2>
+            <p class="home-subtitle">Turn current literacy + numeracy evidence into a timestamped intervention trail and a copy-ready IESP draft.</p>
+          </div>
+          <div class="report-actions">
+            <button class="secondary-btn report-media-open-section-btn" type="button" data-target-section="timeline-iesp">Add Recording</button>
+            <button id="report-iesp-copy" class="secondary-btn" type="button">Copy IESP Draft</button>
+            <button id="report-iesp-export-team" class="secondary-btn" type="button">Export Team Brief (.txt)</button>
+            <button id="report-iesp-export-parent" class="secondary-btn" type="button">Export Parent Snapshot (.txt)</button>
+          </div>
+        </div>
+        <div class="report-protocol-controls">
+          <label class="report-builder-label">
+            Draft track
+            <select id="report-iesp-track" aria-label="IESP draft track">
+              <option value="integrated">Integrated literacy + numeracy</option>
+              <option value="literacy">Literacy only</option>
+              <option value="numeracy">Numeracy only</option>
+            </select>
+          </label>
+          <label class="report-builder-label">
+            Cycle length
+            <select id="report-iesp-cycle" aria-label="IESP cycle length">
+              <option value="4">4 weeks</option>
+              <option value="6">6 weeks</option>
+              <option value="8">8 weeks</option>
+              <option value="12">12 weeks</option>
+            </select>
+          </label>
+          <label class="report-builder-label">
+            Case lead
+            <select id="report-iesp-owner" aria-label="IESP case lead">
+              <option value="teacher">Teacher</option>
+              <option value="learning-support">Learning Support / SPED</option>
+              <option value="eal">EAL</option>
+              <option value="slp">Speech-Language (SLP)</option>
+              <option value="counselor">School Counselor</option>
+              <option value="psychologist">School Psychologist</option>
+              <option value="dean">Dean</option>
+              <option value="admin">Administrator</option>
+            </select>
+          </label>
+          <button id="report-iesp-generate" class="primary-btn" type="button">Generate IESP Draft</button>
+        </div>
+        <div id="report-intervention-timeline" class="report-timeline"></div>
+        <div id="report-iesp-output" class="report-protocol-output"></div>
+        <div class="report-media-slot" data-media-slot="timeline-iesp"></div>
+        <div id="report-iesp-status" class="muted"></div>
+      </section>
+
       <section class="report-card" aria-label="Role pathways">
         <div class="report-card-header">
           <div>
-            <h2>Role-Based Launch Pathways</h2>
-            <p class="home-subtitle">Pick a team role and launch a focused daily workflow in one click.</p>
+            <h2>Role Dashboards + Launch Pathways</h2>
+            <p class="home-subtitle">Pick a role to see a focused dashboard and a one-click daily workflow built from current learner signals.</p>
           </div>
           <div class="report-actions">
             <button class="secondary-btn report-media-open-section-btn" type="button" data-target-section="role-pathway">Add Recording</button>
@@ -339,15 +397,21 @@
           <label class="report-builder-label" for="report-role-select">
             Team role
             <select id="report-role-select" aria-label="Role pathway selector">
+              <option value="teacher">Teacher</option>
+              <option value="admin">Administrator</option>
+              <option value="dean">Dean</option>
               <option value="learning-support">Learning Support / SPED</option>
               <option value="eal">EAL</option>
               <option value="slp">Speech-Language (SLP)</option>
-              <option value="sel-counselor">SEL / School Counselor</option>
-              <option value="leadership">Leadership / Admin</option>
+              <option value="counselor">School Counselor</option>
+              <option value="psychologist">School Psychologist</option>
+              <option value="sel-counselor">SEL / School Counselor (Legacy)</option>
+              <option value="leadership">Leadership / Admin (Legacy)</option>
               <option value="parent">Parent / Caregiver</option>
             </select>
           </label>
         </div>
+        <div id="report-role-dashboard" class="report-role-dashboard"></div>
         <div id="report-role-pathway" class="report-role-pathway"></div>
         <div class="report-media-slot" data-media-slot="role-pathway"></div>
         <div id="report-role-status" class="muted"></div>
@@ -375,6 +439,14 @@
             </select>
           </label>
           <label class="report-builder-label">
+            Language mode
+            <select id="report-parent-language" aria-label="Parent message language mode">
+              <option value="en">English (EN)</option>
+              <option value="es">Spanish (ES)</option>
+              <option value="zh">Chinese (ZH)</option>
+            </select>
+          </label>
+          <label class="report-builder-label">
             Language level
             <select id="report-parent-reading-level" aria-label="Parent message language level">
               <option value="plain">Plain language (K-2/EAL family-friendly)</option>
@@ -383,9 +455,18 @@
             </select>
           </label>
           <label class="report-builder-label">
+            Starter template
+            <select id="report-parent-template" aria-label="Parent starter template">
+              <option value="progress">Progress snapshot</option>
+              <option value="home-routine">Home routine prompt</option>
+              <option value="celebration">Celebrate and encourage</option>
+            </select>
+          </label>
+          <label class="report-builder-label">
             Parent message draft
             <textarea id="report-parent-message-input" rows="5" placeholder="Add a custom note for families..."></textarea>
           </label>
+          <button id="report-parent-template-btn" class="secondary-btn" type="button">Use Starter Template</button>
           <button id="report-parent-generate" class="primary-btn" type="button">Generate Draft</button>
           <button id="report-parent-save" class="secondary-btn" type="button">Save Message</button>
         </div>

@@ -30,6 +30,7 @@ let voiceDiagnosticsState = {
     voiceName: 'Not resolved yet',
     voiceLang: '—',
     qualityTier: 'Unknown',
+    qualityMode: 'Natural preferred',
     fallbackReason: 'Waiting for voice data.',
     candidateCount: 0,
     updatedAt: 0
@@ -72,6 +73,7 @@ const DEFAULT_SETTINGS = {
     speechRate: 0.85,
     voiceDialect: 'en-US',
     narrationStyle: 'expressive', // expressive | neutral
+    speechQualityMode: 'natural-preferred', // natural-preferred | natural-only | fallback-any
     audienceMode: 'auto', // auto | general | young-eal
     autoHear: true,
     showRevealRecordingTools: false,
@@ -138,6 +140,13 @@ function normalizeNarrationStyle(value) {
     const raw = String(value || '').toLowerCase().trim();
     if (raw === 'neutral') return 'neutral';
     return 'expressive';
+}
+
+function normalizeSpeechQualityMode(value) {
+    const raw = String(value || '').toLowerCase().trim();
+    if (raw === 'natural-only' || raw === 'strict' || raw === 'high-only') return 'natural-only';
+    if (raw === 'fallback-any' || raw === 'allow-basic' || raw === 'compatibility') return 'fallback-any';
+    return 'natural-preferred';
 }
 
 function normalizeGradeBandForAudience(value) {
@@ -607,6 +616,7 @@ function loadSettings() {
 
         appSettings.audienceMode = normalizeAudienceMode(appSettings.audienceMode || DEFAULT_SETTINGS.audienceMode);
         appSettings.narrationStyle = normalizeNarrationStyle(appSettings.narrationStyle || DEFAULT_SETTINGS.narrationStyle);
+        appSettings.speechQualityMode = normalizeSpeechQualityMode(appSettings.speechQualityMode || DEFAULT_SETTINGS.speechQualityMode);
 
         const migrated = localStorage.getItem('bonus_frequency_migrated');
         if (!migrated && (!parsed.bonus || ['sometimes', 'often'].includes(parsed.bonus.frequency))) {
@@ -627,6 +637,7 @@ function loadSettings() {
 function saveSettings() {
     appSettings.audienceMode = normalizeAudienceMode(appSettings.audienceMode || DEFAULT_SETTINGS.audienceMode);
     appSettings.narrationStyle = normalizeNarrationStyle(appSettings.narrationStyle || DEFAULT_SETTINGS.narrationStyle);
+    appSettings.speechQualityMode = normalizeSpeechQualityMode(appSettings.speechQualityMode || DEFAULT_SETTINGS.speechQualityMode);
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(appSettings));
 }
 
@@ -639,6 +650,10 @@ function getSpeechRate(type = 'word') {
 
 function getNarrationStyle() {
     return normalizeNarrationStyle(appSettings.narrationStyle || DEFAULT_SETTINGS.narrationStyle);
+}
+
+function getSpeechQualityMode() {
+    return normalizeSpeechQualityMode(appSettings.speechQualityMode || DEFAULT_SETTINGS.speechQualityMode);
 }
 
 function applySettings() {
@@ -696,6 +711,11 @@ function applySettings() {
     const narrationStyleSelect = document.getElementById('narration-style-select');
     if (narrationStyleSelect) {
         narrationStyleSelect.value = normalizeNarrationStyle(appSettings.narrationStyle || DEFAULT_SETTINGS.narrationStyle);
+    }
+
+    const speechQualitySelect = document.getElementById('speech-quality-select');
+    if (speechQualitySelect) {
+        speechQualitySelect.value = getSpeechQualityMode();
     }
 
     const autoHearToggle = document.getElementById('toggle-auto-hear');
@@ -1536,8 +1556,18 @@ function getPreferredEnglishDialect() {
     return 'en-US';
 }
 
+function pickPreferredEnglishCandidate(voices, dialect, options = {}) {
+    const target = String(dialect || 'en-US');
+    let picked = pickBestVoiceForLang(voices, target, options);
+    if (!picked && target.toLowerCase() !== 'en') {
+        picked = pickBestVoiceForLang(voices, 'en', options);
+    }
+    return picked;
+}
+
 function pickBestEnglishVoice(voices) {
     const dialect = getPreferredEnglishDialect();
+    const qualityMode = getSpeechQualityMode();
     const pool = Array.isArray(voices) ? voices : [];
     if (!pool.length) {
         sessionEnglishVoice = { dialect: '', voiceUri: '' };
@@ -1545,21 +1575,50 @@ function pickBestEnglishVoice(voices) {
             voice: null,
             reason: `No system voices are currently loaded for ${dialect}.`,
             dialect,
+            qualityMode,
             candidateCount: 0
         });
         return null;
     }
 
+    const bestHighQuality = pickPreferredEnglishCandidate(pool, dialect, { requireHighQuality: true });
+    const bestSafeGeneral = pickPreferredEnglishCandidate(pool, dialect, { excludeLowQuality: true });
+    const bestAnyGeneral = pickPreferredEnglishCandidate(pool, dialect);
+    const bestGeneral = qualityMode === 'fallback-any'
+        ? (bestHighQuality || bestAnyGeneral)
+        : (bestHighQuality || bestSafeGeneral || bestAnyGeneral);
+    const bestVoiceUri = (bestGeneral && (bestGeneral.voiceURI || bestGeneral.name || '')) || '';
+    const supportsOnlyHighQuality = qualityMode === 'natural-only';
+    const hasSafeAlternative = !!(bestHighQuality || bestSafeGeneral);
+    const disallowBasicWhenPossible = qualityMode === 'natural-preferred' && hasSafeAlternative;
+    let upgradeReason = '';
+
+    const modeBlocksVoice = (voice) => {
+        if (!voice) return true;
+        if (supportsOnlyHighQuality && !isHighQualityVoice(voice)) return true;
+        if (disallowBasicWhenPossible && isLowQualityVoice(voice)) return true;
+        return false;
+    };
+
     if (sessionEnglishVoice.dialect === dialect && sessionEnglishVoice.voiceUri) {
         const locked = pool.find((voice) => (voice.voiceURI || voice.name) === sessionEnglishVoice.voiceUri);
         if (locked && locked.lang && locked.lang.toLowerCase().startsWith('en')) {
-            setVoiceDiagnosticsState({
-                voice: locked,
-                reason: `Using locked session voice for ${dialect}.`,
-                dialect,
-                candidateCount: pool.length
-            });
-            return locked;
+            const lockedUri = locked.voiceURI || locked.name || '';
+            if (modeBlocksVoice(locked) && bestVoiceUri && bestVoiceUri !== lockedUri) {
+                sessionEnglishVoice = { dialect: '', voiceUri: '' };
+                upgradeReason = supportsOnlyHighQuality
+                    ? `Upgraded locked voice to satisfy Natural-only mode for ${dialect}.`
+                    : `Upgraded from a basic locked voice for ${dialect}.`;
+            } else {
+                setVoiceDiagnosticsState({
+                    voice: locked,
+                    reason: `Using locked session voice for ${dialect}.`,
+                    dialect,
+                    qualityMode,
+                    candidateCount: pool.length
+                });
+                return locked;
+            }
         }
     }
 
@@ -1567,46 +1626,93 @@ function pickBestEnglishVoice(voices) {
     if (storedVoiceUri) {
         const remembered = pool.find(v => (v.voiceURI || v.name) === storedVoiceUri);
         if (remembered && remembered.lang && remembered.lang.toLowerCase().startsWith('en')) {
-            sessionEnglishVoice = {
-                dialect,
-                voiceUri: remembered.voiceURI || remembered.name || ''
-            };
-            setVoiceDiagnosticsState({
-                voice: remembered,
-                reason: `Using saved preferred voice for ${dialect}.`,
-                dialect,
-                candidateCount: pool.length
-            });
-            return remembered;
+            const rememberedUri = remembered.voiceURI || remembered.name || '';
+            if (
+                modeBlocksVoice(remembered) &&
+                bestVoiceUri &&
+                bestVoiceUri !== rememberedUri
+            ) {
+                // Keep moving: we auto-upgrade below.
+                upgradeReason = supportsOnlyHighQuality
+                    ? `Upgraded saved voice to satisfy Natural-only mode for ${dialect}.`
+                    : `Upgraded from a basic saved voice for ${dialect}.`;
+            } else if (
+                bestVoiceUri &&
+                rememberedUri &&
+                rememberedUri !== bestVoiceUri &&
+                scoreVoiceForTarget(bestGeneral, dialect) - scoreVoiceForTarget(remembered, dialect) >= 40
+            ) {
+                // Keep moving: a substantially better voice is now available.
+                upgradeReason = `Upgraded to a higher-scoring saved voice for ${dialect}.`;
+            } else {
+                sessionEnglishVoice = {
+                    dialect,
+                    voiceUri: remembered.voiceURI || remembered.name || ''
+                };
+                setVoiceDiagnosticsState({
+                    voice: remembered,
+                    reason: `Using saved preferred voice for ${dialect}.`,
+                    dialect,
+                    qualityMode,
+                    candidateCount: pool.length
+                });
+                return remembered;
+            }
         }
     }
 
-    let voice = pickBestVoiceForLang(pool, dialect);
-    let reason = `Selected highest quality ${dialect} match from loaded voices.`;
-    if (!voice && dialect !== 'en') {
-        voice = pickBestVoiceForLang(pool, 'en');
-        if (voice) {
-            reason = `No direct ${dialect} match; using best available English voice.`;
-        }
+    let voice = null;
+    if (supportsOnlyHighQuality) {
+        voice = bestHighQuality || null;
+    } else if (qualityMode === 'natural-preferred') {
+        voice = bestHighQuality || bestSafeGeneral || bestAnyGeneral || null;
+    } else {
+        voice = bestHighQuality || bestAnyGeneral || null;
+    }
+
+    let reason = bestHighQuality
+        ? `Selected highest quality ${dialect} match from loaded voices.`
+        : `No enhanced ${dialect} voice detected; using best available English voice.`;
+    if (supportsOnlyHighQuality && !bestHighQuality) {
+        reason = `Natural-only mode is enabled and no enhanced ${dialect} voice is installed yet.`;
+    } else if (qualityMode === 'natural-preferred' && !bestHighQuality && bestSafeGeneral) {
+        reason = `No enhanced ${dialect} voice detected; using a non-basic English voice.`;
+    } else if (qualityMode === 'natural-preferred' && !bestHighQuality && !bestSafeGeneral && bestAnyGeneral) {
+        reason = `Only basic English voices are available for ${dialect}; using best available fallback.`;
+    } else if (voice && !bestHighQuality && dialect.toLowerCase() !== 'en' && String(voice.lang || '').toLowerCase().startsWith('en-')) {
+        reason = `No enhanced ${dialect} match; using best available English voice.`;
     }
     if (voice) {
+        if (upgradeReason) {
+            reason = `${upgradeReason} ${reason}`;
+        }
         sessionEnglishVoice = {
             dialect,
             voiceUri: voice.voiceURI || voice.name || ''
         };
-        setStoredEnglishVoiceUriForDialect(dialect, voice.voiceURI || voice.name || '');
+        if (
+            isHighQualityVoice(voice) ||
+            !storedVoiceUri ||
+            (!isLowQualityVoice(voice) && qualityMode !== 'fallback-any')
+        ) {
+            setStoredEnglishVoiceUriForDialect(dialect, voice.voiceURI || voice.name || '');
+        }
         setVoiceDiagnosticsState({
             voice,
             reason,
             dialect,
+            qualityMode,
             candidateCount: pool.length
         });
     } else {
         sessionEnglishVoice = { dialect: '', voiceUri: '' };
         setVoiceDiagnosticsState({
             voice: null,
-            reason: `Loaded voices do not include an English option for ${dialect}.`,
+            reason: supportsOnlyHighQuality
+                ? `Natural-only mode is on and no enhanced English voice is available for ${dialect}.`
+                : `Loaded voices do not include an English option for ${dialect}.`,
             dialect,
+            qualityMode,
             candidateCount: pool.length
         });
     }
@@ -1724,6 +1830,9 @@ function pickBestVoiceForLang(voices, targetLang, options = {}) {
     let pool = exact.length ? exact : candidates;
     if (options.requireHighQuality) {
         pool = pool.filter(isHighQualityVoice);
+    }
+    if (options.excludeLowQuality) {
+        pool = pool.filter(voice => !isLowQualityVoice(voice));
     }
     if (!pool.length) return null;
 
@@ -2208,6 +2317,18 @@ function initTeacherTools() {
         };
     }
 
+    const speechQualitySelect = document.getElementById('speech-quality-select');
+    if (speechQualitySelect) {
+        speechQualitySelect.onchange = () => {
+            appSettings.speechQualityMode = normalizeSpeechQualityMode(speechQualitySelect.value);
+            sessionEnglishVoice = { dialect: '', voiceUri: '' };
+            saveSettings();
+            refreshVoiceDiagnostics('voice quality changed');
+            updateVoiceInstallPrompt();
+            updateEnhancedVoicePrompt();
+        };
+    }
+
     const translationSelect = document.getElementById('translation-default-select');
     if (translationSelect) {
         translationSelect.onchange = () => {
@@ -2402,6 +2523,7 @@ async function importPlatformSettingsFromFile(file) {
 
         merged.audienceMode = normalizeAudienceMode(merged.audienceMode || DEFAULT_SETTINGS.audienceMode);
         merged.narrationStyle = normalizeNarrationStyle(merged.narrationStyle || DEFAULT_SETTINGS.narrationStyle);
+        merged.speechQualityMode = normalizeSpeechQualityMode(merged.speechQualityMode || DEFAULT_SETTINGS.speechQualityMode);
 
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged));
         showToast('Settings imported. Reloading...');
@@ -2798,7 +2920,7 @@ function getVoiceQualityTier(voice) {
     return 'Standard';
 }
 
-function setVoiceDiagnosticsState({ voice = null, reason = '', dialect = null, candidateCount = null } = {}) {
+function setVoiceDiagnosticsState({ voice = null, reason = '', dialect = null, qualityMode = null, candidateCount = null } = {}) {
     if (dialect) {
         voiceDiagnosticsState.dialect = dialect;
     } else {
@@ -2813,6 +2935,10 @@ function setVoiceDiagnosticsState({ voice = null, reason = '', dialect = null, c
         voiceDiagnosticsState.voiceLang = '—';
         voiceDiagnosticsState.qualityTier = 'Unavailable';
     }
+    const mode = qualityMode || getSpeechQualityMode();
+    if (mode === 'natural-only') voiceDiagnosticsState.qualityMode = 'Natural only';
+    else if (mode === 'fallback-any') voiceDiagnosticsState.qualityMode = 'Allow basic fallback';
+    else voiceDiagnosticsState.qualityMode = 'Natural preferred';
     if (reason) {
         voiceDiagnosticsState.fallbackReason = reason;
     }
@@ -2829,6 +2955,7 @@ function renderVoiceDiagnosticsPanel() {
     const dialectEl = document.getElementById('voice-diagnostics-dialect');
     const langEl = document.getElementById('voice-diagnostics-lang');
     const qualityEl = document.getElementById('voice-diagnostics-quality');
+    const policyEl = document.getElementById('voice-diagnostics-policy');
     const reasonEl = document.getElementById('voice-diagnostics-reason');
     const candidatesEl = document.getElementById('voice-diagnostics-candidates');
     const styleEl = document.getElementById('voice-diagnostics-style');
@@ -2838,6 +2965,7 @@ function renderVoiceDiagnosticsPanel() {
     if (dialectEl) dialectEl.textContent = voiceDiagnosticsState.dialect || getPreferredEnglishDialect();
     if (langEl) langEl.textContent = voiceDiagnosticsState.voiceLang || '—';
     if (qualityEl) qualityEl.textContent = voiceDiagnosticsState.qualityTier || 'Unknown';
+    if (policyEl) policyEl.textContent = voiceDiagnosticsState.qualityMode || 'Natural preferred';
     if (reasonEl) reasonEl.textContent = voiceDiagnosticsState.fallbackReason || 'No details available.';
     if (candidatesEl) candidatesEl.textContent = String(voiceDiagnosticsState.candidateCount || 0);
     if (styleEl) styleEl.textContent = getNarrationStyle() === 'expressive' ? 'Expressive' : 'Neutral';
@@ -2849,11 +2977,13 @@ function renderVoiceDiagnosticsPanel() {
 }
 
 async function refreshVoiceDiagnostics(source = 'refresh') {
+    const qualityMode = getSpeechQualityMode();
     if (!('speechSynthesis' in window)) {
         setVoiceDiagnosticsState({
             voice: null,
             reason: 'Speech synthesis is not supported in this browser.',
             dialect: getPreferredEnglishDialect(),
+            qualityMode,
             candidateCount: 0
         });
         return;
@@ -2863,8 +2993,11 @@ async function refreshVoiceDiagnostics(source = 'refresh') {
     if (!preferred) {
         setVoiceDiagnosticsState({
             voice: null,
-            reason: `No English voice available (${source}).`,
+            reason: qualityMode === 'natural-only'
+                ? `No enhanced English voice available (${source}).`
+                : `No English voice available (${source}).`,
             dialect: getPreferredEnglishDialect(),
+            qualityMode,
             candidateCount: Array.isArray(voices) ? voices.length : 0
         });
     }
@@ -2898,6 +3031,13 @@ function ensureVoicePreferencesControls() {
             <option value="expressive">Expressive (recommended)</option>
             <option value="neutral">Neutral</option>
         </select>
+        <label for="speech-quality-select"><strong>Voice quality</strong></label>
+        <select id="speech-quality-select" aria-label="Voice quality mode">
+            <option value="natural-preferred">Natural preferred (recommended)</option>
+            <option value="natural-only">Natural only</option>
+            <option value="fallback-any">Allow basic fallback</option>
+        </select>
+        <div class="teacher-subtext">Natural-only blocks robotic fallback voices but requires enhanced system voices.</div>
         <div class="teacher-subtext">Expressive style adds punctuation-aware pacing and intonation for sentence reading.</div>
     `;
     grid.appendChild(row);
@@ -2917,6 +3057,7 @@ function ensureVoiceDiagnosticsPanel() {
             <div><strong>Preferred dialect:</strong> <span id="voice-diagnostics-dialect">en-US</span></div>
             <div><strong>Voice language:</strong> <span id="voice-diagnostics-lang">—</span></div>
             <div><strong>Quality tier:</strong> <span id="voice-diagnostics-quality">Unknown</span></div>
+            <div><strong>Quality policy:</strong> <span id="voice-diagnostics-policy">Natural preferred</span></div>
             <div><strong>Candidates loaded:</strong> <span id="voice-diagnostics-candidates">0</span></div>
             <div><strong>Narration style:</strong> <span id="voice-diagnostics-style">Expressive</span></div>
             <div><strong>Fallback reason:</strong> <span id="voice-diagnostics-reason">Waiting for voice data.</span></div>

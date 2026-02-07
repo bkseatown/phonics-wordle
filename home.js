@@ -47,9 +47,37 @@
   const learnerAddBtn = document.getElementById('learner-add-btn');
   const learnerList = document.getElementById('learner-list');
   const learnerStatus = document.getElementById('learner-status');
+  const homeRoleSelect = document.getElementById('home-role-select');
+  const homeRoleSignal = document.getElementById('home-role-signal');
+  const homeRoleSecurity = document.getElementById('home-role-security');
+  const homePinCurrentInput = document.getElementById('home-pin-current');
+  const homePinNewInput = document.getElementById('home-pin-new');
+  const homePinConfirmInput = document.getElementById('home-pin-confirm');
+  const homePinStrictToggle = document.getElementById('home-pin-strict');
+  const homePinSaveBtn = document.getElementById('home-pin-save');
+  const homePinStrictSaveBtn = document.getElementById('home-pin-strict-save');
+  const homePinResetBtn = document.getElementById('home-pin-reset');
+  const homePinStatus = document.getElementById('home-pin-status');
+  const homeRecoveryPhraseInput = document.getElementById('home-recovery-phrase');
+  const homeRecoveryCopyBtn = document.getElementById('home-recovery-copy');
+  const homeRecoveryRotateBtn = document.getElementById('home-recovery-rotate');
+  const homeRecoveryInput = document.getElementById('home-recovery-input');
+  const homeRecoveryApplyBtn = document.getElementById('home-recovery-apply');
+  const homeRecoveryStatus = document.getElementById('home-recovery-status');
+  const transferCodeInput = document.getElementById('progress-transfer-code');
+  const transferGenerateBtn = document.getElementById('progress-transfer-generate');
+  const transferApplyBtn = document.getElementById('progress-transfer-apply');
+  const transferStatus = document.getElementById('progress-transfer-status');
+  const homeRoleSummary = document.getElementById('home-role-summary');
+  const homeRoleCards = document.getElementById('home-role-cards');
+  const homeRoleActions = document.getElementById('home-role-actions');
   let editingLearnerId = '';
 
   const REPORT_VERSION = 1;
+  const HOME_ROLE_KEY = 'cornerstone_home_role_v1';
+  const HOME_LAST_ADULT_ROLE_KEY = 'cornerstone_home_role_last_adult_v1';
+  const STUDENT_MODE_PIN_DEFAULT = '2468';
+  const TRANSFER_CODE_PREFIX = 'CMTSS1:';
   const REPORT_EXACT_KEYS = new Set([
     'cloze_settings',
     'cloze_last_set_v1',
@@ -82,6 +110,540 @@
     'opsbuilder_',
     'wtw_'
   ];
+
+  const HOME_ROLE_LABELS = {
+    teacher: 'Teacher',
+    admin: 'Administrator',
+    dean: 'Dean',
+    'learning-support': 'Learning Support Teacher',
+    slp: 'Speech and Language Pathologist',
+    eal: 'EAL Specialist',
+    counselor: 'School Counselor',
+    psychologist: 'School Psychologist',
+    student: 'Student',
+    parent: 'Parent / Caregiver'
+  };
+
+  const HOME_ROLE_ALIAS_MAP = {
+    teacher: 'teacher',
+    classroom: 'teacher',
+    admin: 'admin',
+    administrator: 'admin',
+    leadership: 'admin',
+    leader: 'admin',
+    dean: 'dean',
+    'learning-support': 'learning-support',
+    learningsupport: 'learning-support',
+    'learning_support': 'learning-support',
+    ls: 'learning-support',
+    sped: 'learning-support',
+    slp: 'slp',
+    speech: 'slp',
+    eal: 'eal',
+    ell: 'eal',
+    esl: 'eal',
+    counselor: 'counselor',
+    counselling: 'counselor',
+    'school-counselor': 'counselor',
+    psych: 'psychologist',
+    psychologist: 'psychologist',
+    'school-psychologist': 'psychologist',
+    student: 'student',
+    learner: 'student',
+    pupil: 'student',
+    parent: 'parent',
+    caregiver: 'parent',
+    family: 'parent'
+  };
+
+  const HOME_LITERACY_DOMAIN_LABELS = {
+    decoding: 'Decoding',
+    fluency: 'Fluency & Prosody',
+    comprehension: 'Comprehension',
+    'written-language': 'Written Language',
+    'executive-function': 'SEL / Executive Function',
+    general: 'General Literacy'
+  };
+
+  const HOME_NUMERACY_DOMAIN_LABELS = {
+    'number-sense': 'Number Sense',
+    operations: 'Operations',
+    'problem-solving': 'Problem Solving',
+    fluency: 'Math Fluency',
+    'math-language': 'Math Language',
+    general: 'General Numeracy'
+  };
+
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function clamp01(value) {
+    const numeric = Number(value);
+    if (Number.isNaN(numeric)) return 0;
+    return Math.max(0, Math.min(1, numeric));
+  }
+
+  function normalizeRoleId(raw) {
+    const key = String(raw || '').trim().toLowerCase();
+    if (!key) return '';
+    return HOME_ROLE_ALIAS_MAP[key] || '';
+  }
+
+  function readPreferredRole() {
+    return normalizeRoleId(localStorage.getItem(HOME_ROLE_KEY) || '');
+  }
+
+  function writePreferredRole(roleId) {
+    const normalized = normalizeRoleId(roleId);
+    if (!normalized) return;
+    const previous = normalizeRoleId(localStorage.getItem(HOME_ROLE_KEY) || '');
+    if (previous === normalized) return;
+    if (normalized !== 'student') {
+      localStorage.setItem(HOME_LAST_ADULT_ROLE_KEY, normalized);
+    } else if (previous && previous !== 'student') {
+      localStorage.setItem(HOME_LAST_ADULT_ROLE_KEY, previous);
+    }
+    localStorage.setItem(HOME_ROLE_KEY, normalized);
+    window.dispatchEvent(new CustomEvent('decode:home-role-changed', { detail: { role: normalized } }));
+  }
+
+  function roleFromQuery() {
+    const params = new URLSearchParams(window.location.search || '');
+    return normalizeRoleId(params.get('role'));
+  }
+
+  function applyStudentMode(roleId) {
+    const normalized = normalizeRoleId(roleId);
+    const isStudent = normalized === 'student';
+    document.body.classList.toggle('student-mode', isStudent);
+    document.body.dataset.rolePathway = normalized || '';
+  }
+
+  function updateRoleSelectorStudentLock(isLocked) {
+    if (!homeRoleSelect) return;
+    Array.from(homeRoleSelect.options || []).forEach((option) => {
+      const normalized = normalizeRoleId(option.value);
+      option.disabled = !!isLocked && normalized && normalized !== 'student';
+    });
+  }
+
+  function setPinStatus(message, isError = false) {
+    if (!homePinStatus) return;
+    homePinStatus.textContent = message || '';
+    homePinStatus.classList.toggle('error', !!isError);
+    homePinStatus.classList.toggle('success', !isError && !!message);
+  }
+
+  function setRecoveryStatus(message, isError = false) {
+    if (!homeRecoveryStatus) return;
+    homeRecoveryStatus.textContent = message || '';
+    homeRecoveryStatus.classList.toggle('error', !!isError);
+    homeRecoveryStatus.classList.toggle('success', !isError && !!message);
+  }
+
+  function resetPinFormInputs() {
+    if (homePinCurrentInput) homePinCurrentInput.value = '';
+    if (homePinNewInput) homePinNewInput.value = '';
+    if (homePinConfirmInput) homePinConfirmInput.value = '';
+  }
+
+  function refreshRecoveryPhraseDisplay() {
+    if (!homeRecoveryPhraseInput) return;
+    const platform = window.DECODE_PLATFORM;
+    const state = platform?.getStudentModeRecoveryState?.();
+    const phrase = String(state?.phrase || '').trim();
+    homeRecoveryPhraseInput.value = phrase;
+  }
+
+  function setTransferStatus(message, isError = false) {
+    if (!transferStatus) return;
+    transferStatus.textContent = message || '';
+    transferStatus.classList.toggle('error', !!isError);
+    transferStatus.classList.toggle('success', !isError && !!message);
+  }
+
+  function resolvePinState() {
+    const fallback = {
+      hasCustomPin: false,
+      strictMode: false,
+      fallbackDefaultEnabled: true,
+      defaultPin: STUDENT_MODE_PIN_DEFAULT
+    };
+    const platform = window.DECODE_PLATFORM;
+    const state = platform?.getStudentModePinState?.();
+    if (!state || typeof state !== 'object') return fallback;
+    return {
+      hasCustomPin: !!state.hasCustomPin,
+      strictMode: !!state.strictMode,
+      fallbackDefaultEnabled: state.fallbackDefaultEnabled !== false,
+      defaultPin: String(state.defaultPin || STUDENT_MODE_PIN_DEFAULT)
+    };
+  }
+
+  function scoreFromEntry(entry) {
+    const detail = entry?.detail;
+    const correct = Number(detail?.correct);
+    const total = Number(detail?.total);
+    if (total > 0 && correct >= 0) {
+      return clamp01(correct / total);
+    }
+
+    const orf = Number(detail?.orf);
+    const goal = Number(detail?.goal);
+    if (goal > 0 && orf >= 0) {
+      return clamp01(orf / goal);
+    }
+
+    const ratio = String(entry?.event || '').match(/(\d+)\s*\/\s*(\d+)/);
+    if (ratio) {
+      const numerator = Number(ratio[1]);
+      const denominator = Number(ratio[2]);
+      if (denominator > 0) return clamp01(numerator / denominator);
+    }
+
+    return null;
+  }
+
+  function literacyDomainFromActivity(activityId) {
+    const id = String(activityId || '').toLowerCase();
+    if (id === 'word-quest') return 'decoding';
+    if (id === 'fluency') return 'fluency';
+    if (id === 'cloze' || id === 'comprehension') return 'comprehension';
+    if (id === 'writing' || id === 'madlibs') return 'written-language';
+    if (id === 'plan-it') return 'executive-function';
+    return 'general';
+  }
+
+  function numeracyDomainFromEntry(entry) {
+    const explicit = String(entry?.detail?.domain || '').toLowerCase();
+    if (HOME_NUMERACY_DOMAIN_LABELS[explicit]) return explicit;
+    const id = String(entry?.activity || '').toLowerCase();
+    if (id === 'number-sense') return 'number-sense';
+    if (id === 'operations') return 'operations';
+    if (id === 'problem-solving') return 'problem-solving';
+    if (id === 'fluency') return 'fluency';
+    if (id === 'math-language') return 'math-language';
+    return 'general';
+  }
+
+  function buildDomainSummary(entries, domainResolver, labels) {
+    const bucket = {};
+    entries.forEach((entry) => {
+      const score = scoreFromEntry(entry);
+      if (score === null) return;
+      const domain = domainResolver(entry);
+      if (!bucket[domain]) {
+        bucket[domain] = { domain, sum: 0, count: 0 };
+      }
+      bucket[domain].sum += score;
+      bucket[domain].count += 1;
+    });
+
+    const ranked = Object.values(bucket)
+      .filter((row) => row.count > 0)
+      .map((row) => ({
+        domain: row.domain,
+        avg: row.sum / row.count,
+        count: row.count,
+        label: labels[row.domain] || row.domain
+      }))
+      .sort((a, b) => a.avg - b.avg);
+
+    const topGap = ranked[0] || null;
+    const topStrength = ranked.length ? ranked[ranked.length - 1] : null;
+    return { ranked, topGap, topStrength };
+  }
+
+  function buildRoleContext() {
+    const placement = load();
+    const recommendation = placement?.recommendation || null;
+    const literacyLogs = getRecentActivityEntries();
+    const numeracyRaw = safeParse(localStorage.getItem('decode_numeracy_log_v1') || '');
+    const numeracyLogs = Array.isArray(numeracyRaw) ? numeracyRaw : [];
+    const literacySummary = buildDomainSummary(
+      literacyLogs,
+      (entry) => literacyDomainFromActivity(entry?.activity),
+      HOME_LITERACY_DOMAIN_LABELS
+    );
+    const numeracySummary = buildDomainSummary(
+      numeracyLogs,
+      numeracyDomainFromEntry,
+      HOME_NUMERACY_DOMAIN_LABELS
+    );
+    const weekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    const literacyWeek = literacyLogs.filter((entry) => Number(entry?.ts || 0) >= weekAgo).length;
+    const numeracyWeek = numeracyLogs.filter((entry) => Number(entry?.ts || 0) >= weekAgo).length;
+    const learner = window.DECODE_PLATFORM?.getActiveLearner?.() || null;
+
+    return {
+      learner,
+      recommendation,
+      wordQuestUrl: recommendation ? wordQuestHref(recommendation.focus, recommendation.length) : 'word-quest.html',
+      literacyWeek,
+      numeracyWeek,
+      literacySummary,
+      numeracySummary
+    };
+  }
+
+  function recommendHomeRole(context) {
+    const literacyGap = context?.literacySummary?.topGap?.domain || '';
+    if (literacyGap === 'executive-function') return 'counselor';
+    if (literacyGap === 'fluency') return 'slp';
+    if (literacyGap === 'comprehension' || literacyGap === 'written-language') return 'eal';
+    if (literacyGap === 'decoding') return 'learning-support';
+    if ((context?.literacyWeek || 0) + (context?.numeracyWeek || 0) <= 2) return 'teacher';
+    return 'teacher';
+  }
+
+  function roleReportHref(roleId, hash = '') {
+    const base = `teacher-report.html?role=${encodeURIComponent(roleId)}`;
+    return hash ? `${base}${hash}` : base;
+  }
+
+  function buildRoleModel(roleId, context) {
+    const learnerLabel = context?.learner?.name || 'Current learner';
+    const literacyGap = context?.literacySummary?.topGap?.label || 'Gather more literacy evidence';
+    const numeracyGap = context?.numeracySummary?.topGap?.label || 'Gather more numeracy evidence';
+    const literacyStrength = context?.literacySummary?.topStrength?.label || 'No confirmed literacy strength yet';
+    const numeracyStrength = context?.numeracySummary?.topStrength?.label || 'No confirmed numeracy strength yet';
+    const weeklyLine = `${context?.literacyWeek || 0} literacy sessions · ${context?.numeracyWeek || 0} numeracy sessions in the last 7 days`;
+
+    const models = {
+      teacher: {
+        label: 'Teacher',
+        tagline: 'Clear pathways from a strong base.',
+        mission: `Keep Tier 1 strong while targeting the highest-need skill gaps for ${learnerLabel}.`,
+        cards: [
+          { title: 'Primary Lens', body: `Top literacy gap: ${literacyGap}. Top numeracy gap: ${numeracyGap}.` },
+          { title: 'What To Protect', body: `Maintain core access while extending strengths (${literacyStrength}; ${numeracyStrength}).` },
+          { title: 'Evidence Check', body: weeklyLine }
+        ],
+        actions: [
+          { label: 'Open Teacher Report', href: roleReportHref('teacher', '#report-role-pathway'), kind: 'primary' },
+          { label: 'Run Word Quest', href: context.wordQuestUrl, kind: 'ghost' },
+          { label: 'Run Number Sense', href: 'number-sense.html', kind: 'ghost' }
+        ]
+      },
+      admin: {
+        label: 'Administrator',
+        tagline: 'Building Tier 1. Strengthening Tier 2. Supporting Tier 3.',
+        mission: 'Monitor implementation quality, evidence confidence, and support-intensity fit across teams.',
+        cards: [
+          { title: 'System Priority', body: `Current risk concentration: ${literacyGap} (literacy) and ${numeracyGap} (numeracy).` },
+          { title: 'Momentum Signal', body: weeklyLine },
+          { title: 'Decision Lens', body: 'Use timeline + outcomes to verify that staffing decisions follow data.' }
+        ],
+        actions: [
+          { label: 'Open Leadership View', href: roleReportHref('admin', '#report-outcomes'), kind: 'primary' },
+          { label: 'Review Timeline', href: roleReportHref('admin', '#report-intervention-timeline'), kind: 'ghost' },
+          { label: 'Review Alignment', href: roleReportHref('admin', '#report-framework-crosswalk'), kind: 'ghost' }
+        ]
+      },
+      dean: {
+        label: 'Dean',
+        tagline: 'Building Tier 1. Strengthening Tier 2. Supporting Tier 3.',
+        mission: 'Coordinate classroom + specialist execution so supports stay coherent and measurable.',
+        cards: [
+          { title: 'Team Priority', body: `Highest current focus areas: ${literacyGap} and ${numeracyGap}.` },
+          { title: 'Handoff Quality', body: 'Set weekly owners and deadlines for each red-lane action.' },
+          { title: 'Evidence Check', body: weeklyLine }
+        ],
+        actions: [
+          { label: 'Open Dean Workflow', href: roleReportHref('dean', '#report-role-pathway'), kind: 'primary' },
+          { label: 'Plan-It Coordination', href: 'plan-it.html', kind: 'ghost' },
+          { label: 'Review Timeline', href: roleReportHref('dean', '#report-intervention-timeline'), kind: 'ghost' }
+        ]
+      },
+      'learning-support': {
+        label: 'Learning Support Teacher',
+        tagline: 'From solid ground to open access.',
+        mission: 'Tighten intervention cycles with explicit teaching, guided transfer, and documentation fidelity.',
+        cards: [
+          { title: 'Intervention Target', body: `Priority targets: ${literacyGap} and ${numeracyGap}.` },
+          { title: 'Strength Leverage', body: `Use strengths to build transfer (${literacyStrength}; ${numeracyStrength}).` },
+          { title: 'Evidence Check', body: weeklyLine }
+        ],
+        actions: [
+          { label: 'Open LS Dashboard', href: roleReportHref('learning-support', '#report-iesp-output'), kind: 'primary' },
+          { label: 'Target Word Quest', href: context.wordQuestUrl, kind: 'ghost' },
+          { label: 'Open Intervention Timeline', href: roleReportHref('learning-support', '#report-intervention-timeline'), kind: 'ghost' }
+        ]
+      },
+      slp: {
+        label: 'Speech and Language Pathologist',
+        tagline: 'From solid ground to open access.',
+        mission: 'Connect articulation/phonology and prosody goals to reading and expressive language transfer.',
+        cards: [
+          { title: 'Speech-Literacy Focus', body: `Current language-linked gap: ${literacyGap}.` },
+          { title: 'Transfer Anchor', body: `Use oral rehearsal to support ${numeracyGap} explanations in math language.` },
+          { title: 'Evidence Check', body: weeklyLine }
+        ],
+        actions: [
+          { label: 'Open SLP Pathway', href: roleReportHref('slp', '#report-role-pathway'), kind: 'primary' },
+          { label: 'Run Speed Sprint', href: 'fluency.html', kind: 'ghost' },
+          { label: 'Open Goal Drafts', href: roleReportHref('slp', '#report-goal-output'), kind: 'ghost' }
+        ]
+      },
+      eal: {
+        label: 'EAL Specialist',
+        tagline: 'From solid ground to open access.',
+        mission: 'Support language access without reducing rigor through vocabulary, syntax, and discourse scaffolds.',
+        cards: [
+          { title: 'Language Access Target', body: `Highest language-heavy needs: ${literacyGap} and ${numeracyGap}.` },
+          { title: 'Bridge To Classroom', body: 'Pair sentence frames with evidence responses in reading and math.' },
+          { title: 'Evidence Check', body: weeklyLine }
+        ],
+        actions: [
+          { label: 'Open EAL Pathway', href: roleReportHref('eal', '#report-role-pathway'), kind: 'primary' },
+          { label: 'Run Read & Think', href: 'comprehension.html', kind: 'ghost' },
+          { label: 'Run Story Fill', href: 'cloze.html', kind: 'ghost' }
+        ]
+      },
+      counselor: {
+        label: 'School Counselor',
+        tagline: 'From solid ground to open access.',
+        mission: 'Build self-management, persistence, and reflection language during academic tasks.',
+        cards: [
+          { title: 'SEL/EF Priority', body: `Current regulation/EF pressure point: ${literacyGap}.` },
+          { title: 'Student Voice', body: 'Use quick reflection routines to capture thoughts, emotions, actions, and next step.' },
+          { title: 'Evidence Check', body: weeklyLine }
+        ],
+        actions: [
+          { label: 'Open Counselor Pathway', href: roleReportHref('counselor', '#report-role-pathway'), kind: 'primary' },
+          { label: 'Run Plan-It', href: 'plan-it.html', kind: 'ghost' },
+          { label: 'Open Parent Partnership', href: roleReportHref('counselor', '#report-parent-communication'), kind: 'ghost' }
+        ]
+      },
+      psychologist: {
+        label: 'School Psychologist',
+        tagline: 'From solid ground to open access.',
+        mission: 'Triangulate classroom/intervention evidence to guide referral confidence and next diagnostic steps.',
+        cards: [
+          { title: 'Assessment Lens', body: `Converging concern areas: ${literacyGap} and ${numeracyGap}.` },
+          { title: 'Risk Framing', body: 'Separate skill deficit from language load and performance variability.' },
+          { title: 'Evidence Check', body: weeklyLine }
+        ],
+        actions: [
+          { label: 'Open Psych Workflow', href: roleReportHref('psychologist', '#report-role-pathway'), kind: 'primary' },
+          { label: 'Review Numeracy Intake', href: roleReportHref('psychologist', '#report-numeracy-import-preview'), kind: 'ghost' },
+          { label: 'Open IESP Draft', href: roleReportHref('psychologist', '#report-iesp-output'), kind: 'ghost' }
+        ]
+      },
+      student: {
+        label: 'Student',
+        tagline: 'Strong foundations across every tier.',
+        mission: `Know your next step, practice with focus, and track your wins for ${learnerLabel}.`,
+        cards: [
+          { title: 'My Next Literacy Goal', body: `Focus today: ${literacyGap}.` },
+          { title: 'My Next Math Goal', body: `Focus today: ${numeracyGap}.` },
+          { title: 'My Strengths', body: `You are already showing strength in ${literacyStrength} and ${numeracyStrength}.` }
+        ],
+        actions: [
+          { label: 'Start Word Quest', href: context.wordQuestUrl, kind: 'primary' },
+          { label: 'Start Number Sense', href: 'number-sense.html', kind: 'ghost' },
+          { label: 'Build Confidence (Plan-It)', href: 'plan-it.html', kind: 'ghost' }
+        ]
+      },
+      parent: {
+        label: 'Parent / Caregiver',
+        tagline: 'Every learner supported, every step of the way.',
+        mission: `Support ${learnerLabel} with simple, consistent home routines aligned to school goals.`,
+        cards: [
+          { title: 'Current School Focus', body: `Reading: ${literacyGap}. Math: ${numeracyGap}.` },
+          { title: 'What Is Going Well', body: `Current strengths: ${literacyStrength}; ${numeracyStrength}.` },
+          { title: 'Home Routine Cue', body: '5-10 minutes daily: one reading strategy + one conceptual math strategy.' }
+        ],
+        actions: [
+          { label: 'Open Parent Pathway', href: roleReportHref('parent', '#report-parent-communication'), kind: 'primary' },
+          { label: 'View Family Summary', href: roleReportHref('parent', '#report-share-summary'), kind: 'ghost' },
+          { label: 'Open Home Practice Activities', href: context.wordQuestUrl, kind: 'ghost' }
+        ]
+      }
+    };
+
+    return models[roleId] || models.teacher;
+  }
+
+  function renderRoleDashboard() {
+    if (!homeRoleSelect || !homeRoleSignal || !homeRoleSummary || !homeRoleCards || !homeRoleActions) return;
+
+    const context = buildRoleContext();
+    const queryRole = roleFromQuery();
+    const storedRole = readPreferredRole();
+    const fallbackRole = recommendHomeRole(context);
+    const requestedRole = normalizeRoleId(homeRoleSelect.value)
+      || queryRole
+      || storedRole
+      || fallbackRole;
+    let selectedRole = requestedRole;
+
+    if (storedRole === 'student' && selectedRole !== 'student') {
+      selectedRole = 'student';
+    }
+
+    if (!homeRoleSelect.value || normalizeRoleId(homeRoleSelect.value) !== selectedRole) {
+      homeRoleSelect.value = selectedRole;
+    }
+    updateRoleSelectorStudentLock(selectedRole === 'student');
+    applyStudentMode(selectedRole);
+    writePreferredRole(selectedRole);
+
+    const pinState = resolvePinState();
+    refreshRecoveryPhraseDisplay();
+    if (homePinStrictToggle) {
+      homePinStrictToggle.checked = !!pinState.strictMode;
+      homePinStrictToggle.disabled = !pinState.hasCustomPin;
+    }
+    if (homePinStrictSaveBtn) {
+      homePinStrictSaveBtn.disabled = !pinState.hasCustomPin;
+    }
+
+    if (homeRoleSecurity) {
+      const pinModeLine = pinState.hasCustomPin
+        ? (pinState.fallbackDefaultEnabled
+          ? `Custom PIN enabled (fallback default ${pinState.defaultPin} still works).`
+          : 'Custom PIN enabled (strict mode: default fallback disabled).')
+        : `Using default PIN ${pinState.defaultPin}.`;
+      homeRoleSecurity.textContent = selectedRole === 'student'
+        ? `Student Mode is active. Adults in any role can use "Adult Exit" in the top bar. ${pinModeLine} Recovery phrase can also unlock.`
+        : `Student Mode security (all adult roles): ${pinModeLine} Keep your recovery phrase in a safe place.`;
+    }
+
+    const model = buildRoleModel(selectedRole, context);
+    const evidenceText = `${context.literacyWeek} literacy + ${context.numeracyWeek} numeracy sessions this week`;
+
+    homeRoleSignal.innerHTML = `
+      <span class="home-role-chip">${escapeHtml(model.label)}</span>
+      <span class="home-role-chip subtle">${escapeHtml(evidenceText)}</span>
+    `;
+
+    homeRoleSummary.innerHTML = `
+      <div class="home-role-title">${escapeHtml(model.tagline)}</div>
+      <div class="home-role-mission">${escapeHtml(model.mission)}</div>
+    `;
+
+    homeRoleCards.innerHTML = (model.cards || [])
+      .map((card) => `
+        <article class="home-role-card">
+          <h3>${escapeHtml(card.title)}</h3>
+          <p>${escapeHtml(card.body)}</p>
+        </article>
+      `)
+      .join('');
+
+    homeRoleActions.innerHTML = (model.actions || [])
+      .map((action) => `
+        <a class="home-cta ${action.kind === 'primary' ? 'primary' : 'ghost'}" href="${escapeHtml(action.href)}">${escapeHtml(action.label)}</a>
+      `)
+      .join('');
+  }
 
   function safeParse(json) {
     try {
@@ -156,7 +718,7 @@
   function handleExportJson() {
     const snapshot = buildReportSnapshot();
     const keyCount = Object.keys(snapshot.data).length;
-    const filename = `decode-report-${formatDateSlug(new Date())}.json`;
+    const filename = `cornerstone-mtss-report-${formatDateSlug(new Date())}.json`;
     downloadBlob(JSON.stringify(snapshot, null, 2), filename, 'application/json;charset=utf-8');
     setReportStatus(`Exported ${keyCount} data keys to ${filename}.`);
   }
@@ -198,7 +760,7 @@
       .map((row) => row.map(escapeCsvCell).join(','))
       .join('\n');
 
-    const filename = `decode-activity-${formatDateSlug(new Date())}.csv`;
+    const filename = `cornerstone-mtss-activity-${formatDateSlug(new Date())}.csv`;
     downloadBlob(csv, filename, 'text/csv;charset=utf-8');
     setReportStatus(`Exported ${rows.length} activity rows to ${filename}.`);
   }
@@ -224,31 +786,118 @@
     renderLearners();
   }
 
+  function commitImportPairs(pairs = []) {
+    const platform = window.DECODE_PLATFORM;
+    if (platform?.importLearnerDataSnapshot) {
+      const payload = {};
+      pairs.forEach(([key, value]) => {
+        payload[key] = value;
+      });
+      platform.importLearnerDataSnapshot(payload);
+    } else {
+      pairs.forEach(([key, value]) => {
+        localStorage.setItem(key, value);
+      });
+    }
+    refreshAfterImport();
+    return pairs.length;
+  }
+
+  function utf8ToBase64(text) {
+    const input = String(text || '');
+    const bytes = new TextEncoder().encode(input);
+    let binary = '';
+    bytes.forEach((byte) => {
+      binary += String.fromCharCode(byte);
+    });
+    return btoa(binary);
+  }
+
+  function base64ToUtf8(value) {
+    const encoded = String(value || '').trim();
+    if (!encoded) return '';
+    const binary = atob(encoded);
+    const bytes = Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  }
+
+  function handleGenerateTransferCode() {
+    if (!transferCodeInput) return;
+    try {
+      const snapshot = buildReportSnapshot();
+      const payload = {
+        version: REPORT_VERSION,
+        format: 'cornerstone-transfer',
+        exportedAt: new Date().toISOString(),
+        learner: snapshot.learner || null,
+        data: snapshot.data || {}
+      };
+      const encoded = utf8ToBase64(JSON.stringify(payload));
+      const transferCode = `${TRANSFER_CODE_PREFIX}${encoded}`;
+      transferCodeInput.value = transferCode;
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        navigator.clipboard.writeText(transferCode)
+          .then(() => setTransferStatus('Transfer code generated and copied. It includes learners, settings, activity logs, and report data.'))
+          .catch(() => setTransferStatus('Transfer code generated. Clipboard blocked, so copy from the box.'));
+      } else {
+        setTransferStatus('Transfer code generated. Copy from the box, then paste on another device.');
+      }
+    } catch {
+      setTransferStatus('Could not generate transfer code.', true);
+    }
+  }
+
+  function handleApplyTransferCode() {
+    const rawInput = String(transferCodeInput?.value || '').trim();
+    if (!rawInput) {
+      setTransferStatus('Paste a transfer code first.', true);
+      return;
+    }
+
+    let rawPayloadText = '';
+    try {
+      if (rawInput.startsWith('{')) {
+        rawPayloadText = rawInput;
+      } else {
+        const compact = rawInput.replace(/\s+/g, '');
+        const encoded = compact.startsWith(TRANSFER_CODE_PREFIX)
+          ? compact.slice(TRANSFER_CODE_PREFIX.length)
+          : compact;
+        rawPayloadText = base64ToUtf8(encoded);
+      }
+    } catch {
+      setTransferStatus('Transfer code is invalid or corrupted.', true);
+      return;
+    }
+
+    const pairs = extractImportPairs(rawPayloadText);
+    if (!pairs.length) {
+      setTransferStatus('Transfer code did not contain supported Cornerstone data keys.', true);
+      return;
+    }
+
+    const shouldApply = window.confirm('Apply transfer code now? This updates matching local data on this device and can overwrite current values.');
+    if (!shouldApply) {
+      setTransferStatus('Transfer apply cancelled.');
+      return;
+    }
+
+    const count = commitImportPairs(pairs);
+    setTransferStatus(`Applied transfer code and imported ${count} data keys. Refresh if role/dashboard does not update immediately.`);
+    setReportStatus(`Imported ${count} data keys from transfer code.`);
+  }
+
   function handleImportFile(file) {
     if (!file) return;
     file.text()
       .then((raw) => {
         const pairs = extractImportPairs(raw);
         if (!pairs.length) {
-          setReportStatus('Import failed: file did not contain supported Decode data keys.', true);
+          setReportStatus('Import failed: file did not contain supported Cornerstone data keys.', true);
           return;
         }
-
-        const platform = window.DECODE_PLATFORM;
-        if (platform?.importLearnerDataSnapshot) {
-          const payload = {};
-          pairs.forEach(([key, value]) => {
-            payload[key] = value;
-          });
-          platform.importLearnerDataSnapshot(payload);
-        } else {
-          pairs.forEach(([key, value]) => {
-            localStorage.setItem(key, value);
-          });
-        }
-
-        refreshAfterImport();
-        setReportStatus(`Imported ${pairs.length} data keys from ${file.name}.`);
+        const count = commitImportPairs(pairs);
+        setReportStatus(`Imported ${count} data keys from ${file.name}.`);
       })
       .catch(() => {
         setReportStatus('Import failed: unable to read the selected file.', true);
@@ -752,21 +1401,22 @@
 
       if (!entries.length) {
         activityLogEmpty.textContent = 'No recent activity yet.';
-        return;
+      } else {
+        entries.forEach((entry) => {
+          const when = entry?.ts ? new Date(entry.ts) : null;
+          const whenText = when && !Number.isNaN(when.getTime())
+            ? when.toLocaleDateString()
+            : '';
+          const label = entry?.label || entry?.activityLabel || entry?.activity || 'Activity';
+          const event = entry?.event || entry?.action || entry?.message || 'Updated';
+          const li = document.createElement('li');
+          li.textContent = whenText ? `${label}: ${event} (${whenText})` : `${label}: ${event}`;
+          activityLogList.appendChild(li);
+        });
       }
-
-      entries.forEach((entry) => {
-        const when = entry?.ts ? new Date(entry.ts) : null;
-        const whenText = when && !Number.isNaN(when.getTime())
-          ? when.toLocaleDateString()
-          : '';
-        const label = entry?.label || entry?.activityLabel || entry?.activity || 'Activity';
-        const event = entry?.event || entry?.action || entry?.message || 'Updated';
-        const li = document.createElement('li');
-        li.textContent = whenText ? `${label}: ${event} (${whenText})` : `${label}: ${event}`;
-        activityLogList.appendChild(li);
-      });
     }
+
+    renderRoleDashboard();
   }
 
   renderProgress();
@@ -774,6 +1424,8 @@
 
   exportJsonBtn?.addEventListener('click', handleExportJson);
   exportCsvBtn?.addEventListener('click', handleExportCsv);
+  transferGenerateBtn?.addEventListener('click', handleGenerateTransferCode);
+  transferApplyBtn?.addEventListener('click', handleApplyTransferCode);
   importJsonBtn?.addEventListener('click', () => {
     importFileInput?.click();
   });
@@ -801,6 +1453,129 @@
     platform.refreshLearnerSwitchers?.();
     renderLearners();
     setLearnerStatus('Learner added.');
+  });
+  homeRoleSelect?.addEventListener('change', () => {
+    renderRoleDashboard();
+  });
+  homePinSaveBtn?.addEventListener('click', () => {
+    const currentPin = String(homePinCurrentInput?.value || '').trim();
+    const newPin = String(homePinNewInput?.value || '').trim();
+    const confirmPin = String(homePinConfirmInput?.value || '').trim();
+    if (!currentPin) {
+      setPinStatus('Enter current PIN first.', true);
+      return;
+    }
+    if (newPin !== confirmPin) {
+      setPinStatus('New PIN and confirm PIN do not match.', true);
+      return;
+    }
+    const platform = window.DECODE_PLATFORM;
+    const response = platform?.updateStudentModePin?.({ currentPin, newPin });
+    if (!response?.ok) {
+      if (response?.reason === 'current-pin') {
+        setPinStatus('Current PIN is incorrect.', true);
+      } else if (response?.reason === 'pin-format') {
+        setPinStatus('New PIN must be 4-8 digits.', true);
+      } else {
+        setPinStatus('Could not save PIN on this device.', true);
+      }
+      return;
+    }
+    resetPinFormInputs();
+    setPinStatus('Adult PIN updated for this device.');
+    renderRoleDashboard();
+  });
+  homeRecoveryCopyBtn?.addEventListener('click', () => {
+    const phrase = String(homeRecoveryPhraseInput?.value || '').trim();
+    if (!phrase) {
+      setRecoveryStatus('Recovery phrase unavailable. Refresh role dashboard.', true);
+      return;
+    }
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      navigator.clipboard.writeText(phrase)
+        .then(() => setRecoveryStatus('Recovery phrase copied. Store it somewhere secure.'))
+        .catch(() => setRecoveryStatus('Clipboard blocked. Copy phrase manually from the box.'));
+      return;
+    }
+    setRecoveryStatus('Clipboard unavailable. Copy phrase manually from the box.');
+  });
+  homeRecoveryRotateBtn?.addEventListener('click', () => {
+    const currentPin = String(homePinCurrentInput?.value || '').trim();
+    if (!currentPin) {
+      setRecoveryStatus('Enter current PIN first to regenerate phrase.', true);
+      return;
+    }
+    const platform = window.DECODE_PLATFORM;
+    const response = platform?.rotateStudentModeRecoveryPhrase?.({ currentPin });
+    if (!response?.ok) {
+      setRecoveryStatus('Current PIN is incorrect.', true);
+      return;
+    }
+    if (homePinCurrentInput) homePinCurrentInput.value = '';
+    refreshRecoveryPhraseDisplay();
+    setRecoveryStatus('Recovery phrase regenerated. Replace your saved copy.');
+    renderRoleDashboard();
+  });
+  homeRecoveryApplyBtn?.addEventListener('click', () => {
+    const phrase = String(homeRecoveryInput?.value || '').trim();
+    if (!phrase) {
+      setRecoveryStatus('Enter recovery phrase first.', true);
+      return;
+    }
+    const platform = window.DECODE_PLATFORM;
+    const response = platform?.recoverStudentModePinWithPhrase?.({ phrase });
+    if (!response?.ok) {
+      setRecoveryStatus('Recovery phrase is incorrect.', true);
+      return;
+    }
+    if (homeRecoveryInput) homeRecoveryInput.value = '';
+    resetPinFormInputs();
+    setRecoveryStatus(`Recovery accepted. PIN reset to default ${STUDENT_MODE_PIN_DEFAULT}.`);
+    setPinStatus(`PIN reset to default ${STUDENT_MODE_PIN_DEFAULT}.`);
+    renderRoleDashboard();
+  });
+  homePinStrictSaveBtn?.addEventListener('click', () => {
+    const currentPin = String(homePinCurrentInput?.value || '').trim();
+    if (!currentPin) {
+      setPinStatus('Enter current PIN first.', true);
+      return;
+    }
+    const strictMode = !!homePinStrictToggle?.checked;
+    const platform = window.DECODE_PLATFORM;
+    const response = platform?.setStudentModeStrict?.({ currentPin, strictMode });
+    if (!response?.ok) {
+      if (response?.reason === 'current-pin') {
+        setPinStatus('Current PIN is incorrect.', true);
+      } else if (response?.reason === 'custom-required') {
+        setPinStatus('Set a custom PIN first, then enable strict mode.', true);
+      } else {
+        setPinStatus('Could not update strict mode on this device.', true);
+      }
+      return;
+    }
+    if (homePinCurrentInput) homePinCurrentInput.value = '';
+    setPinStatus(strictMode
+      ? 'Strict mode enabled. Default fallback PIN is now disabled.'
+      : `Strict mode disabled. Default fallback PIN ${STUDENT_MODE_PIN_DEFAULT} is active.`);
+    setRecoveryStatus('');
+    renderRoleDashboard();
+  });
+  homePinResetBtn?.addEventListener('click', () => {
+    const currentPin = String(homePinCurrentInput?.value || '').trim();
+    if (!currentPin) {
+      setPinStatus('Enter current PIN first.', true);
+      return;
+    }
+    const platform = window.DECODE_PLATFORM;
+    const response = platform?.resetStudentModePinToDefault?.(currentPin);
+    if (!response?.ok) {
+      setPinStatus('Current PIN is incorrect.', true);
+      return;
+    }
+    resetPinFormInputs();
+    setPinStatus(`PIN reset to default ${STUDENT_MODE_PIN_DEFAULT}.`);
+    setRecoveryStatus('');
+    renderRoleDashboard();
   });
   learnerList?.addEventListener('click', (event) => {
     const target = event.target;

@@ -171,7 +171,39 @@ const ui = {
   feedback: document.getElementById('numsense-feedback'),
   pulse: document.getElementById('numsense-pulse'),
   fun: document.getElementById('numsense-fun'),
-  coachList: document.getElementById('numsense-coach-list')
+  coachList: document.getElementById('numsense-coach-list'),
+  manipTools: Array.from(document.querySelectorAll('[data-manip-tool]')),
+  manipPanels: Array.from(document.querySelectorAll('[data-manip-panel]')),
+  base10Pieces: Array.from(document.querySelectorAll('[data-base10-piece]')),
+  base10Hundreds: document.getElementById('numsense-base10-hundreds'),
+  base10Tens: document.getElementById('numsense-base10-tens'),
+  base10Ones: document.getElementById('numsense-base10-ones'),
+  base10Reset: document.getElementById('numsense-base10-reset'),
+  base10Total: document.getElementById('numsense-base10-total'),
+  base10View: document.getElementById('numsense-base10-view'),
+  arrayRows: document.getElementById('numsense-array-rows'),
+  arrayCols: document.getElementById('numsense-array-cols'),
+  arrayReset: document.getElementById('numsense-array-reset'),
+  arrayTotal: document.getElementById('numsense-array-total'),
+  arrayView: document.getElementById('numsense-array-view'),
+  lineStart: document.getElementById('numsense-line-start'),
+  lineEnd: document.getElementById('numsense-line-end'),
+  lineStep: document.getElementById('numsense-line-step'),
+  lineSlider: document.getElementById('numsense-line-slider'),
+  lineBack: document.getElementById('numsense-line-back'),
+  lineForward: document.getElementById('numsense-line-forward'),
+  lineReset: document.getElementById('numsense-line-reset'),
+  lineCurrent: document.getElementById('numsense-line-current'),
+  lineView: document.getElementById('numsense-line-view')
+};
+
+const manipState = {
+  activeTool: 'base10',
+  base10: { hundreds: 1, tens: 2, ones: 4 },
+  array: { rows: 3, cols: 4, cells: [] },
+  arrayPaint: { active: false, value: true },
+  base10DragPiece: '',
+  line: { start: 0, end: 20, step: 2, current: 8 }
 };
 
 function applyLightTheme() {
@@ -215,6 +247,12 @@ function roundTo(value, digits = 2) {
 function clamp01(value) {
   if (Number.isNaN(value)) return 0;
   return Math.min(1, Math.max(0, value));
+}
+
+function clampNumber(value, min, max, fallback = min) {
+  const numeric = Number(value);
+  if (Number.isNaN(numeric)) return fallback;
+  return Math.max(min, Math.min(max, numeric));
 }
 
 function average(values) {
@@ -1003,6 +1041,320 @@ function renderCurrentItem() {
   });
 }
 
+function setManipTool(toolId) {
+  const allowed = ['base10', 'array', 'line'];
+  manipState.activeTool = allowed.includes(toolId) ? toolId : 'base10';
+  ui.manipTools.forEach((button) => {
+    const isActive = String(button.dataset.manipTool || '') === manipState.activeTool;
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+  ui.manipPanels.forEach((panel) => {
+    const isActive = String(panel.dataset.manipPanel || '') === manipState.activeTool;
+    panel.classList.toggle('hidden', !isActive);
+  });
+}
+
+function renderBase10Model() {
+  if (!ui.base10View || !ui.base10Total) return;
+  const hundreds = Math.round(clampNumber(manipState.base10.hundreds, 0, 9, 0));
+  const tens = Math.round(clampNumber(manipState.base10.tens, 0, 15, 0));
+  const ones = Math.round(clampNumber(manipState.base10.ones, 0, 20, 0));
+  manipState.base10.hundreds = hundreds;
+  manipState.base10.tens = tens;
+  manipState.base10.ones = ones;
+
+  if (ui.base10Hundreds) ui.base10Hundreds.value = String(hundreds);
+  if (ui.base10Tens) ui.base10Tens.value = String(tens);
+  if (ui.base10Ones) ui.base10Ones.value = String(ones);
+
+  const total = (hundreds * 100) + (tens * 10) + ones;
+  ui.base10Total.textContent = String(total);
+
+  const makeRow = (count, className, label, key) => {
+    if (!count) return `<div class="report-bench-note">${label}: none</div>`;
+    const blocks = Array.from({ length: count })
+      .map(() => `<button type="button" class="numsense-base10-block ${className}" data-base10-remove="${key}" aria-label="Remove ${label} block">${label}</button>`)
+      .join('');
+    return `<div class="numsense-base10-row">${blocks}</div>`;
+  };
+
+  ui.base10View.innerHTML = [
+    makeRow(hundreds, 'hundred', '100', 'hundreds'),
+    makeRow(tens, 'ten', '10', 'tens'),
+    makeRow(ones, 'one', '1', 'ones')
+  ].join('');
+}
+
+function ensureArrayCells(reset = false) {
+  const rows = Math.round(clampNumber(manipState.array.rows, 1, 12, 3));
+  const cols = Math.round(clampNumber(manipState.array.cols, 1, 12, 4));
+  const total = rows * cols;
+  const needsInit = !Array.isArray(manipState.array.cells) || manipState.array.cells.length !== total;
+  if (reset || needsInit) {
+    manipState.array.cells = Array.from({ length: total }, () => true);
+  }
+}
+
+function setArrayCellState(index, value) {
+  if (!Array.isArray(manipState.array.cells)) return;
+  if (index < 0 || index >= manipState.array.cells.length) return;
+  manipState.array.cells[index] = !!value;
+}
+
+function renderArrayModel() {
+  if (!ui.arrayView || !ui.arrayTotal) return;
+  const rows = Math.round(clampNumber(manipState.array.rows, 1, 12, 3));
+  const cols = Math.round(clampNumber(manipState.array.cols, 1, 12, 4));
+  manipState.array.rows = rows;
+  manipState.array.cols = cols;
+  ensureArrayCells();
+  if (ui.arrayRows) ui.arrayRows.value = String(rows);
+  if (ui.arrayCols) ui.arrayCols.value = String(cols);
+  const activeCount = manipState.array.cells.reduce((sum, stateValue) => sum + (stateValue ? 1 : 0), 0);
+  ui.arrayTotal.textContent = String(activeCount);
+  ui.arrayView.style.gridTemplateColumns = `repeat(${cols}, 18px)`;
+  ui.arrayView.innerHTML = manipState.array.cells
+    .map((isActive, index) => `<button type="button" class="numsense-array-chip ${isActive ? 'is-active' : 'is-off'}" data-array-index="${index}" aria-label="${isActive ? 'Filled' : 'Unfilled'} array chip"></button>`)
+    .join('');
+}
+
+function normalizeLineState() {
+  const rawStart = Math.round(clampNumber(manipState.line.start, -100, 100, 0));
+  const rawEnd = Math.round(clampNumber(manipState.line.end, -100, 100, 20));
+  const step = Math.round(clampNumber(manipState.line.step, 1, 20, 2));
+  let start = rawStart;
+  let end = rawEnd;
+  if (end <= start) {
+    end = Math.min(100, start + 10);
+  }
+  const current = Math.round(clampNumber(manipState.line.current, start, end, start));
+
+  manipState.line.start = start;
+  manipState.line.end = end;
+  manipState.line.step = step;
+  manipState.line.current = current;
+
+  if (ui.lineStart) ui.lineStart.value = String(start);
+  if (ui.lineEnd) ui.lineEnd.value = String(end);
+  if (ui.lineStep) ui.lineStep.value = String(step);
+  if (ui.lineSlider) {
+    ui.lineSlider.min = String(start);
+    ui.lineSlider.max = String(end);
+    ui.lineSlider.step = '1';
+    ui.lineSlider.value = String(current);
+  }
+}
+
+function renderNumberLineModel() {
+  if (!ui.lineView || !ui.lineCurrent) return;
+  normalizeLineState();
+  const { start, end, current } = manipState.line;
+  const span = end - start;
+  const tickCount = Math.min(42, span + 1);
+  const stepSize = span <= 41 ? 1 : Math.ceil(span / 41);
+  const ticks = [];
+  for (let value = start; value <= end && ticks.length < tickCount; value += stepSize) {
+    ticks.push(value);
+  }
+  if (ticks[ticks.length - 1] !== end) ticks.push(end);
+  if (!ticks.includes(current)) ticks.push(current);
+  ticks.sort((a, b) => a - b);
+
+  ui.lineCurrent.textContent = String(current);
+  ui.lineView.innerHTML = `
+    <div class="numsense-line-track">
+      ${ticks.map((value) => `
+        <button type="button" class="numsense-line-tick ${value === current ? 'is-current' : ''}" data-line-value="${value}" aria-label="Set current point to ${value}">
+          <div class="numsense-line-dot"></div>
+          <div>${value}</div>
+        </button>
+      `).join('')}
+    </div>
+  `;
+}
+
+function jumpNumberLine(direction = 1) {
+  normalizeLineState();
+  const delta = manipState.line.step * (direction >= 0 ? 1 : -1);
+  const next = manipState.line.current + delta;
+  manipState.line.current = Math.round(clampNumber(next, manipState.line.start, manipState.line.end, manipState.line.current));
+  renderNumberLineModel();
+}
+
+function updateBase10Count(key, delta = 1) {
+  const limits = { hundreds: 9, tens: 15, ones: 20 };
+  const selectedKey = String(key || '');
+  if (!Object.prototype.hasOwnProperty.call(limits, selectedKey)) return;
+  const current = Number(manipState.base10[selectedKey] || 0);
+  const max = limits[selectedKey];
+  manipState.base10[selectedKey] = clampNumber(current + delta, 0, max, current);
+  renderBase10Model();
+}
+
+function renderManipulativeStudio() {
+  setManipTool(manipState.activeTool);
+  renderBase10Model();
+  renderArrayModel();
+  renderNumberLineModel();
+}
+
+function bindManipulativeStudio() {
+  ui.manipTools.forEach((button) => {
+    button.addEventListener('click', () => {
+      setManipTool(String(button.dataset.manipTool || 'base10'));
+    });
+  });
+
+  ui.base10Pieces.forEach((piece) => {
+    piece.addEventListener('dragstart', (event) => {
+      const key = String(piece.dataset.base10Piece || '');
+      manipState.base10DragPiece = key;
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'copy';
+        event.dataTransfer.setData('text/plain', key);
+      }
+      piece.classList.add('is-dragging');
+    });
+    piece.addEventListener('dragend', () => {
+      manipState.base10DragPiece = '';
+      piece.classList.remove('is-dragging');
+      ui.base10View?.classList.remove('is-drop-target');
+    });
+    piece.addEventListener('click', () => {
+      updateBase10Count(String(piece.dataset.base10Piece || ''), 1);
+    });
+  });
+
+  ui.base10View?.addEventListener('dragover', (event) => {
+    event.preventDefault();
+    ui.base10View?.classList.add('is-drop-target');
+  });
+  ui.base10View?.addEventListener('dragleave', () => {
+    ui.base10View?.classList.remove('is-drop-target');
+  });
+  ui.base10View?.addEventListener('drop', (event) => {
+    event.preventDefault();
+    ui.base10View?.classList.remove('is-drop-target');
+    const fromTransfer = event.dataTransfer?.getData('text/plain') || '';
+    const key = String(fromTransfer || manipState.base10DragPiece || '');
+    updateBase10Count(key, 1);
+    manipState.base10DragPiece = '';
+  });
+  ui.base10View?.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const block = target.closest('[data-base10-remove]');
+    if (!block) return;
+    const key = String(block.getAttribute('data-base10-remove') || '');
+    updateBase10Count(key, -1);
+  });
+
+  ui.base10Hundreds?.addEventListener('input', () => {
+    manipState.base10.hundreds = clampNumber(ui.base10Hundreds?.value, 0, 9, manipState.base10.hundreds);
+    renderBase10Model();
+  });
+  ui.base10Tens?.addEventListener('input', () => {
+    manipState.base10.tens = clampNumber(ui.base10Tens?.value, 0, 15, manipState.base10.tens);
+    renderBase10Model();
+  });
+  ui.base10Ones?.addEventListener('input', () => {
+    manipState.base10.ones = clampNumber(ui.base10Ones?.value, 0, 20, manipState.base10.ones);
+    renderBase10Model();
+  });
+  ui.base10Reset?.addEventListener('click', () => {
+    manipState.base10 = { hundreds: 1, tens: 2, ones: 4 };
+    renderBase10Model();
+  });
+
+  ui.arrayRows?.addEventListener('input', () => {
+    manipState.array.rows = clampNumber(ui.arrayRows?.value, 1, 12, manipState.array.rows);
+    ensureArrayCells(true);
+    renderArrayModel();
+  });
+  ui.arrayCols?.addEventListener('input', () => {
+    manipState.array.cols = clampNumber(ui.arrayCols?.value, 1, 12, manipState.array.cols);
+    ensureArrayCells(true);
+    renderArrayModel();
+  });
+  ui.arrayReset?.addEventListener('click', () => {
+    manipState.array = { rows: 3, cols: 4, cells: [] };
+    ensureArrayCells(true);
+    renderArrayModel();
+  });
+  ui.arrayView?.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const chip = target.closest('[data-array-index]');
+    if (!chip) return;
+    const index = Number(chip.getAttribute('data-array-index'));
+    if (Number.isNaN(index)) return;
+    const currentValue = !!manipState.array.cells[index];
+    manipState.arrayPaint.active = true;
+    manipState.arrayPaint.value = !currentValue;
+    if (manipState.array.cells[index] !== manipState.arrayPaint.value) {
+      setArrayCellState(index, manipState.arrayPaint.value);
+      renderArrayModel();
+    }
+  });
+  ui.arrayView?.addEventListener('pointerover', (event) => {
+    if (!manipState.arrayPaint.active) return;
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const chip = target.closest('[data-array-index]');
+    if (!chip) return;
+    const index = Number(chip.getAttribute('data-array-index'));
+    if (Number.isNaN(index)) return;
+    if (manipState.array.cells[index] === manipState.arrayPaint.value) return;
+    setArrayCellState(index, manipState.arrayPaint.value);
+    renderArrayModel();
+  });
+  document.addEventListener('pointerup', () => {
+    manipState.arrayPaint.active = false;
+  });
+  document.addEventListener('pointercancel', () => {
+    manipState.arrayPaint.active = false;
+  });
+
+  ui.lineStart?.addEventListener('input', () => {
+    manipState.line.start = clampNumber(ui.lineStart?.value, -100, 100, manipState.line.start);
+    renderNumberLineModel();
+  });
+  ui.lineEnd?.addEventListener('input', () => {
+    manipState.line.end = clampNumber(ui.lineEnd?.value, -100, 100, manipState.line.end);
+    renderNumberLineModel();
+  });
+  ui.lineStep?.addEventListener('input', () => {
+    manipState.line.step = clampNumber(ui.lineStep?.value, 1, 20, manipState.line.step);
+    renderNumberLineModel();
+  });
+  ui.lineSlider?.addEventListener('input', () => {
+    manipState.line.current = clampNumber(ui.lineSlider?.value, manipState.line.start, manipState.line.end, manipState.line.current);
+    renderNumberLineModel();
+  });
+  ui.lineBack?.addEventListener('click', () => {
+    jumpNumberLine(-1);
+  });
+  ui.lineForward?.addEventListener('click', () => {
+    jumpNumberLine(1);
+  });
+  ui.lineReset?.addEventListener('click', () => {
+    manipState.line = { start: 0, end: 20, step: 2, current: 8 };
+    renderNumberLineModel();
+  });
+  ui.lineView?.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const tick = target.closest('[data-line-value]');
+    if (!tick) return;
+    const value = Number(tick.getAttribute('data-line-value'));
+    if (Number.isNaN(value)) return;
+    manipState.line.current = clampNumber(value, manipState.line.start, manipState.line.end, manipState.line.current);
+    renderNumberLineModel();
+  });
+}
+
 function normalizeAnswerText(value) {
   return String(value || '')
     .trim()
@@ -1358,6 +1710,8 @@ function init() {
   renderPulse();
   renderCoachMoves();
   renderCurrentItem();
+  bindManipulativeStudio();
+  renderManipulativeStudio();
 
   ui.start?.addEventListener('click', startSession);
   ui.hintBtn?.addEventListener('click', showHint);

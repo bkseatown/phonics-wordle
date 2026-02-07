@@ -153,6 +153,15 @@ body.home-page {
     padding-bottom: 32px;
 }
 
+body.student-mode [data-student-hidden="true"],
+body.student-mode #classroom-btn,
+body.student-mode #teacher-btn,
+body.student-mode #reports-btn,
+body.student-mode .learner-manage-btn,
+body.student-mode a[href*="teacher-report.html"] {
+    display: none !important;
+}
+
 .home-main {
     width: 100%;
     max-width: var(--page-max);
@@ -206,6 +215,50 @@ body.home-page {
     line-height: 1.45;
     font-weight: 650;
     max-width: 52ch;
+}
+
+.home-brand-block {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.home-brand-name {
+    font-size: clamp(1.15rem, 2.2vw, 1.5rem);
+    font-weight: 950;
+    color: #0f172a;
+    letter-spacing: 0.02em;
+}
+
+.home-brand-tagline {
+    color: #4338ca;
+    font-size: 1rem;
+    font-weight: 850;
+}
+
+.home-brand-alt-grid {
+    display: grid;
+    gap: 6px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.home-brand-alt {
+    border-radius: 12px;
+    border: 1px solid rgba(99, 102, 241, 0.24);
+    background: rgba(238, 242, 255, 0.8);
+    color: #1e293b;
+    font-size: 0.84rem;
+    font-weight: 650;
+    line-height: 1.35;
+    padding: 8px 10px;
+}
+
+.home-brand-description {
+    margin: 0;
+    color: #334155;
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.45;
 }
 
 .home-cta-row {
@@ -340,6 +393,158 @@ body.home-page {
     color: #475569;
     font-weight: 650;
     line-height: 1.4;
+}
+
+.home-role-controls {
+    margin-top: 12px;
+    display: grid;
+    gap: 8px;
+}
+
+.home-role-signal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.home-role-security {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #475569;
+}
+
+.home-pin-controls {
+    margin-top: 6px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.84);
+    padding: 10px;
+    display: grid;
+    gap: 6px;
+}
+
+.home-check-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: #334155;
+}
+
+.home-transfer-panel {
+    margin-top: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.82);
+    padding: 10px;
+    display: grid;
+    gap: 8px;
+}
+
+.home-transfer-steps {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 4px;
+    color: #334155;
+    font-size: 0.88rem;
+    font-weight: 650;
+}
+
+.home-transfer-note {
+    margin: 0;
+    color: #7f1d1d;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.home-transfer-code {
+    min-height: 108px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.25;
+}
+
+.home-recovery-panel {
+    margin-top: 4px;
+    border-top: 1px dashed rgba(148, 163, 184, 0.4);
+    padding-top: 8px;
+    display: grid;
+    gap: 6px;
+}
+
+.home-role-chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    border: 1px solid rgba(79, 70, 229, 0.28);
+    background: rgba(224, 231, 255, 0.78);
+    color: #312e81;
+    font-size: 0.8rem;
+    font-weight: 850;
+    padding: 4px 10px;
+}
+
+.home-role-chip.subtle {
+    border-color: rgba(148, 163, 184, 0.35);
+    background: rgba(241, 245, 249, 0.82);
+    color: #334155;
+}
+
+.home-role-summary {
+    margin-top: 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(255, 255, 255, 0.84);
+    padding: 12px;
+    display: grid;
+    gap: 6px;
+}
+
+.home-role-title {
+    color: #1e3a8a;
+    font-size: 0.98rem;
+    font-weight: 900;
+}
+
+.home-role-mission {
+    color: #334155;
+    font-size: 0.9rem;
+    font-weight: 650;
+    line-height: 1.4;
+}
+
+.home-role-grid {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+}
+
+.home-role-card {
+    border-radius: 14px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(255, 255, 255, 0.84);
+    padding: 12px;
+    display: grid;
+    gap: 6px;
+}
+
+.home-role-card h3 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 0.86rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.home-role-card p {
+    margin: 0;
+    color: #334155;
+    font-size: 0.86rem;
+    font-weight: 650;
+    line-height: 1.38;
 }
 
 .home-path-grid,
@@ -595,6 +800,11 @@ body.report-page {
     border-radius: var(--lab-radius);
     box-shadow: var(--lab-shadow);
     padding: 18px;
+}
+
+.report-student-lock {
+    border-color: rgba(99, 102, 241, 0.35);
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(238, 242, 255, 0.92));
 }
 
 .report-card-header {
@@ -1355,6 +1565,14 @@ body.report-page {
     color: #991b1b;
 }
 
+#report-iesp-status.success {
+    color: #166534;
+}
+
+#report-iesp-status.error {
+    color: #991b1b;
+}
+
 .report-protocol-grid {
     display: grid;
     gap: 10px;
@@ -1414,6 +1632,44 @@ body.report-page {
     gap: 10px;
 }
 
+.report-role-dashboard {
+    margin-top: 10px;
+}
+
+.report-role-dashboard-grid {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.report-role-dashboard-card {
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.84);
+    padding: 10px 12px;
+    display: grid;
+    gap: 6px;
+}
+
+.report-role-dashboard-card h3 {
+    margin: 0;
+    font-size: 0.86rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #334155;
+}
+
+.report-role-dashboard-card ul {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 4px;
+    color: #334155;
+    font-size: 0.83rem;
+    font-weight: 650;
+    line-height: 1.3;
+}
+
 .report-role-summary {
     border: 1px solid rgba(148, 163, 184, 0.35);
     border-radius: 14px;
@@ -1463,6 +1719,69 @@ body.report-page {
     font-size: 0.86rem;
     color: #334155;
     font-weight: 650;
+}
+
+.report-timeline {
+    margin-top: 10px;
+    display: grid;
+    gap: 10px;
+}
+
+.report-timeline-list {
+    display: grid;
+    gap: 8px;
+}
+
+.report-timeline-item {
+    border: 1px solid rgba(148, 163, 184, 0.32);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.84);
+    padding: 10px 12px;
+    display: grid;
+    gap: 5px;
+}
+
+.report-timeline-item-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: #475569;
+    font-weight: 700;
+}
+
+.report-timeline-track {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 2px 8px;
+    border: 1px solid rgba(59, 130, 246, 0.34);
+    background: rgba(219, 234, 254, 0.75);
+    color: #1d4ed8;
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 900;
+}
+
+.report-timeline-track.numeracy {
+    border-color: rgba(14, 165, 233, 0.35);
+    background: rgba(224, 242, 254, 0.72);
+    color: #0c4a6e;
+}
+
+.report-timeline-event {
+    color: #0f172a;
+    font-weight: 800;
+    line-height: 1.35;
+}
+
+.report-timeline-note {
+    color: #334155;
+    font-size: 0.84rem;
+    font-weight: 650;
+    line-height: 1.35;
 }
 
 .report-heatmap-wrap {
@@ -1686,6 +2005,22 @@ h3,
 .learner-manage-btn {
     padding: 6px 10px !important;
     font-size: 0.8rem !important;
+}
+
+.student-mode-exit-btn {
+    margin-left: 6px;
+    border-radius: 10px !important;
+    border: 1px solid rgba(248, 113, 113, 0.5) !important;
+    background: rgba(254, 226, 226, 0.92) !important;
+    color: #991b1b !important;
+    font-weight: 800;
+}
+
+.student-mode-exit-btn:hover,
+.student-mode-exit-btn:focus-visible {
+    background: rgba(254, 202, 202, 0.96) !important;
+    border-color: rgba(239, 68, 68, 0.6) !important;
+    color: #7f1d1d !important;
 }
 
 .nav-group {
@@ -9269,6 +9604,244 @@ body.numsense-page {
     font-weight: 800;
 }
 
+.numsense-manip-card {
+    border-radius: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(255, 255, 255, 0.92);
+    padding: 12px;
+    display: grid;
+    gap: 10px;
+}
+
+.numsense-manip-header {
+    display: grid;
+    gap: 4px;
+}
+
+.numsense-manip-header h3 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 1rem;
+}
+
+.numsense-manip-subtitle {
+    color: #475569;
+    font-size: 0.84rem;
+    font-weight: 650;
+    line-height: 1.35;
+}
+
+.numsense-manip-tool-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.numsense-manip-tool {
+    min-height: 34px;
+    border-radius: 10px;
+}
+
+.numsense-manip-tool.is-active {
+    background: linear-gradient(135deg, var(--btn-primary-1) 0%, var(--btn-primary-2) 55%, var(--btn-primary-3) 100%);
+    color: #f8fafc;
+    border-color: var(--btn-primary-border);
+}
+
+.numsense-manip-panel {
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 12px;
+    background: rgba(248, 250, 252, 0.92);
+    padding: 10px;
+    display: grid;
+    gap: 10px;
+}
+
+.numsense-manip-controls {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    align-items: end;
+}
+
+.numsense-manip-controls input[type="number"] {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.5);
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
+.numsense-manip-controls input[type="range"] {
+    width: 100%;
+    accent-color: #4f46e5;
+}
+
+.numsense-manip-summary {
+    color: #334155;
+    font-weight: 800;
+    font-size: 0.86rem;
+}
+
+.numsense-manip-drag-help {
+    color: #475569;
+    font-size: 0.8rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.numsense-base10-tray {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.numsense-base10-piece {
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    border-radius: 10px;
+    background: rgba(238, 242, 255, 0.94);
+    color: #312e81;
+    padding: 7px 11px;
+    font-size: 0.78rem;
+    font-weight: 850;
+    cursor: grab;
+}
+
+.numsense-base10-piece.is-dragging {
+    opacity: 0.55;
+}
+
+.numsense-base10-view {
+    display: grid;
+    gap: 8px;
+    min-height: 62px;
+    border: 1px dashed rgba(148, 163, 184, 0.45);
+    border-radius: 10px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.75);
+}
+
+.numsense-base10-view.is-drop-target {
+    border-color: rgba(79, 70, 229, 0.78);
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.16);
+}
+
+.numsense-base10-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.numsense-base10-block {
+    border: 1px solid rgba(14, 165, 233, 0.45);
+    background: rgba(224, 242, 254, 0.88);
+    color: #0c4a6e;
+    font-size: 0.74rem;
+    font-weight: 900;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    padding: 0;
+    border-radius: 8px;
+}
+
+.numsense-base10-block.hundred {
+    width: 54px;
+    height: 54px;
+}
+
+.numsense-base10-block.ten {
+    width: 54px;
+    height: 20px;
+}
+
+.numsense-base10-block.one {
+    width: 18px;
+    height: 18px;
+    font-size: 0.66rem;
+}
+
+.numsense-array-view {
+    display: grid;
+    gap: 2px;
+    justify-content: start;
+}
+
+.numsense-array-chip {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 1px solid rgba(99, 102, 241, 0.45);
+    background: rgba(224, 231, 255, 0.88);
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition: transform 0.08s ease, background 0.14s ease, border-color 0.14s ease;
+}
+
+.numsense-array-chip.is-active {
+    background: rgba(99, 102, 241, 0.82);
+    border-color: rgba(67, 56, 202, 0.85);
+}
+
+.numsense-array-chip.is-off {
+    background: rgba(241, 245, 249, 0.78);
+    border-color: rgba(148, 163, 184, 0.48);
+}
+
+.numsense-array-chip:active {
+    transform: scale(0.92);
+}
+
+.numsense-line-view {
+    display: grid;
+    gap: 8px;
+}
+
+.numsense-line-track {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.numsense-line-tick {
+    min-width: 30px;
+    text-align: center;
+    font-size: 0.73rem;
+    color: #334155;
+    font-weight: 750;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+}
+
+.numsense-line-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    margin: 0 auto 4px;
+    background: rgba(148, 163, 184, 0.7);
+}
+
+.numsense-line-tick.is-current .numsense-line-dot {
+    width: 12px;
+    height: 12px;
+    background: rgba(79, 70, 229, 0.95);
+}
+
+.numsense-line-tick.is-current {
+    color: #312e81;
+}
+
 @media (max-width: 1100px) {
     .numsense-main {
         grid-template-columns: 1fr;
@@ -9300,6 +9873,10 @@ body.numsense-page {
 
     .numsense-submit {
         width: 100%;
+    }
+
+    .numsense-manip-controls {
+        grid-template-columns: 1fr;
     }
 }
 

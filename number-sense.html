@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Decode the Word — Number Sense Sprint</title>
+    <title>CORNERSTONE MTSS — Number Sense Sprint</title>
     <link rel="stylesheet" href="style.css" />
     <script src="platform.js" defer></script>
     <script src="number-sense.js" defer></script>
@@ -12,7 +12,7 @@
   <body class="numsense-page force-light look-35">
     <div class="numsense-header">
       <div>
-        <h1><a href="index.html">Decode the Word</a></h1>
+        <h1><a href="index.html">CORNERSTONE MTSS</a></h1>
         <div class="numsense-subtitle">Number Sense Sprint: quick probes for quantity, operations, and strategy language.</div>
       </div>
       <nav class="header-actions" aria-label="Primary">
@@ -119,6 +119,87 @@
             <li>Start the sprint to unlock targeted coaching moves.</li>
           </ul>
         </details>
+
+        <section class="numsense-manip-card" aria-label="Manipulative strategy studio">
+          <div class="numsense-manip-header">
+            <h3>Manipulative Studio</h3>
+            <div class="numsense-manip-subtitle">Use base-10 blocks, arrays, and number lines to try multiple strategies before answering.</div>
+          </div>
+          <div class="numsense-manip-tool-row" role="tablist" aria-label="Manipulative tools">
+            <button type="button" class="secondary-btn numsense-manip-tool is-active" data-manip-tool="base10">Base-10 Blocks</button>
+            <button type="button" class="secondary-btn numsense-manip-tool" data-manip-tool="array">Arrays</button>
+            <button type="button" class="secondary-btn numsense-manip-tool" data-manip-tool="line">Number Line</button>
+          </div>
+
+          <div class="numsense-manip-panel" data-manip-panel="base10">
+            <div class="numsense-manip-drag-help">Drag blocks from the tray into the workspace. Tap a block to remove it.</div>
+            <div class="numsense-base10-tray" aria-label="Base-10 drag tray">
+              <button type="button" class="numsense-base10-piece hundred" data-base10-piece="hundreds" draggable="true">+100</button>
+              <button type="button" class="numsense-base10-piece ten" data-base10-piece="tens" draggable="true">+10</button>
+              <button type="button" class="numsense-base10-piece one" data-base10-piece="ones" draggable="true">+1</button>
+            </div>
+            <div class="numsense-manip-controls">
+              <label class="numsense-field">
+                Hundreds
+                <input id="numsense-base10-hundreds" type="number" min="0" max="9" value="1" />
+              </label>
+              <label class="numsense-field">
+                Tens
+                <input id="numsense-base10-tens" type="number" min="0" max="15" value="2" />
+              </label>
+              <label class="numsense-field">
+                Ones
+                <input id="numsense-base10-ones" type="number" min="0" max="20" value="4" />
+              </label>
+              <button id="numsense-base10-reset" type="button" class="secondary-btn">Reset Blocks</button>
+            </div>
+            <div class="numsense-manip-summary">Total value: <strong id="numsense-base10-total">124</strong></div>
+            <div id="numsense-base10-view" class="numsense-base10-view"></div>
+          </div>
+
+          <div class="numsense-manip-panel hidden" data-manip-panel="array">
+            <div class="numsense-manip-controls">
+              <label class="numsense-field">
+                Rows
+                <input id="numsense-array-rows" type="number" min="1" max="12" value="3" />
+              </label>
+              <label class="numsense-field">
+                Columns
+                <input id="numsense-array-cols" type="number" min="1" max="12" value="4" />
+              </label>
+              <button id="numsense-array-reset" type="button" class="secondary-btn">Reset Array</button>
+            </div>
+            <div class="numsense-manip-drag-help">Drag across chips to shade or unshade groups.</div>
+            <div class="numsense-manip-summary">Array total: <strong id="numsense-array-total">12</strong></div>
+            <div id="numsense-array-view" class="numsense-array-view"></div>
+          </div>
+
+          <div class="numsense-manip-panel hidden" data-manip-panel="line">
+            <div class="numsense-manip-controls">
+              <label class="numsense-field">
+                Start
+                <input id="numsense-line-start" type="number" min="-100" max="100" value="0" />
+              </label>
+              <label class="numsense-field">
+                End
+                <input id="numsense-line-end" type="number" min="-100" max="100" value="20" />
+              </label>
+              <label class="numsense-field">
+                Jump
+                <input id="numsense-line-step" type="number" min="1" max="20" value="2" />
+              </label>
+              <label class="numsense-field">
+                Drag marker
+                <input id="numsense-line-slider" type="range" min="0" max="20" value="8" step="1" />
+              </label>
+              <button id="numsense-line-back" type="button" class="secondary-btn">Jump Back</button>
+              <button id="numsense-line-forward" type="button" class="secondary-btn">Jump Forward</button>
+              <button id="numsense-line-reset" type="button" class="secondary-btn">Reset Line</button>
+            </div>
+            <div class="numsense-manip-summary">Current point: <strong id="numsense-line-current">8</strong></div>
+            <div id="numsense-line-view" class="numsense-line-view"></div>
+          </div>
+        </section>
 
         <div class="numsense-note">
           Logs save to local browser storage and feed the Numeracy Pulse in <a href="teacher-report.html">Teacher Report</a>.
