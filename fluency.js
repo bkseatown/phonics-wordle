@@ -306,6 +306,17 @@ const feedbackEl = document.getElementById('fluency-feedback');
 const coinsEl = document.getElementById('fluency-coins');
 const streakEl = document.getElementById('fluency-streak');
 const scoreBtn = document.getElementById('fluency-check');
+const coachTargetSelect = document.getElementById('fluency-coach-target');
+const coachStartBtn = document.getElementById('fluency-coach-start');
+const coachStopBtn = document.getElementById('fluency-coach-stop');
+const coachClearBtn = document.getElementById('fluency-coach-clear');
+const coachStatusEl = document.getElementById('fluency-coach-status');
+const coachHeardEl = document.getElementById('fluency-coach-heard');
+const coachMismatchEl = document.getElementById('fluency-coach-mismatch');
+const coachWaveCanvas = document.getElementById('fluency-wave-canvas');
+const soundFilterInput = document.getElementById('fluency-sound-filter');
+const soundRefreshBtn = document.getElementById('fluency-sound-refresh');
+const soundClipsListEl = document.getElementById('fluency-sound-clips-list');
 
 function applyLightTheme() {
     document.body.classList.add('force-light');
@@ -328,6 +339,24 @@ let trackerMode = 'errors'; // 'errors' | 'stop'
 let lineFocusEnabled = false;
 let trackerActiveLine = 1;
 let trackerLineCount = 1;
+const REPORT_MEDIA_DB = {
+    name: 'decode_report_media_v1',
+    version: 1,
+    store: 'clips'
+};
+let coachRecognition = null;
+let coachListening = false;
+let coachFinalTranscript = '';
+let coachInterimTranscript = '';
+let coachExpectedTokens = [];
+let coachAudioStream = null;
+let coachAudioContext = null;
+let coachAnalyser = null;
+let coachWaveAnimation = 0;
+let coachEnergyTrail = [];
+let coachGuideTrail = [];
+let soundClipObjectUrls = [];
+let coachLastComparison = null;
 
 function normalizeTokenForCount(token) {
     if (!token) return '';
@@ -421,6 +450,655 @@ function safeParse(json) {
     } catch {
         return null;
     }
+}
+
+function escapeHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function normalizeCoachToken(token) {
+    return normalizeTokenForCount(token)
+        .toLowerCase()
+        .replace(/[^a-z0-9'-]/g, '');
+}
+
+function tokenizeCoachText(text) {
+    return String(text || '')
+        .split(/\s+/)
+        .map((part) => normalizeCoachToken(part))
+        .filter(Boolean);
+}
+
+function setCoachStatus(message, isError = false) {
+    if (!coachStatusEl) return;
+    coachStatusEl.textContent = message || '';
+    coachStatusEl.classList.toggle('error', !!isError);
+    coachStatusEl.classList.toggle('success', !isError && !!message);
+}
+
+function clearCoachWordHighlights() {
+    passageEl?.querySelectorAll('.fluency-word').forEach((wordEl) => {
+        wordEl.classList.remove('coach-match', 'coach-mismatch');
+    });
+}
+
+function getCoachTargetText() {
+    const source = String(currentPassage?.passage || '');
+    if (!source) return '';
+    const mode = String(coachTargetSelect?.value || 'sentence');
+    if (mode === 'passage') return source;
+    const sentenceMatch = source.match(/[^.!?]+[.!?]/);
+    return (sentenceMatch?.[0] || source).trim();
+}
+
+function getCoachExpectedTokens() {
+    return tokenizeCoachText(getCoachTargetText());
+}
+
+function getCoachTranscriptText() {
+    return `${coachFinalTranscript} ${coachInterimTranscript}`.trim().replace(/\s+/g, ' ');
+}
+
+function updateCoachTranscriptView() {
+    if (!coachHeardEl) return;
+    const text = getCoachTranscriptText();
+    coachHeardEl.textContent = text || 'Start listening, then read aloud.';
+    coachHeardEl.classList.toggle('muted', !text);
+}
+
+function buildLetterCue(expectedWord, heardWord) {
+    const expected = String(expectedWord || '');
+    const heard = String(heardWord || '');
+    if (!expected || !heard) return '';
+    const maxLen = Math.max(expected.length, heard.length);
+    let mismatchAt = -1;
+    for (let index = 0; index < maxLen; index += 1) {
+        if ((expected[index] || '') !== (heard[index] || '')) {
+            mismatchAt = index + 1;
+            break;
+        }
+    }
+    if (mismatchAt <= 0) return '';
+    return `first letter shift at position ${mismatchAt}`;
+}
+
+function describeSoundCue(expectedWord = '', heardWord = '') {
+    const expected = String(expectedWord || '').toLowerCase();
+    const heard = String(heardWord || '').toLowerCase();
+    if (!expected) return '';
+
+    const cueRules = [
+        { pattern: /th/, cue: 'Track /th/: tongue between teeth, then release with voice.' },
+        { pattern: /sh/, cue: 'Track /sh/: lips forward and airflow steady.' },
+        { pattern: /ch/, cue: 'Track /ch/: start with /t/ then release to /sh/.' },
+        { pattern: /ph/, cue: 'Track /f/: lower lip touches upper teeth.' },
+        { pattern: /(ar|er|ir|or|ur)/, cue: 'Track the r-controlled vowel chunk before finishing the word.' },
+        { pattern: /(ea|ee|ai|ay|oa|ow|igh)/, cue: 'Hold the vowel team as one sound before moving to the ending.' },
+        { pattern: /(tion|sion)/, cue: 'Blend the ending as /shun/ while keeping the root clear.' }
+    ];
+    const matched = cueRules.find((rule) => rule.pattern.test(expected));
+    if (matched) return matched.cue;
+    if (heard && expected[0] !== heard[0]) return 'Restart with the first sound, then connect the vowel smoothly.';
+    return 'Tap each sound left-to-right, then blend once at normal pace.';
+}
+
+function buildProsodyTips(targetText = '') {
+    const text = String(targetText || '');
+    const tips = [];
+    if (/[?]/.test(text)) tips.push('Lift intonation slightly at each question mark.');
+    if (/[,;]/.test(text)) tips.push('Use a short pause at commas and semicolons.');
+    if (/[.!]/.test(text)) tips.push('Use a full stop pause at sentence endings.');
+    if (/["“”]/.test(text)) tips.push('Shift expression for dialogue so character voice is clear.');
+    if (!tips.length) tips.push('Keep a steady pace and finish each phrase before starting the next.');
+    return tips.slice(0, 3);
+}
+
+function summarizeMismatchCounts(mismatches = []) {
+    return mismatches.reduce((acc, row) => {
+        const type = String(row?.type || '');
+        if (type === 'missing') acc.missing += 1;
+        else if (type === 'extra') acc.extra += 1;
+        else acc.substitution += 1;
+        return acc;
+    }, { missing: 0, extra: 0, substitution: 0 });
+}
+
+function buildFocusWords(mismatches = []) {
+    const seen = new Set();
+    const focus = [];
+    mismatches.forEach((row) => {
+        if (focus.length >= 4) return;
+        const expected = normalizeCoachToken(row?.expected || '');
+        const heard = normalizeCoachToken(row?.heard || '');
+        const token = expected || heard;
+        if (!token || seen.has(token)) return;
+        seen.add(token);
+        focus.push({
+            token,
+            cue: describeSoundCue(expected, heard)
+        });
+    });
+    return focus;
+}
+
+function compareCoachTokens(expectedTokens, heardTokens) {
+    const mismatches = [];
+    const matches = [];
+    let expectedIndex = 0;
+    let heardIndex = 0;
+
+    while (expectedIndex < expectedTokens.length && heardIndex < heardTokens.length) {
+        const expected = expectedTokens[expectedIndex];
+        const heard = heardTokens[heardIndex];
+        if (expected === heard) {
+            matches.push({ expectedIndex: expectedIndex + 1, token: expected });
+            expectedIndex += 1;
+            heardIndex += 1;
+            continue;
+        }
+
+        const heardNext = heardTokens[heardIndex + 1];
+        if (heardNext && heardNext === expected) {
+            mismatches.push({
+                type: 'extra',
+                expectedIndex: expectedIndex + 1,
+                expected,
+                heard
+            });
+            heardIndex += 1;
+            continue;
+        }
+
+        const expectedNext = expectedTokens[expectedIndex + 1];
+        if (expectedNext && expectedNext === heard) {
+            mismatches.push({
+                type: 'missing',
+                expectedIndex: expectedIndex + 1,
+                expected,
+                heard
+            });
+            expectedIndex += 1;
+            continue;
+        }
+
+        mismatches.push({
+            type: 'substitution',
+            expectedIndex: expectedIndex + 1,
+            expected,
+            heard,
+            cue: buildLetterCue(expected, heard)
+        });
+        expectedIndex += 1;
+        heardIndex += 1;
+    }
+
+    while (expectedIndex < expectedTokens.length) {
+        mismatches.push({
+            type: 'missing',
+            expectedIndex: expectedIndex + 1,
+            expected: expectedTokens[expectedIndex],
+            heard: ''
+        });
+        expectedIndex += 1;
+    }
+
+    while (heardIndex < heardTokens.length) {
+        mismatches.push({
+            type: 'extra',
+            expectedIndex: expectedTokens.length,
+            expected: '',
+            heard: heardTokens[heardIndex]
+        });
+        heardIndex += 1;
+    }
+
+    return { mismatches, matches };
+}
+
+function highlightCoachMismatches(result) {
+    clearCoachWordHighlights();
+    const mismatchSet = new Set(
+        (result?.mismatches || [])
+            .filter((row) => row.type !== 'extra' && row.expectedIndex > 0)
+            .map((row) => Number(row.expectedIndex))
+    );
+    const matchSet = new Set(
+        (result?.matches || [])
+            .map((row) => Number(row.expectedIndex))
+            .filter((index) => !mismatchSet.has(index))
+    );
+
+    let expectedIndex = 0;
+    passageEl?.querySelectorAll('.fluency-word').forEach((wordEl) => {
+        const normalized = normalizeCoachToken(wordEl.textContent || '');
+        if (!normalized) return;
+        expectedIndex += 1;
+        if (mismatchSet.has(expectedIndex)) {
+            wordEl.classList.add('coach-mismatch');
+            return;
+        }
+        if (matchSet.has(expectedIndex)) {
+            wordEl.classList.add('coach-match');
+        }
+    });
+}
+
+function renderCoachMismatchReport(result, expectedTokens, heardTokens) {
+    if (!coachMismatchEl) return;
+    if (!heardTokens.length) {
+        coachMismatchEl.textContent = 'Mismatches will appear here with targeted letter cues.';
+        coachMismatchEl.classList.add('muted');
+        return;
+    }
+
+    const mismatches = Array.isArray(result?.mismatches) ? result.mismatches : [];
+    if (!mismatches.length) {
+        const prosodyTips = buildProsodyTips(getCoachTargetText());
+        coachMismatchEl.innerHTML = `
+            <div class="fluency-coach-good">Strong match. Keep that pacing and expression.</div>
+            <div class="fluency-coach-prosody"><strong>Prosody target:</strong> ${escapeHtml(prosodyTips.join(' '))}</div>
+        `;
+        coachMismatchEl.classList.remove('muted');
+        return;
+    }
+
+    const rows = mismatches.slice(0, 6).map((row) => {
+        if (row.type === 'missing') {
+            return `<li>Missed <strong>${escapeHtml(row.expected)}</strong> near word ${row.expectedIndex}. <span class="fluency-coach-cue">${escapeHtml(describeSoundCue(row.expected, row.heard))}</span></li>`;
+        }
+        if (row.type === 'extra') {
+            return `<li>Extra word heard: <strong>${escapeHtml(row.heard)}</strong>.</li>`;
+        }
+        const cue = row.cue ? ` (${escapeHtml(row.cue)})` : '';
+        const soundCue = describeSoundCue(row.expected, row.heard);
+        return `<li>Expected <strong>${escapeHtml(row.expected)}</strong>, heard <strong>${escapeHtml(row.heard)}</strong>${cue}. <span class="fluency-coach-cue">${escapeHtml(soundCue)}</span></li>`;
+    }).join('');
+
+    const precision = expectedTokens.length
+        ? Math.max(0, ((expectedTokens.length - mismatches.length) / expectedTokens.length) * 100)
+        : 0;
+    const counts = summarizeMismatchCounts(mismatches);
+    const focusWords = buildFocusWords(mismatches);
+    const focusWordLine = focusWords.length
+        ? focusWords.map((item) => `${item.token} (${item.cue})`).join(' · ')
+        : 'Replay the first sentence and track first sound + vowel in each target word.';
+    const prosodyTips = buildProsodyTips(getCoachTargetText());
+    coachMismatchEl.innerHTML = `
+        <div class="fluency-coach-score">Approximate match: ${precision.toFixed(0)}%</div>
+        <div class="fluency-coach-breakdown">Substitutions: ${counts.substitution} · Missed: ${counts.missing} · Extra: ${counts.extra}</div>
+        <ul class="fluency-coach-list">${rows}</ul>
+        <div class="fluency-coach-loop"><strong>20-second practice loop:</strong> ${escapeHtml(focusWordLine)}</div>
+        <div class="fluency-coach-prosody"><strong>Prosody target:</strong> ${escapeHtml(prosodyTips.join(' '))}</div>
+    `;
+    coachMismatchEl.classList.remove('muted');
+}
+
+function updateCoachComparison() {
+    coachExpectedTokens = getCoachExpectedTokens();
+    const heardTokens = tokenizeCoachText(getCoachTranscriptText());
+    const result = compareCoachTokens(coachExpectedTokens, heardTokens);
+    coachLastComparison = {
+        expectedTokens: coachExpectedTokens.slice(),
+        heardTokens: heardTokens.slice(),
+        mismatches: Array.isArray(result?.mismatches) ? result.mismatches.slice() : [],
+        matches: Array.isArray(result?.matches) ? result.matches.slice() : []
+    };
+    highlightCoachMismatches(result);
+    renderCoachMismatchReport(result, coachExpectedTokens, heardTokens);
+}
+
+function buildCoachGuideTrail(text, sampleCount = 140) {
+    const tokens = String(text || '').split(/\s+/).filter(Boolean);
+    if (!tokens.length) {
+        return Array.from({ length: sampleCount }, () => 0.22);
+    }
+    const tokenEnergy = tokens.map((token) => {
+        const trimmed = String(token || '').trim();
+        if (/[!?]$/.test(trimmed)) return 0.72;
+        if (/[.,;:]$/.test(trimmed)) return 0.2;
+        if (trimmed.length >= 8) return 0.52;
+        return 0.36;
+    });
+    const trail = [];
+    for (let index = 0; index < sampleCount; index += 1) {
+        const pct = sampleCount <= 1 ? 0 : index / (sampleCount - 1);
+        const tokenIndex = Math.min(tokenEnergy.length - 1, Math.floor(pct * tokenEnergy.length));
+        trail.push(tokenEnergy[tokenIndex]);
+    }
+    return trail;
+}
+
+function ensureCoachCanvasSize() {
+    if (!coachWaveCanvas) return;
+    const ratio = window.devicePixelRatio || 1;
+    const rect = coachWaveCanvas.getBoundingClientRect();
+    const width = Math.max(300, Math.round(rect.width || 640));
+    const height = Math.max(120, Math.round(rect.height || 150));
+    const targetWidth = Math.round(width * ratio);
+    const targetHeight = Math.round(height * ratio);
+    if (coachWaveCanvas.width === targetWidth && coachWaveCanvas.height === targetHeight) return;
+    coachWaveCanvas.width = targetWidth;
+    coachWaveCanvas.height = targetHeight;
+}
+
+function drawTrailLine(ctx, trail, width, height, color) {
+    if (!trail.length) return;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    trail.forEach((value, index) => {
+        const x = (index / Math.max(1, trail.length - 1)) * width;
+        const y = height - (Math.max(0, Math.min(1, value)) * (height - 10)) - 5;
+        if (index === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+}
+
+function drawCoachWaveFrame() {
+    if (!coachWaveCanvas) return;
+    ensureCoachCanvasSize();
+    const context = coachWaveCanvas.getContext('2d');
+    if (!context) return;
+
+    const ratio = window.devicePixelRatio || 1;
+    const width = coachWaveCanvas.width / ratio;
+    const height = coachWaveCanvas.height / ratio;
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    context.clearRect(0, 0, width, height);
+
+    context.fillStyle = 'rgba(248, 250, 252, 0.95)';
+    context.fillRect(0, 0, width, height);
+
+    context.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+    context.lineWidth = 1;
+    for (let row = 1; row <= 3; row += 1) {
+        const y = (height / 4) * row;
+        context.beginPath();
+        context.moveTo(0, y);
+        context.lineTo(width, y);
+        context.stroke();
+    }
+
+    let energy = 0;
+    if (coachAnalyser) {
+        const buffer = new Float32Array(coachAnalyser.fftSize);
+        coachAnalyser.getFloatTimeDomainData(buffer);
+        let sum = 0;
+        for (let index = 0; index < buffer.length; index += 1) {
+            const sample = buffer[index];
+            sum += sample * sample;
+        }
+        const rms = Math.sqrt(sum / Math.max(1, buffer.length));
+        energy = Math.min(1, rms * 8);
+    }
+    coachEnergyTrail.push(energy);
+    if (coachEnergyTrail.length > 140) coachEnergyTrail.shift();
+
+    if (!coachGuideTrail.length) {
+        coachGuideTrail = buildCoachGuideTrail(getCoachTargetText(), 140);
+    }
+    while (coachGuideTrail.length < coachEnergyTrail.length) {
+        coachGuideTrail.push(coachGuideTrail[coachGuideTrail.length - 1] || 0.24);
+    }
+
+    drawTrailLine(context, coachGuideTrail.slice(-140), width, height, 'rgba(99, 102, 241, 0.55)');
+    drawTrailLine(context, coachEnergyTrail.slice(-140), width, height, 'rgba(14, 165, 233, 0.95)');
+}
+
+function stopCoachWaveLoop() {
+    if (coachWaveAnimation) {
+        cancelAnimationFrame(coachWaveAnimation);
+        coachWaveAnimation = 0;
+    }
+}
+
+function startCoachWaveLoop() {
+    stopCoachWaveLoop();
+    const tick = () => {
+        drawCoachWaveFrame();
+        if (coachListening) {
+            coachWaveAnimation = requestAnimationFrame(tick);
+        } else {
+            coachWaveAnimation = 0;
+            drawCoachWaveFrame();
+        }
+    };
+    coachWaveAnimation = requestAnimationFrame(tick);
+}
+
+async function startCoachAudioCapture() {
+    if (coachAudioStream && coachAnalyser) return true;
+    if (!navigator.mediaDevices?.getUserMedia) return false;
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) {
+        stream.getTracks().forEach((track) => track.stop());
+        return false;
+    }
+    const audioContext = new AudioCtx();
+    const source = audioContext.createMediaStreamSource(stream);
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 1024;
+    source.connect(analyser);
+    coachAudioStream = stream;
+    coachAudioContext = audioContext;
+    coachAnalyser = analyser;
+    return true;
+}
+
+function stopCoachAudioCapture() {
+    try {
+        coachAudioStream?.getTracks?.().forEach((track) => track.stop());
+    } catch (e) {}
+    coachAudioStream = null;
+    coachAnalyser = null;
+    if (coachAudioContext && typeof coachAudioContext.close === 'function') {
+        coachAudioContext.close().catch(() => {});
+    }
+    coachAudioContext = null;
+}
+
+function updateCoachButtons() {
+    if (coachStartBtn) coachStartBtn.disabled = coachListening;
+    if (coachStopBtn) coachStopBtn.disabled = !coachListening;
+}
+
+function getSpeechRecognitionCtor() {
+    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+
+function ensureCoachRecognition() {
+    if (coachRecognition) return coachRecognition;
+    const Ctor = getSpeechRecognitionCtor();
+    if (!Ctor) return null;
+    const recognition = new Ctor();
+    recognition.lang = 'en-US';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event) => {
+        let interim = '';
+        for (let index = event.resultIndex; index < event.results.length; index += 1) {
+            const transcript = String(event.results[index]?.[0]?.transcript || '').trim();
+            if (!transcript) continue;
+            if (event.results[index].isFinal) {
+                coachFinalTranscript = `${coachFinalTranscript} ${transcript}`.trim();
+            } else {
+                interim = `${interim} ${transcript}`.trim();
+            }
+        }
+        coachInterimTranscript = interim;
+        updateCoachTranscriptView();
+        updateCoachComparison();
+    };
+    recognition.onerror = (event) => {
+        setCoachStatus(`Read coach error: ${String(event?.error || 'unknown')}.`, true);
+    };
+    recognition.onend = () => {
+        if (!coachListening) return;
+        coachListening = false;
+        updateCoachButtons();
+        stopCoachAudioCapture();
+        stopCoachWaveLoop();
+        setCoachStatus('Listening ended. Tap Start listening to continue.');
+    };
+    coachRecognition = recognition;
+    return recognition;
+}
+
+async function startCoachListening() {
+    if (coachListening) return;
+    coachExpectedTokens = getCoachExpectedTokens();
+    coachGuideTrail = buildCoachGuideTrail(getCoachTargetText(), 140);
+    if (!coachExpectedTokens.length) {
+        setCoachStatus('No target text available for read coach.', true);
+        return;
+    }
+
+    setCoachStatus('Starting microphone and read coach...');
+    try {
+        await startCoachAudioCapture();
+    } catch (error) {
+        setCoachStatus('Microphone access blocked. Allow microphone and try again.', true);
+        return;
+    }
+
+    coachListening = true;
+    updateCoachButtons();
+    startCoachWaveLoop();
+
+    const recognition = ensureCoachRecognition();
+    if (!recognition) {
+        setCoachStatus('Speech-to-text unavailable in this browser. Wave coach still active.', true);
+        return;
+    }
+    try {
+        recognition.start();
+        setCoachStatus('Listening... read naturally and keep your pacing smooth.');
+    } catch (error) {
+        coachListening = false;
+        updateCoachButtons();
+        stopCoachAudioCapture();
+        stopCoachWaveLoop();
+        setCoachStatus('Could not start speech recognition. Try again.', true);
+    }
+}
+
+function stopCoachListening() {
+    if (!coachListening && !coachRecognition) return;
+    coachListening = false;
+    updateCoachButtons();
+    try {
+        coachRecognition?.stop?.();
+    } catch (error) {}
+    stopCoachAudioCapture();
+    stopCoachWaveLoop();
+    setCoachStatus('Listening stopped.');
+}
+
+function clearCoach() {
+    stopCoachListening();
+    coachFinalTranscript = '';
+    coachInterimTranscript = '';
+    coachLastComparison = null;
+    coachEnergyTrail = [];
+    coachGuideTrail = buildCoachGuideTrail(getCoachTargetText(), 140);
+    updateCoachTranscriptView();
+    updateCoachComparison();
+    drawCoachWaveFrame();
+    setCoachStatus('Read coach cleared.');
+}
+
+async function readTeacherSoundClips() {
+    if (!window.indexedDB) return [];
+    return new Promise((resolve) => {
+        const request = indexedDB.open(REPORT_MEDIA_DB.name, REPORT_MEDIA_DB.version);
+        request.onerror = () => resolve([]);
+        request.onupgradeneeded = () => {};
+        request.onsuccess = () => {
+            const db = request.result;
+            try {
+                const tx = db.transaction(REPORT_MEDIA_DB.store, 'readonly');
+                const store = tx.objectStore(REPORT_MEDIA_DB.store);
+                const getAll = store.getAll();
+                getAll.onerror = () => {
+                    db.close();
+                    resolve([]);
+                };
+                getAll.onsuccess = () => {
+                    const rows = Array.isArray(getAll.result) ? getAll.result : [];
+                    db.close();
+                    resolve(rows);
+                };
+            } catch (error) {
+                db.close();
+                resolve([]);
+            }
+        };
+    });
+}
+
+function releaseSoundClipUrls() {
+    soundClipObjectUrls.forEach((url) => {
+        try {
+            URL.revokeObjectURL(url);
+        } catch (error) {}
+    });
+    soundClipObjectUrls = [];
+}
+
+async function refreshSoundClips() {
+    if (!soundClipsListEl) return;
+    const query = String(soundFilterInput?.value || '').trim().toLowerCase();
+    soundClipsListEl.innerHTML = '<div class="muted">Loading clips...</div>';
+    const rows = await readTeacherSoundClips();
+    releaseSoundClipUrls();
+
+    const filtered = rows
+        .filter((clip) => String(clip?.owner || '').toLowerCase() === 'teacher')
+        .filter((clip) => {
+            if (!query) return true;
+            const label = String(clip?.label || '').toLowerCase();
+            const tags = Array.isArray(clip?.tags) ? clip.tags.map((item) => String(item || '').toLowerCase()) : [];
+            return label.includes(query) || tags.some((tag) => tag.includes(query));
+        })
+        .sort((a, b) => Number(b?.createdAt || 0) - Number(a?.createdAt || 0))
+        .slice(0, 12);
+
+    if (!filtered.length) {
+        soundClipsListEl.innerHTML = '<div class="muted">No matching teacher clips yet. Record clips in Teacher Report and tag them by sound.</div>';
+        return;
+    }
+
+    const cards = filtered.map((clip) => {
+        const objectUrl = URL.createObjectURL(clip.blob);
+        soundClipObjectUrls.push(objectUrl);
+        const tags = Array.isArray(clip.tags) ? clip.tags : [];
+        const media = clip.sourceType === 'audio'
+            ? `<audio controls preload="none" src="${objectUrl}"></audio>`
+            : `<video controls preload="metadata" src="${objectUrl}" playsinline></video>`;
+        const tagsLine = tags.length
+            ? `<div class="fluency-sound-clip-tags">${tags.map((tag) => `<span class="fluency-sound-clip-tag">#${escapeHtml(tag)}</span>`).join('')}</div>`
+            : '';
+        return `
+            <article class="fluency-sound-clip-card">
+                <div class="fluency-sound-clip-head">
+                    <div class="fluency-sound-clip-title">${escapeHtml(clip.label || 'Teacher clip')}</div>
+                    <div class="fluency-sound-clip-date">${escapeHtml(new Date(Number(clip.createdAt || Date.now())).toLocaleDateString())}</div>
+                </div>
+                ${tagsLine}
+                <div class="fluency-sound-clip-media">${media}</div>
+            </article>
+        `;
+    }).join('');
+
+    soundClipsListEl.innerHTML = cards;
 }
 
 function getDefaultGradeBand() {
@@ -672,7 +1350,13 @@ function renderPassage() {
     titleEl.textContent = currentPassage.title;
     const wc = tokenizePassage(currentPassage.passage).map(normalizeTokenForCount).filter(Boolean).length;
     metaEl.textContent = `Grade ${currentPassage.gradeBand} • Lexile band: ${currentPassage.lexileBand} • Focus: ${currentPassage.focus} • Words: ${wc}`;
+    stopCoachListening();
     renderTrackablePassage(currentPassage.passage);
+    coachExpectedTokens = getCoachExpectedTokens();
+    coachGuideTrail = buildCoachGuideTrail(getCoachTargetText(), 140);
+    updateCoachTranscriptView();
+    updateCoachComparison();
+    drawCoachWaveFrame();
 }
 
 function formatTime(seconds) {
@@ -794,11 +1478,45 @@ function init() {
     pauseBtn.addEventListener('click', stopTimer);
     resetBtn.addEventListener('click', resetTimer);
     scoreBtn.addEventListener('click', scoreFluency);
+    coachTargetSelect?.addEventListener('change', () => {
+        coachExpectedTokens = getCoachExpectedTokens();
+        coachGuideTrail = buildCoachGuideTrail(getCoachTargetText(), 140);
+        updateCoachComparison();
+        drawCoachWaveFrame();
+        setCoachStatus(`Coach target set to ${coachTargetSelect.value === 'passage' ? 'whole passage' : 'first sentence'}.`);
+    });
+    coachStartBtn?.addEventListener('click', () => {
+        startCoachListening();
+    });
+    coachStopBtn?.addEventListener('click', () => {
+        stopCoachListening();
+    });
+    coachClearBtn?.addEventListener('click', () => {
+        clearCoach();
+    });
+    soundRefreshBtn?.addEventListener('click', () => {
+        refreshSoundClips();
+    });
+    soundFilterInput?.addEventListener('input', () => {
+        refreshSoundClips();
+    });
 
     window.addEventListener('resize', () => {
         mapWordLines();
         applyLineFocusHighlighting();
+        drawCoachWaveFrame();
     });
+
+    window.addEventListener('beforeunload', () => {
+        stopCoachListening();
+        releaseSoundClipUrls();
+    });
+
+    updateCoachButtons();
+    updateCoachTranscriptView();
+    updateCoachComparison();
+    drawCoachWaveFrame();
+    refreshSoundClips();
 }
 
 init();

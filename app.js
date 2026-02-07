@@ -9,8 +9,10 @@ if (typeof window !== 'undefined' && !window.WORD_ENTRIES && typeof WORDS_DATA !
     window.WORD_ENTRIES = WORDS_DATA;
 }
 
-const MAX_GUESSES = 6;
+const MAX_GUESSES_LIMIT = 6;
+const MIN_GUESSES_LIMIT = 1;
 let CURRENT_WORD_LENGTH = 5;
+let CURRENT_MAX_GUESSES = MAX_GUESSES_LIMIT;
 let currentWord = "";
 let currentEntry = null;
 let guesses = [];
@@ -47,6 +49,8 @@ let fitScreenActive = false;
 let fitScreenTightActive = false;
 let fitScreenRaf = null;
 let wordQuestScrollFallback = false;
+let isCustomWordRound = false;
+let customWordInLibrary = true;
 let voiceHealthCheckInProgress = false;
 let voiceHealthCheckToken = 0;
 let pronunciationRecognition = null;
@@ -116,6 +120,7 @@ const DEFAULT_SETTINGS = {
         pinned: false,
         lang: 'en'
     },
+    guessCount: MAX_GUESSES_LIMIT,
     bonus: {
         frequency: 'always'
     },
@@ -132,6 +137,24 @@ const DEFAULT_SETTINGS = {
 };
 
 const UI_LOOK_CLASSES = ['look-k2', 'look-35', 'look-612'];
+const CUSTOM_WORD_BLOCK_PATTERNS = [
+    /fuck/i,
+    /shit/i,
+    /bitch/i,
+    /cunt/i,
+    /dick/i,
+    /cock/i,
+    /pussy/i,
+    /penis/i,
+    /vagina/i,
+    /porn/i,
+    /nude/i,
+    /xxx/i,
+    /slut/i,
+    /whore/i,
+    /fetish/i,
+    /nsfw/i
+];
 
 function getUiLookValue() {
     const raw = (appSettings?.uiLook || DEFAULT_SETTINGS.uiLook || '35').toString();
@@ -176,6 +199,117 @@ function normalizeGradeBandForAudience(value) {
     if (raw === '912' || raw === '9-12') return '9-12';
     if (raw === '612' || raw === '6-12') return '6-8';
     return raw;
+}
+
+function normalizeGuessCount(value) {
+    const parsed = Number.parseInt(String(value ?? ''), 10);
+    if (!Number.isFinite(parsed)) return MAX_GUESSES_LIMIT;
+    return Math.min(MAX_GUESSES_LIMIT, Math.max(MIN_GUESSES_LIMIT, parsed));
+}
+
+function normalizeCustomWordInput(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function isBlockedCustomWord(value) {
+    const normalized = normalizeCustomWordInput(value);
+    if (!normalized) return false;
+    return CUSTOM_WORD_BLOCK_PATTERNS.some((pattern) => pattern.test(normalized));
+}
+
+function validateCustomWordValue(value) {
+    const normalized = normalizeCustomWordInput(value);
+    if (normalized.length < 3 || normalized.length > 12) {
+        return { ok: false, message: 'Use 3-12 letters (A-Z only).' };
+    }
+    if (!/^[a-z]+$/.test(normalized)) {
+        return { ok: false, message: 'Letters only (no spaces, numbers, or symbols).' };
+    }
+    if (isBlockedCustomWord(normalized)) {
+        return { ok: false, message: 'That word is blocked by the class-safe filter. Try another word.' };
+    }
+    const inLibrary = !!window.WORD_ENTRIES?.[normalized];
+    return {
+        ok: true,
+        value: normalized,
+        inLibrary
+    };
+}
+
+function isCurrentWordAudioBlocked() {
+    return isCustomWordRound && !customWordInLibrary;
+}
+
+function setTeacherErrorMessage(message = '', isError = false) {
+    const errorEl = document.getElementById("teacher-error");
+    if (!errorEl) return;
+    errorEl.textContent = message || '';
+    errorEl.style.color = isError ? "var(--color-incorrect)" : "var(--color-correct)";
+}
+
+function setQuickCustomWordStatus(message = '', isError = false, isSuccess = false) {
+    const statusEl = document.getElementById('quick-custom-word-status');
+    if (!statusEl) return;
+    statusEl.textContent = message || '';
+    statusEl.classList.toggle('error', !!isError);
+    statusEl.classList.toggle('success', !isError && !!isSuccess);
+}
+
+function updateWordQuestAudioAvailabilityNotice() {
+    const blocked = isCurrentWordAudioBlocked();
+    const hearWordBtn = document.getElementById("simple-hear-word");
+    const hearSentenceBtn = document.getElementById("simple-hear-sentence");
+    const sentencePreview = document.getElementById('sentence-preview');
+
+    [hearWordBtn, hearSentenceBtn].forEach((btn) => {
+        if (!btn) return;
+        btn.disabled = blocked;
+        btn.classList.toggle('hint-btn-disabled', blocked);
+        btn.title = blocked
+            ? 'Audio and sentence support are available only for words in the current library.'
+            : '';
+    });
+
+    if (blocked && sentencePreview) {
+        sentencePreview.textContent = 'Custom word mode: audio, sentence, and definition are unavailable for words outside the current library.';
+        sentencePreview.classList.remove('hidden');
+    } else if (sentencePreview) {
+        sentencePreview.classList.add('hidden');
+    }
+}
+
+function applyCustomWordChallenge(rawValue, options = {}) {
+    const result = validateCustomWordValue(rawValue);
+    if (!result.ok) {
+        if (options.source === 'teacher') {
+            setTeacherErrorMessage(result.message, true);
+        }
+        setQuickCustomWordStatus(result.message, true, false);
+        return false;
+    }
+
+    const wordLabel = result.value.toUpperCase();
+    if (options.source === 'teacher') {
+        setTeacherErrorMessage(`✅ Word accepted: "${wordLabel}"`, false);
+    }
+
+    if (options.closeTeacherModal) {
+        closeModal();
+    }
+
+    if (result.inLibrary) {
+        setQuickCustomWordStatus(`Custom word "${wordLabel}" loaded with full library support.`, false, true);
+    } else {
+        setQuickCustomWordStatus(
+            `Custom word "${wordLabel}" loaded. Audio, sentence, and definition are disabled because this word is not in the current library.`,
+            false,
+            true
+        );
+    }
+
+    showBanner(`✅ Custom challenge word set: ${wordLabel}`);
+    startNewGame(result.value);
+    return true;
 }
 
 function applyUiLookClass() {
@@ -549,6 +683,7 @@ function normalizePackedTtsType(type = 'word') {
     const raw = String(type || 'word').trim().toLowerCase();
     if (raw === 'definition' || raw === 'def') return 'def';
     if (raw === 'sentence' || raw === 'sent') return 'sentence';
+    if (raw === 'passage' || raw === 'text') return 'passage';
     if (raw === 'phoneme' || raw === 'sound') return 'phoneme';
     return 'word';
 }
@@ -609,6 +744,22 @@ function getPackedPhonemeManifestKey(soundKey = '', languageCode = 'en') {
     if (!normalizedSound) return '';
     const lang = normalizePackedTtsLanguage(languageCode);
     return `@phoneme:${normalizedSound}|${lang}|phoneme`;
+}
+
+function normalizePassageSlug(title = '') {
+    const raw = String(title || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    return raw || '';
+}
+
+function getPackedPassageManifestKey(title = '', languageCode = 'en') {
+    const slug = normalizePassageSlug(title);
+    if (!slug) return '';
+    const lang = normalizePackedTtsLanguage(languageCode);
+    return `@passage:${slug}|${lang}|passage`;
 }
 
 function parsePackedTtsManifestKey(key = '') {
@@ -852,6 +1003,29 @@ async function tryPlayPackedPhoneme(soundKey = '', languageCode = 'en') {
     return false;
 }
 
+async function tryPlayPackedPassageClip({ title = '', languageCode = 'en' } = {}) {
+    const key = getPackedPassageManifestKey(title, languageCode);
+    if (!key) return false;
+
+    const manifest = await loadPackedTtsManifest();
+    const primaryClip = manifest?.entries?.[key];
+    if (primaryClip) {
+        const played = await playAudioClipUrl(primaryClip);
+        if (played) return true;
+    }
+
+    const activePackId = normalizeTtsPackId(manifest?.__packId || 'default');
+    if (activePackId !== 'default') {
+        const fallbackManifest = await loadPackedTtsManifestFromPath(PACKED_TTS_DEFAULT_MANIFEST_PATH);
+        const fallbackClip = fallbackManifest?.entries?.[key];
+        if (fallbackClip) {
+            return playAudioClipUrl(fallbackClip);
+        }
+    }
+
+    return false;
+}
+
 function getPhonemeRecordingKey(sound = '') {
     return `phoneme_${sound.toString().toLowerCase()}`;
 }
@@ -954,6 +1128,7 @@ function loadSettings() {
         appSettings.narrationStyle = normalizeNarrationStyle(appSettings.narrationStyle || DEFAULT_SETTINGS.narrationStyle);
         appSettings.speechQualityMode = normalizeSpeechQualityMode(appSettings.speechQualityMode || DEFAULT_SETTINGS.speechQualityMode);
         appSettings.ttsPackId = normalizeTtsPackId(appSettings.ttsPackId || DEFAULT_SETTINGS.ttsPackId);
+        appSettings.guessCount = normalizeGuessCount(appSettings.guessCount ?? DEFAULT_SETTINGS.guessCount);
 
         const migrated = localStorage.getItem('bonus_frequency_migrated');
         if (!migrated && (!parsed.bonus || ['sometimes', 'often'].includes(parsed.bonus.frequency))) {
@@ -976,6 +1151,7 @@ function saveSettings() {
     appSettings.narrationStyle = normalizeNarrationStyle(appSettings.narrationStyle || DEFAULT_SETTINGS.narrationStyle);
     appSettings.speechQualityMode = normalizeSpeechQualityMode(appSettings.speechQualityMode || DEFAULT_SETTINGS.speechQualityMode);
     appSettings.ttsPackId = normalizeTtsPackId(appSettings.ttsPackId || DEFAULT_SETTINGS.ttsPackId);
+    appSettings.guessCount = normalizeGuessCount(appSettings.guessCount ?? DEFAULT_SETTINGS.guessCount);
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(appSettings));
 }
 
@@ -1065,6 +1241,14 @@ function applySettings() {
         ttsPackSelect.value = getPreferredTtsPackId();
     }
 
+    const guessCountSelect = document.getElementById('guess-count-select');
+    if (guessCountSelect) {
+        const nextGuessCount = normalizeGuessCount(appSettings.guessCount ?? DEFAULT_SETTINGS.guessCount);
+        appSettings.guessCount = nextGuessCount;
+        CURRENT_MAX_GUESSES = nextGuessCount;
+        guessCountSelect.value = String(nextGuessCount);
+    }
+
     const autoHearToggle = document.getElementById('toggle-auto-hear');
     if (autoHearToggle) {
         autoHearToggle.checked = appSettings.autoHear !== false;
@@ -1094,12 +1278,14 @@ function applySoundWallSectionVisibility() {
 function applyWordQuestUrlPreset() {
     const patternSelect = document.getElementById("pattern-select");
     const lengthSelect = document.getElementById("length-select");
+    const guessCountSelect = document.getElementById("guess-count-select");
     if (!patternSelect || !lengthSelect) return;
 
     try {
         const params = new URLSearchParams(window.location.search);
         const focusParam = (params.get('focus') || '').trim();
         const lenParam = (params.get('len') || '').trim();
+        const guessParam = (params.get('guesses') || '').trim();
 
         if (focusParam) {
             const allowed = Array.from(patternSelect.options).some(opt => opt.value === focusParam);
@@ -1118,6 +1304,14 @@ function applyWordQuestUrlPreset() {
                 lengthSelect.value = opt.value;
                 lengthAutoSet = false;
             }
+        }
+
+        if (guessCountSelect && guessParam) {
+            const normalizedGuessCount = normalizeGuessCount(guessParam);
+            guessCountSelect.value = String(normalizedGuessCount);
+            appSettings.guessCount = normalizedGuessCount;
+            CURRENT_MAX_GUESSES = normalizedGuessCount;
+            saveSettings();
         }
     } catch (e) {
         syncLengthOptionsToPattern(true);
@@ -1418,6 +1612,13 @@ function isCoarsePointerLayout() {
     return window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 }
 
+function getVisibleElementHeight(element) {
+    if (!element || element.offsetParent === null) return 0;
+    const rect = element.getBoundingClientRect();
+    if (!rect || !Number.isFinite(rect.height) || rect.height <= 0) return 0;
+    return Math.ceil(rect.height);
+}
+
 function applyWordQuestDesktopScale() {
     const body = document.body;
     if (!body || !body.classList.contains('word-quest-page')) return;
@@ -1436,26 +1637,40 @@ function applyWordQuestDesktopScale() {
     const headerHeight = header ? Math.ceil(header.getBoundingClientRect().height) : 0;
     const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 900;
 
-    // Available vertical room for board + hint row + keyboard.
-    const availableHeight = Math.max(540, viewportHeight - headerHeight - 36);
-    // Estimated constant chrome inside the canvas (gaps, paddings, hint row).
-    const staticChrome = 208;
+    const quickCustomPanel = document.querySelector('.quick-custom-word-panel');
+    const focusPanel = document.getElementById('focus-panel');
+    const quickPanelHeight = getVisibleElementHeight(quickCustomPanel);
+    const focusPanelHeight = focusPanel && !focusPanel.classList.contains('hidden')
+        ? getVisibleElementHeight(focusPanel)
+        : 0;
+    const chromeAboveCanvas = quickPanelHeight + focusPanelHeight;
+    const reservedOutsideCanvas = 46 + chromeAboveCanvas;
+    const availableHeight = Math.max(420, viewportHeight - headerHeight - reservedOutsideCanvas);
+    // Estimated constant chrome inside the canvas (board padding, hint row, keyboard panel padding).
+    const staticChrome = isCoarsePointerLayout() ? 196 : 186;
 
-    let tileSize = (availableHeight - staticChrome) / 8.15;
-    tileSize = Math.max(56, Math.min(74, tileSize));
+    let tileSize = (availableHeight - staticChrome) / 8.35;
+    tileSize = Math.max(46, Math.min(74, tileSize));
+    if (viewportHeight < 860) tileSize = Math.min(tileSize, 58);
+    if (viewportHeight < 780) tileSize = Math.min(tileSize, 52);
 
-    let keySize = tileSize * 0.73;
-    keySize = Math.max(38, Math.min(53, keySize));
+    let keySize = tileSize * 0.72;
+    keySize = Math.max(34, Math.min(53, keySize));
 
-    let wideKeySize = keySize * 1.58;
-    wideKeySize = Math.max(66, Math.min(92, wideKeySize));
+    let wideKeySize = keySize * 1.62;
+    wideKeySize = Math.max(62, Math.min(94, wideKeySize));
 
     const keyboardMax = Math.round((keySize * 10) + 86);
-    const canvasMax = Math.round(Math.max(840, Math.min(1100, keyboardMax + 286)));
-    let bottomGap = Math.max(22, Math.min(42, Math.round((viewportHeight - headerHeight) * 0.045)));
-    if (isCoarsePointerLayout()) {
-        bottomGap = Math.min(46, bottomGap + 6);
+    const canvasMax = Math.round(Math.max(760, Math.min(1080, keyboardMax + 282)));
+    const coarsePointer = isCoarsePointerLayout();
+    let bottomGap = coarsePointer ? 36 : 28;
+    if (viewportHeight < 980) bottomGap -= 6;
+    if (viewportHeight < 920) bottomGap -= 6;
+    if (viewportHeight < 860) bottomGap -= 4;
+    if (coarsePointer) {
+        bottomGap += 4;
     }
+    bottomGap = Math.max(14, Math.min(56, bottomGap));
 
     body.style.setProperty('--wq-tile-size-desktop', `${tileSize.toFixed(1)}px`);
     body.style.setProperty('--wq-key-size-desktop', `${keySize.toFixed(1)}px`);
@@ -1483,12 +1698,19 @@ function updateWordQuestScrollFallback() {
     const viewportBottom = window.visualViewport
         ? (window.visualViewport.offsetTop + window.visualViewport.height)
         : (window.innerHeight || document.documentElement.clientHeight || 0);
-    const safeBottom = Math.max(0, viewportBottom - (coarsePointer ? 14 : 8));
+    const comfortInset = coarsePointer ? 20 : 14;
+    const safeBottom = Math.max(0, viewportBottom - comfortInset);
     const canvasRect = canvas.getBoundingClientRect();
     const keyboardRect = keyboardEl.getBoundingClientRect();
-    const isClipped = canvasRect.bottom > safeBottom || keyboardRect.bottom > safeBottom || (canvas.scrollHeight > canvas.clientHeight + 8);
-    const forceFallback = coarsePointer && window.innerWidth >= 821;
-    const shouldFallback = forceFallback || isClipped;
+    const overflowPx = Math.max(
+        0,
+        canvasRect.bottom - safeBottom,
+        keyboardRect.bottom - safeBottom,
+        canvas.scrollHeight - canvas.clientHeight - 8
+    );
+    // Keep no-scroll layout as the default; only fallback when clipping is clearly unavoidable.
+    const fallbackThreshold = coarsePointer ? 32 : 22;
+    const shouldFallback = overflowPx > fallbackThreshold;
 
     if (wordQuestScrollFallback !== shouldFallback) {
         wordQuestScrollFallback = shouldFallback;
@@ -2411,9 +2633,24 @@ function initControls() {
         };
     }
 
+    const guessCountSelect = document.getElementById("guess-count-select");
+    if (guessCountSelect) {
+        guessCountSelect.onchange = (e) => {
+            e.target.blur();
+            const nextGuessCount = normalizeGuessCount(guessCountSelect.value);
+            appSettings.guessCount = nextGuessCount;
+            CURRENT_MAX_GUESSES = nextGuessCount;
+            saveSettings();
+            startNewGame();
+        };
+    }
+
     document.getElementById("teacher-btn").onclick = openTeacherMode;
     document.getElementById("set-word-btn").onclick = handleTeacherSubmit;
     document.getElementById("open-studio-btn").onclick = openStudioSetup;
+    const quickCustomWordInput = document.getElementById('quick-custom-word-input');
+    const quickCustomWordStartBtn = document.getElementById('quick-custom-word-start');
+    const quickCustomWordClearBtn = document.getElementById('quick-custom-word-clear');
     const toggleMaskBtn = document.getElementById("toggle-mask");
     const customWordInput = document.getElementById("custom-word-input");
     const supportsTextSecurity = typeof CSS !== 'undefined' && CSS.supports && (
@@ -2456,12 +2693,42 @@ function initControls() {
         };
     }
 
+    if (quickCustomWordStartBtn) {
+        quickCustomWordStartBtn.onclick = () => {
+            const value = quickCustomWordInput ? quickCustomWordInput.value : '';
+            applyCustomWordChallenge(value, { source: 'quick' });
+            if (quickCustomWordInput) quickCustomWordInput.blur();
+        };
+    }
+
+    if (quickCustomWordInput) {
+        quickCustomWordInput.addEventListener('keydown', (event) => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            applyCustomWordChallenge(quickCustomWordInput.value, { source: 'quick' });
+        });
+    }
+
+    if (quickCustomWordClearBtn) {
+        quickCustomWordClearBtn.onclick = () => {
+            if (quickCustomWordInput) quickCustomWordInput.value = '';
+            isCustomWordRound = false;
+            customWordInLibrary = true;
+            setQuickCustomWordStatus('Library mode active. Pick a focus or enter a custom challenge word.', false, false);
+            startNewGame();
+        };
+    }
+
     // Simple audio buttons
     const hearWordBtn = document.getElementById("simple-hear-word");
     const hearSentenceBtn = document.getElementById("simple-hear-sentence");
     
     if (hearWordBtn) {
         hearWordBtn.onclick = () => {
+            if (isCurrentWordAudioBlocked()) {
+                hearWordBtn.blur();
+                return;
+            }
             if (currentWord) {
                 // Add visual feedback
                 const originalText = hearWordBtn.innerHTML;
@@ -2482,6 +2749,10 @@ function initControls() {
     
     if (hearSentenceBtn) {
         hearSentenceBtn.onclick = () => {
+            if (isCurrentWordAudioBlocked()) {
+                hearSentenceBtn.blur();
+                return;
+            }
             let sentence = null;
             if (currentEntry && currentEntry.en && currentEntry.en.sentence) {
                 sentence = currentEntry.en.sentence;
@@ -2538,8 +2809,12 @@ function initControls() {
             hearSentenceBtn.blur();
         };
     }
+
+    setQuickCustomWordStatus('Library mode active. Pick a focus or enter a custom challenge word.', false, false);
+    updateWordQuestAudioAvailabilityNotice();
     
     document.getElementById("speak-btn").onclick = () => {
+        if (isCurrentWordAudioBlocked()) return;
         speak(currentWord, "word");
     };
     document.getElementById("play-again-btn").onclick = () => {
@@ -4238,6 +4513,7 @@ function startNewGame(customWord = null) {
     gameOver = false;
     guesses = [];
     currentGuess = "";
+    CURRENT_MAX_GUESSES = normalizeGuessCount(appSettings.guessCount ?? DEFAULT_SETTINGS.guessCount);
     board.innerHTML = "";
     clearKeyboardColors();
     updateFocusPanel();
@@ -4247,19 +4523,27 @@ function startNewGame(customWord = null) {
     if (customWord) {
         currentWord = customWord.toLowerCase();
         CURRENT_WORD_LENGTH = currentWord.length;
-        currentEntry = window.WORD_ENTRIES[currentWord] || { 
-            def: "Teacher set word.", sentence: "Can you decode this?", syllables: currentWord 
+        isCustomWordRound = true;
+        customWordInLibrary = !!window.WORD_ENTRIES?.[currentWord];
+        currentEntry = window.WORD_ENTRIES[currentWord] || {
+            def: "",
+            sentence: "",
+            syllables: currentWord
         };
     } else {
         const data = getWordFromDictionary();
         currentWord = data.word;
         currentEntry = data.entry;
         CURRENT_WORD_LENGTH = currentWord.length;
+        isCustomWordRound = false;
+        customWordInLibrary = true;
+        setQuickCustomWordStatus('Library mode active. Pick a focus or enter a custom challenge word.', false, false);
     }
 
     isFirstLoad = false;
     board.style.setProperty("--word-length", CURRENT_WORD_LENGTH);
-    for (let i = 0; i < MAX_GUESSES * CURRENT_WORD_LENGTH; i++) {
+    board.style.setProperty("--max-guesses", CURRENT_MAX_GUESSES);
+    for (let i = 0; i < CURRENT_MAX_GUESSES * CURRENT_WORD_LENGTH; i++) {
         const tile = document.createElement("div");
         tile.className = "tile";
         tile.id = `tile-${i}`;
@@ -4270,6 +4554,7 @@ function startNewGame(customWord = null) {
     updateGrid();
     
     console.log(`✓ Game started: word="${currentWord}" (${CURRENT_WORD_LENGTH} letters)`);
+    updateWordQuestAudioAvailabilityNotice();
     
     // Update adaptive actions for new word
     if (typeof updateAdaptiveActions === 'function') {
@@ -4573,6 +4858,7 @@ function handleInput(char) {
 }
 
 function deleteLetter() {
+    if (gameOver) return;
     currentGuess = currentGuess.slice(0, -1);
     updateGrid();
 }
@@ -4581,11 +4867,13 @@ function updateGrid() {
     const offset = guesses.length * CURRENT_WORD_LENGTH;
     for (let i = 0; i < CURRENT_WORD_LENGTH; i++) {
         const t = document.getElementById(`tile-${offset + i}`);
+        if (!t) continue;
         t.textContent = "";
         t.className = "tile row-active"; 
     }
     for (let i = 0; i < currentGuess.length; i++) {
         const t = document.getElementById(`tile-${offset + i}`);
+        if (!t) continue;
         const char = currentGuess[i];
         t.textContent = isUpperCase ? char.toUpperCase() : char;
         t.className = "tile active row-active";
@@ -4632,7 +4920,7 @@ function submitGuess() {
         setTimeout(() => {
             showEndModal(true);  // Show word reveal first
         }, 1500);
-    } else if (guesses.length >= MAX_GUESSES) {
+    } else if (guesses.length >= CURRENT_MAX_GUESSES) {
         gameOver = true;
         setTimeout(() => showEndModal(false), 1500);
     } else {
@@ -4744,6 +5032,7 @@ function estimateSpeechDuration(text, rate = 1) {
 
 function autoPlayReveal(definitionText, sentenceText) {
     if (appSettings.autoHear === false) return;
+    if (isCurrentWordAudioBlocked()) return;
     const wordText = currentWord || '';
     const speechRateWord = getSpeechRate('word');
     const speechRateSentence = getSpeechRate('sentence');
@@ -5097,9 +5386,31 @@ function showEndModal(win) {
     def = adaptedCopy.definition;
     sentence = adaptedCopy.sentence;
     renderAudienceModeNote(adaptedCopy.mode);
-    
-    document.getElementById("modal-def").textContent = def;
-    document.getElementById("modal-sentence").textContent = `"${sentence}"`;
+
+    const hasLibrarySupport = !isCurrentWordAudioBlocked();
+    if (!hasLibrarySupport) {
+        def = '';
+        sentence = '';
+    }
+
+    const modalDefEl = document.getElementById("modal-def");
+    const modalSentenceEl = document.getElementById("modal-sentence");
+    if (modalDefEl) {
+        modalDefEl.textContent = hasLibrarySupport
+            ? def
+            : 'Custom challenge word: definition unavailable (not in current library).';
+    }
+    if (modalSentenceEl) {
+        modalSentenceEl.textContent = hasLibrarySupport && sentence
+            ? `"${sentence}"`
+            : 'Sentence unavailable for this custom challenge word.';
+    }
+
+    const speakBtn = document.getElementById("speak-btn");
+    if (speakBtn) {
+        speakBtn.disabled = !hasLibrarySupport;
+        speakBtn.textContent = hasLibrarySupport ? 'Hear Word' : 'Audio unavailable';
+    }
 
     setupModalAudioControls(def, sentence);
 
@@ -5414,23 +5725,12 @@ function updateVoiceIndicator() {
 }
 
 function handleTeacherSubmit() {
-    const val = document.getElementById("custom-word-input").value.trim().toLowerCase();
-    if (val.length < 3 || val.length > 10 || !/^[a-z]+$/.test(val)) {
-        document.getElementById("teacher-error").textContent = "3-10 letters, no spaces.";
-        return;
+    const input = document.getElementById("custom-word-input");
+    const rawValue = input ? input.value : '';
+    const applied = applyCustomWordChallenge(rawValue, { source: 'teacher', closeTeacherModal: true });
+    if (applied && input) {
+        input.value = '';
     }
-    
-    // Show clear confirmation
-    document.getElementById("teacher-error").textContent = "";
-    document.getElementById("teacher-error").style.color = "var(--color-correct)";
-    document.getElementById("teacher-error").textContent = `✅ Word accepted: "${val.toUpperCase()}" - Game ready!`;
-    
-    // Briefly pause for confirmation, then start
-    setTimeout(() => {
-        closeModal();
-        showBanner(`✅ Teacher word set: ${val.toUpperCase()}`);
-        startNewGame(val);
-    }, 800);
 }
 
 function closeModal() {
@@ -6298,12 +6598,277 @@ async function speakWithSystemVoice(text) {
     speakEnglishText(text, speechType, preferred, fallbackLang);
 }
 
+const DEFAULT_DECODABLE_TEXTS = [
+    {
+        title: 'Sam and the Map',
+        level: 'K-2 · CVC',
+        gradeBand: 'K-2',
+        focus: 'Short vowels',
+        tags: ['cvc'],
+        content: 'Sam had a map. Pam had a cap. Sam ran to the path and sat by a big log. Pam said, "Tap the map and plan the path." Sam did not rush. He had to spot each mark. At last, Sam and Pam got back to camp and had a snack.'
+    },
+    {
+        title: 'The Red Jet',
+        level: 'K-2 · CVC',
+        gradeBand: 'K-2',
+        focus: 'Short vowels',
+        tags: ['cvc'],
+        content: 'Ben and Jen got a red jet toy. The jet can dip and spin. Ben set the jet on a mat. Jen got a pen and drew a net. "Can the jet get in?" Jen said. Ben did a test. The jet did not fit. They had to fix the net. Then it did.'
+    },
+    {
+        title: 'Ship at the Shop',
+        level: 'K-2 · Digraphs',
+        gradeBand: 'K-2',
+        focus: 'Sh and ch',
+        tags: ['digraph'],
+        content: 'Chip and Ash had cash for the shop. Chip chose a shell and a dish. Ash chose a fish and a brush. At the shop, they had to check each tag. "This shell is cheap," said Chip. "This dish is shiny," said Ash. They left the shop with a big grin.'
+    },
+    {
+        title: 'Thin Path, Thick Log',
+        level: 'K-2 · Digraphs',
+        gradeBand: 'K-2',
+        focus: 'Th',
+        tags: ['digraph'],
+        content: 'Theo and Beth had to go on a thin path by the hill. They saw a thick log on the path. "Think first," said Beth. Theo said, "Then we can shift the log." They put their hands on the log and gave it a push. The path was clear, and they went on.'
+    },
+    {
+        title: 'Flag at the Cliff',
+        level: 'K-2 · Blends',
+        gradeBand: 'K-2',
+        focus: 'Initial and final blends',
+        tags: ['ccvc', 'cvcc'],
+        content: 'Brad had a flag and a plan. He had to climb the small cliff by camp. Glen brought a black clip. "Clip the flag to the branch," said Glen. Brad did it and stood still. The flag did not slip. The class clapped when the flag flapped in the wind.'
+    },
+    {
+        title: 'Trick on the Track',
+        level: 'K-2 · Trigraphs',
+        gradeBand: 'K-2',
+        focus: 'Tch and dge',
+        tags: ['trigraph'],
+        content: 'Mitch went to the track for a quick match. He had to catch a badge at each check point. At the last point, he had to dodge a big cone and latch a tag to his shirt. Mitch had to stretch and breathe, but he did the whole challenge with grit.'
+    },
+    {
+        title: 'Make a Cake',
+        level: 'K-2 · Magic E',
+        gradeBand: 'K-2',
+        focus: 'CVCe',
+        tags: ['cvce'],
+        content: 'Nate and Jade made a cake at home. Nate wrote bake, made, and plate on a note. Jade said, "The e is quiet but it makes the vowel say its name." They mixed, baked, and set the cake on a plate. They gave the cake to the whole class.'
+    },
+    {
+        title: 'Rain by the Train',
+        level: 'K-2 · Vowel Teams',
+        gradeBand: 'K-2',
+        focus: 'Ai and ea',
+        tags: ['vowel_team'],
+        content: 'It was rain day at the train stop. Mia and Dean wore rain coats and waited. They read the sign to pass the time. "The train is late," said Mia. Dean read it again. Soon the train came. They waved and made space for each rider to board.'
+    },
+    {
+        title: 'Park in the Dark',
+        level: 'K-2 · R-Controlled',
+        gradeBand: 'K-2',
+        focus: 'Ar and or',
+        tags: ['r_controlled'],
+        content: 'Mark and Nora went to the park at dusk. The bark on the dark tree looked rough. Nora saw a card on a bench. The card said, "Start at the north corner." They followed each part and found a small star charm in the grass.'
+    },
+    {
+        title: 'Boil and Bounce',
+        level: 'K-2 · Diphthongs',
+        gradeBand: 'K-2',
+        focus: 'Oi and ou',
+        tags: ['diphthong'],
+        content: 'Joy found a coin by the house. Lou heard a shout and ran out. They took the coin to the lost box. Then they played with a bouncy ball. "Boing!" it went. They could hear the sound and point to the oi in boing and the ou in out.'
+    },
+    {
+        title: 'Puff, Bell, and Buzz',
+        level: 'K-2 · FLOSS',
+        gradeBand: 'K-2',
+        focus: 'FLOSS endings',
+        tags: ['floss'],
+        content: 'The bell will ring at lunch. Will and Tess had to pack a full bag. Tess had fluff for art and Will had a class pass. "Tell me when the bell rings," said Will. Tess listened. Ding! The bell rang, and they went to lunch.'
+    },
+    {
+        title: 'Bunk in the Camp',
+        level: 'K-2 · Welded',
+        gradeBand: 'K-2',
+        focus: 'Nk and ng',
+        tags: ['welded'],
+        content: 'At camp, the bunk had a long trunk under each bed. Hank had to bring his sling and a drink. Ming had to bring a blank tag for his trunk. At night, they sang a song and hung each tag on a hook so no trunk got mixed up.'
+    },
+    {
+        title: 'Schwa in the Middle',
+        level: '3-5 · Schwa',
+        gradeBand: '3-5',
+        focus: 'Unstressed vowels',
+        tags: ['schwa'],
+        content: 'The class read about the banana festival and the camera club. Ms. Perez said, "Listen to the unstressed vowel. It sounds like uh in many words." Students tapped syllables in animal, support, and pencil, then marked where the schwa sound appeared.'
+    },
+    {
+        title: 'Prefix Power Plan',
+        level: '3-5 · Morphology',
+        gradeBand: '3-5',
+        focus: 'Prefixes',
+        tags: ['prefix'],
+        content: 'The team built a prefix chart for preview, replay, and rewrite. They learned that a prefix can change meaning before the base word. In small groups, students used each new word in a sentence and checked whether the prefix meaning matched the context.'
+    },
+    {
+        title: 'Suffix Switch',
+        level: '3-5 · Morphology',
+        gradeBand: '3-5',
+        focus: 'Suffixes',
+        tags: ['suffix'],
+        content: 'During writing workshop, students revised short drafts and added suffixes to make meaning precise. Quick became quickly, care became careful, and teach became teacher. The class discussed how suffix choices can shift part of speech and sentence rhythm.'
+    },
+    {
+        title: 'Compound Word Crew',
+        level: '3-5 · Compounds',
+        gradeBand: '3-5',
+        focus: 'Compound words',
+        tags: ['compound'],
+        content: 'A small crew made a playground map with labels like sandbox, backpack, and basketball court. They split each compound into two known words, then explained how the parts combined to create a new meaning. The map was clear, useful, and easy to read.'
+    },
+    {
+        title: 'Multisyllable Checkpoint',
+        level: '3-5 · Multisyllabic',
+        gradeBand: '3-5',
+        focus: 'Syllable division',
+        tags: ['multisyllable'],
+        content: 'At the checkpoint station, students decoded words such as fantastic, remember, and computer. They underlined vowel patterns, divided syllables, and blended each part. When someone got stuck, partners coached with a repeatable routine: mark, divide, blend, confirm.'
+    },
+    {
+        title: 'Perspective Letters',
+        level: '6-8 · Fluency + Meaning',
+        gradeBand: '6-8',
+        focus: 'Prosody and punctuation',
+        tags: ['multisyllable', 'suffix'],
+        content: 'The class read two letters about the same event from different perspectives. One voice sounded frustrated, and the other sounded hopeful. Students practiced prosody by pausing at punctuation and adjusting intonation to reflect speaker purpose in each paragraph.'
+    },
+    {
+        title: 'Science Terms in Context',
+        level: '6-8 · Academic',
+        gradeBand: '6-8',
+        focus: 'Morphology and vocabulary',
+        tags: ['prefix', 'suffix', 'multisyllable'],
+        content: 'In science class, teams decoded words like microscopic, reactivate, and transportation. They located prefixes, roots, and suffixes, then used context clues to explain meaning. Each team created a short summary using at least three new terms accurately.'
+    },
+    {
+        title: 'Argument Outline',
+        level: '9-12 · Advanced',
+        gradeBand: '9-12',
+        focus: 'Academic language',
+        tags: ['prefix', 'suffix', 'multisyllable', 'schwa'],
+        content: 'Students prepared an argument outline on school sustainability choices. They read a source set, annotated key terms, and decoded unfamiliar words before discussion. During rehearsal, they focused on precise language, clear transitions, and evidence-based claims.'
+    },
+    {
+        title: 'Career Pathway Memo',
+        level: '9-12 · Advanced',
+        gradeBand: '9-12',
+        focus: 'Complex text fluency',
+        tags: ['multisyllable', 'suffix'],
+        content: 'A student team drafted a memo for a mock internship panel. They revised for clarity, checked pronunciation of technical words, and practiced reading aloud with pacing that supported comprehension. Final reflections focused on communication, confidence, and audience awareness.'
+    },
+    {
+        title: 'Splash at Lunch',
+        level: 'K-2 · Digraphs',
+        gradeBand: 'K-2',
+        focus: 'Sh, ch, th',
+        tags: ['digraph'],
+        content: 'At lunch, Theo had a fish dish and a peach. Ash had chips and a thick shake. A splash hit the bench when Theo shook his cup. The class said, "Check your cup and clean the chair." They did, then they got back to lunch.'
+    },
+    {
+        title: 'Crab Trap Plan',
+        level: 'K-2 · Blends',
+        gradeBand: 'K-2',
+        focus: 'Blends',
+        tags: ['ccvc', 'cvcc'],
+        content: 'Brock and Clara had to set a crab trap near the dock. Clara drew a plan with a black crayon. Brock put a snack in the trap and set it by a flat rock. They came back at dusk and found one small crab to sketch and then set free.'
+    },
+    {
+        title: 'Late Train Note',
+        level: 'K-2 · Magic E',
+        gradeBand: 'K-2',
+        focus: 'Long vowel CVCe',
+        tags: ['cvce'],
+        content: 'Kate wrote a note: "The train is late, so wait by the gate." She gave the note to Jake. Jake smiled and said, "I can read each long vowel because the e at the end is silent." They made it to the gate right on time.'
+    },
+    {
+        title: 'Bright Sea Team',
+        level: 'K-2 · Vowel Teams',
+        gradeBand: 'K-2',
+        focus: 'Vowel teams',
+        tags: ['vowel_team'],
+        content: 'A team on the beach had a clean blue sail. They read a chart that said to steer near the green buoy. "Read, then lead," said the coach. The team agreed. They moved in a straight line and reached the shore with big smiles.'
+    },
+    {
+        title: 'Schwa Strategy Circle',
+        level: '3-5 · Schwa',
+        gradeBand: '3-5',
+        focus: 'Unstressed syllables',
+        tags: ['schwa', 'multisyllable'],
+        content: 'Students sat in a strategy circle and practiced words like support, family, and problem. They tapped each syllable, circled the unstressed vowel, and rehearsed accurate pronunciation. The group wrote a quick tip card to use during independent reading.'
+    },
+    {
+        title: 'Prefix Detective File',
+        level: '3-5 · Morphology',
+        gradeBand: '3-5',
+        focus: 'Prefix meaning',
+        tags: ['prefix', 'multisyllable'],
+        content: 'In the detective file, students sorted preview, misread, and reconnect by prefix. They discussed how each prefix shifted meaning and then tested the words in context. The team closed with a short paragraph using at least two new words correctly.'
+    },
+    {
+        title: 'Suffix Revision Sprint',
+        level: '3-5 · Morphology',
+        gradeBand: '3-5',
+        focus: 'Suffixes in writing',
+        tags: ['suffix', 'multisyllable'],
+        content: 'Writers revised a draft and swapped broad words for precise forms: create became creative, assist became assistant, and move became movement. Partners read each sentence aloud and listened for clarity, rhythm, and accurate pronunciation.'
+    },
+    {
+        title: 'History Debate Warm-Up',
+        level: '6-8 · Academic',
+        gradeBand: '6-8',
+        focus: 'Academic vocabulary',
+        tags: ['prefix', 'suffix', 'multisyllable'],
+        content: 'Before debate, students decoded words like disagreement, reconstruction, and political. They underlined roots and affixes, practiced pronunciation, and linked each term to a short evidence statement. The warm-up improved confidence before discussion.'
+    },
+    {
+        title: 'Lab Safety Briefing',
+        level: '6-8 · Fluency + Meaning',
+        gradeBand: '6-8',
+        focus: 'Precision and prosody',
+        tags: ['multisyllable', 'suffix'],
+        content: 'During lab briefing, students read instructions with careful pacing so every safety step was clear. They paused at punctuation, emphasized caution words, and corrected difficult terms like protective and ventilation. Teams then restated directions in their own words.'
+    },
+    {
+        title: 'College Seminar Preview',
+        level: '9-12 · Advanced',
+        gradeBand: '9-12',
+        focus: 'Complex syntax and fluency',
+        tags: ['prefix', 'suffix', 'multisyllable'],
+        content: 'Students previewed a seminar article and decoded low-frequency academic vocabulary before annotation. They practiced concise oral summaries with attention to phrasing and tone. Final reflections compared first-read confidence to post-strategy confidence.'
+    },
+    {
+        title: 'Internship Reflection Script',
+        level: '9-12 · Advanced',
+        gradeBand: '9-12',
+        focus: 'Presentation fluency',
+        tags: ['multisyllable', 'schwa', 'suffix'],
+        content: 'A learner drafted a reflection script for an internship panel. They rehearsed transitions, checked stress patterns in multisyllabic words, and adjusted pacing for audience comprehension. The final read-through sounded clear, credible, and professional.'
+    }
+];
+
+function ensureDecodableTextsLibrary() {
+    if (Array.isArray(window.DECODABLE_TEXTS) && window.DECODABLE_TEXTS.length) {
+        return window.DECODABLE_TEXTS;
+    }
+    window.DECODABLE_TEXTS = DEFAULT_DECODABLE_TEXTS.map((entry) => ({ ...entry }));
+    return window.DECODABLE_TEXTS;
+}
+
 // Open decodable texts
 function openDecodableTexts() {
-    if (!window.DECODABLE_TEXTS) {
-        alert('Decodable texts not loaded');
-        return;
-    }
+    const decodableTexts = ensureDecodableTextsLibrary();
+    if (!decodableTexts.length) return;
     
     modalOverlay.classList.remove('hidden');
     const decodableModal = document.getElementById('decodable-modal');
@@ -6324,7 +6889,7 @@ function openDecodableTexts() {
     const pattern = document.getElementById('pattern-select').value;
     
     // Filter texts by current pattern
-    const texts = window.DECODABLE_TEXTS.filter(text => {
+    const texts = decodableTexts.filter(text => {
         return pattern === 'all' || (text.tags && text.tags.some(tag => tag === pattern || pattern.includes(tag)));
     });
     
@@ -6333,18 +6898,30 @@ function openDecodableTexts() {
         return;
     }
     
-    listDiv.innerHTML = texts.map(text => `
+    const countsByBand = texts.reduce((acc, text) => {
+        const band = text.gradeBand || 'Mixed';
+        acc[band] = (acc[band] || 0) + 1;
+        return acc;
+    }, {});
+    const countSummary = Object.entries(countsByBand)
+        .map(([band, count]) => `${band}: ${count}`)
+        .join(' · ');
+
+    listDiv.innerHTML = `
+        <div class="decodable-library-meta"><strong>${texts.length} passages ready</strong> · ${countSummary || 'Mixed grade bands'}</div>
+        ${texts.map(text => `
         <div class="decodable-text-card" onclick="readDecodableText('${text.title}')">
             <div class="decodable-text-title">${text.title}</div>
             <div class="decodable-text-level">${text.level}</div>
             <div class="decodable-text-content">${text.content}</div>
         </div>
-    `).join('');
+    `).join('')}
+    `;
 }
 
 // Read decodable text aloud
-function readDecodableText(title) {
-    const text = window.DECODABLE_TEXTS.find(t => t.title === title);
+async function readDecodableText(title) {
+    const text = ensureDecodableTextsLibrary().find(t => t.title === title);
     if (text) {
         clearPracticeGroup('passage:');
         const recorder = document.getElementById('decodable-recorder');
@@ -6352,7 +6929,10 @@ function readDecodableText(title) {
             recorder.innerHTML = '';
             ensurePracticeRecorder(recorder, `passage:${text.title}`, 'Record Passage');
         }
-        speak(text.content, 'sentence');
+        const playedPacked = await tryPlayPackedPassageClip({ title: text.title, languageCode: 'en' });
+        if (!playedPacked) {
+            speak(text.content, 'sentence');
+        }
     }
 }
 

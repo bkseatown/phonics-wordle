@@ -96,9 +96,18 @@ const taskList = document.getElementById('planit-task-list');
 const resetBtn = document.getElementById('planit-reset');
 const checkBtn = document.getElementById('planit-check');
 const autoBtn = document.getElementById('planit-auto');
+const hintBtn = document.getElementById('planit-hint');
 const feedbackEl = document.getElementById('planit-feedback');
 const timelineEl = document.getElementById('planit-timeline');
 const lessonEl = document.getElementById('planit-lesson');
+const missionRerollBtn = document.getElementById('planit-mission-reroll');
+const missionListEl = document.getElementById('planit-mission-list');
+const missionBannerEl = document.getElementById('planit-mission-banner');
+const missionXpEl = document.getElementById('planit-xp');
+const missionStreakEl = document.getElementById('planit-streak');
+const missionLevelEl = document.getElementById('planit-level');
+const missionProgressTextEl = document.getElementById('planit-level-progress-text');
+const missionProgressFillEl = document.getElementById('planit-level-progress-fill');
 
 const reflectionSection = document.getElementById('planit-reflection');
 const reflectionPromptEl = document.getElementById('planit-reflection-prompt');
@@ -200,11 +209,25 @@ const QUICK_FOCUS_LIBRARY = {
 const STORAGE_KEY = 'planit_progress_v2';
 const VIDEO_KEY = 'planit_video_links_v1';
 const REFLECTION_KEY = 'planit_reflections_v1';
+const CHALLENGE_KEY = 'planit_challenge_v1';
+const LEVEL_XP = 100;
+const BASE_MISSIONS = ['all-tasks', 'no-overlap'];
+const FOCUS_TASK_PATTERN = /(break|reset|unwind|read|snack)/i;
 
 let currentScenario = SCENARIOS[0];
 let selections = {}; // { taskId: "HH:MM" }
 let activeTaskId = null;
 let lastCheck = { missing: new Set(), overlaps: new Set() };
+let lastPlanSource = 'manual';
+let challengeState = {
+  xp: 0,
+  streak: 0,
+  bestStreak: 0,
+  wins: 0,
+  losses: 0,
+  bonusMissionId: 'start-strong',
+  lastScoredSignature: ''
+};
 
 function applyLightTheme() {
   document.body.classList.add('force-light');
@@ -218,6 +241,101 @@ function safeParse(json) {
   } catch {
     return null;
   }
+}
+
+function defaultChallengeState() {
+  return {
+    xp: 0,
+    streak: 0,
+    bestStreak: 0,
+    wins: 0,
+    losses: 0,
+    bonusMissionId: 'start-strong',
+    lastScoredSignature: ''
+  };
+}
+
+function loadChallengeState() {
+  const parsed = safeParse(localStorage.getItem(CHALLENGE_KEY) || '');
+  if (!parsed || typeof parsed !== 'object') {
+    challengeState = defaultChallengeState();
+    return;
+  }
+  challengeState = {
+    ...defaultChallengeState(),
+    ...parsed
+  };
+}
+
+function saveChallengeState() {
+  localStorage.setItem(CHALLENGE_KEY, JSON.stringify(challengeState));
+}
+
+function getFocusTasksForScenario() {
+  return (currentScenario.tasks || []).filter((task) => FOCUS_TASK_PATTERN.test(String(task.label || '')));
+}
+
+function getScenarioBonusMissionPool() {
+  const pool = ['start-strong', 'finish-buffer'];
+  if (getFocusTasksForScenario().length) {
+    pool.push('focus-reset');
+  }
+  return pool;
+}
+
+function pickBonusMission(exclude = '') {
+  const pool = getScenarioBonusMissionPool().filter((id) => id !== exclude);
+  if (!pool.length) return 'start-strong';
+  const index = Math.floor(Math.random() * pool.length);
+  return pool[index];
+}
+
+function ensureBonusMissionForScenario() {
+  const pool = getScenarioBonusMissionPool();
+  if (!pool.includes(challengeState.bonusMissionId)) {
+    challengeState.bonusMissionId = pool[0] || 'start-strong';
+    saveChallengeState();
+  }
+}
+
+function getMissionDefinition(missionId) {
+  switch (missionId) {
+    case 'all-tasks':
+      return {
+        id: missionId,
+        title: 'Fill the board',
+        text: 'Place a start time for every task.'
+      };
+    case 'no-overlap':
+      return {
+        id: missionId,
+        title: 'Zero overlap',
+        text: 'Keep the timeline conflict-free.'
+      };
+    case 'focus-reset':
+      return {
+        id: missionId,
+        title: 'Protect a reset',
+        text: 'Schedule at least one regulation task before the final hour.'
+      };
+    case 'finish-buffer':
+      return {
+        id: missionId,
+        title: 'Finish with buffer',
+        text: 'Leave at least one step as a buffer before the timeline ends.'
+      };
+    default:
+      return {
+        id: 'start-strong',
+        title: 'Start strong',
+        text: 'Start one task inside the first hour window.'
+      };
+  }
+}
+
+function getMissionIds() {
+  ensureBonusMissionForScenario();
+  return BASE_MISSIONS.concat(challengeState.bonusMissionId || 'start-strong');
 }
 
 function normalizeGradeBand(value) {
@@ -395,6 +513,131 @@ function getIntervals() {
   return { intervals, problems };
 }
 
+function evaluatePlanSnapshot() {
+  const missingTasks = currentScenario.tasks.filter((task) => !selections[task.id]);
+  const { intervals, problems: rangeProblems } = getIntervals();
+  const issues = rangeProblems.slice();
+  const overlapIds = new Set();
+  const sorted = intervals.slice().sort((a, b) => a.start - b.start);
+
+  for (let i = 1; i < sorted.length; i += 1) {
+    const prev = sorted[i - 1];
+    const cur = sorted[i];
+    if (cur.start < prev.end) {
+      issues.push(`Overlap: ${prev.label} overlaps with ${cur.label}.`);
+      overlapIds.add(prev.id);
+      overlapIds.add(cur.id);
+    }
+  }
+
+  currentScenario.tasks.forEach((task) => {
+    const chosen = selections[task.id];
+    if (!chosen) return;
+    if (task.mustStart && chosen !== task.mustStart) {
+      issues.push(`${task.label} must start at ${task.mustStart}.`);
+      overlapIds.add(task.id);
+    }
+    if (task.earliest && toMinutes(chosen) < toMinutes(task.earliest)) {
+      issues.push(`${task.label} starts too early (earliest: ${task.earliest}).`);
+    }
+    if (task.latestStart && toMinutes(chosen) > toMinutes(task.latestStart)) {
+      issues.push(`${task.label} starts too late (latest: ${task.latestStart}).`);
+    }
+  });
+
+  const start = toMinutes(currentScenario.startTime);
+  const end = toMinutes(currentScenario.endTime);
+  const firstHourLimit = start + 60;
+  const hasEarlyStart = intervals.some((interval) => interval.start <= firstHourLimit);
+  const focusTaskIds = new Set(getFocusTasksForScenario().map((task) => task.id));
+  const finalHourStart = end - 60;
+  const hasFocusReset = intervals.some((interval) => focusTaskIds.has(interval.id) && interval.start < finalHourStart);
+  const latestEnd = intervals.reduce((max, interval) => Math.max(max, interval.end), start);
+  const hasBuffer = (end - latestEnd) >= currentScenario.stepMinutes;
+
+  return {
+    missingTasks,
+    intervals,
+    sorted,
+    issues,
+    overlapIds,
+    allTasksPlaced: missingTasks.length === 0,
+    noOverlaps: overlapIds.size === 0,
+    clean: missingTasks.length === 0 && issues.length === 0,
+    hasEarlyStart,
+    hasFocusReset,
+    hasBuffer
+  };
+}
+
+function getMissionStatuses(snapshot) {
+  const map = {
+    'all-tasks': snapshot.allTasksPlaced,
+    'no-overlap': snapshot.allTasksPlaced && snapshot.noOverlaps && snapshot.issues.length === 0,
+    'start-strong': snapshot.hasEarlyStart,
+    'focus-reset': snapshot.hasFocusReset,
+    'finish-buffer': snapshot.hasBuffer
+  };
+
+  return getMissionIds().map((missionId) => {
+    const def = getMissionDefinition(missionId);
+    return {
+      ...def,
+      done: !!map[missionId]
+    };
+  });
+}
+
+function buildPlanSignature() {
+  const rows = Object.keys(selections)
+    .sort()
+    .map((taskId) => `${taskId}:${selections[taskId]}`);
+  return `${currentScenario.id}|${rows.join('|')}`;
+}
+
+function renderMissionBoard(snapshot = evaluatePlanSnapshot()) {
+  if (!missionListEl) return;
+  const missionStatuses = getMissionStatuses(snapshot);
+  const level = Math.floor((Number(challengeState.xp) || 0) / LEVEL_XP) + 1;
+  const progress = (Number(challengeState.xp) || 0) % LEVEL_XP;
+  const progressPct = Math.max(0, Math.min(100, (progress / LEVEL_XP) * 100));
+  const doneCount = missionStatuses.filter((mission) => mission.done).length;
+
+  missionXpEl.textContent = String(Math.max(0, Number(challengeState.xp) || 0));
+  missionStreakEl.textContent = String(Math.max(0, Number(challengeState.streak) || 0));
+  missionLevelEl.textContent = String(level);
+  missionProgressTextEl.textContent = `${progress} / ${LEVEL_XP} XP to next level`;
+  missionProgressFillEl.style.width = `${progressPct}%`;
+
+  missionListEl.innerHTML = missionStatuses.map((mission) => `
+    <article class="planit-mission-item ${mission.done ? 'is-done' : ''}">
+      <div class="planit-mission-item-main">
+        <div class="planit-mission-item-title">${mission.title}</div>
+        <div class="planit-mission-item-text">${mission.text}</div>
+      </div>
+      <div class="planit-mission-item-status">${mission.done ? '✓' : '•'}</div>
+    </article>
+  `).join('');
+
+  if (missionBannerEl && !missionBannerEl.textContent.trim()) {
+    missionBannerEl.textContent = `Missions complete: ${doneCount} / ${missionStatuses.length}.`;
+    missionBannerEl.classList.toggle('muted', true);
+  }
+}
+
+function setMissionBanner(message, tone = 'neutral') {
+  if (!missionBannerEl) return;
+  missionBannerEl.textContent = message || '';
+  missionBannerEl.classList.remove('muted', 'is-success', 'is-warning');
+  if (!message) {
+    missionBannerEl.classList.add('muted');
+    return;
+  }
+  if (tone === 'success') missionBannerEl.classList.add('is-success');
+  else if (tone === 'warning') missionBannerEl.classList.add('is-warning');
+  else missionBannerEl.classList.add('muted');
+}
+
 function overlapsAny(interval, others) {
   return others.some(o => (interval.start < o.end && interval.end > o.start));
 }
@@ -469,11 +712,14 @@ function renderTasks() {
         } else {
           delete selections[task.id];
         }
+        lastPlanSource = 'manual';
         activeTaskId = null;
         clearCheckFlags();
         saveState();
         renderTasks();
         renderTimeline();
+        renderMissionBoard();
+        setMissionBanner('');
         hideReflection();
       });
     }
@@ -532,11 +778,14 @@ function renderTimeline() {
       if (!activeTask) return;
       if (!isSlotAvailable(activeTask, label)) return;
       selections[activeTask.id] = label;
+      lastPlanSource = 'manual';
       activeTaskId = null;
       clearCheckFlags();
       saveState();
       renderTasks();
       renderTimeline();
+      renderMissionBoard();
+      setMissionBanner('');
       hideReflection();
     });
 
@@ -565,70 +814,87 @@ function renderTimeline() {
       const task = currentScenario.tasks.find(t => t.id === it.id);
       if (task?.mustStart) return;
       delete selections[it.id];
+      lastPlanSource = 'manual';
       clearCheckFlags();
       saveState();
       renderTasks();
       renderTimeline();
+      renderMissionBoard();
+      setMissionBanner('');
       hideReflection();
     });
     timelineEl.appendChild(block);
   });
 }
 
+function awardChallengeWin(snapshot) {
+  const signature = buildPlanSignature();
+  if (signature === challengeState.lastScoredSignature) {
+    const missionStatuses = getMissionStatuses(snapshot);
+    setMissionBanner(`Plan already scored. ${missionStatuses.filter((mission) => mission.done).length}/${missionStatuses.length} missions complete. Tweak the plan for more XP.`, 'warning');
+    renderMissionBoard(snapshot);
+    return;
+  }
+
+  const missionStatuses = getMissionStatuses(snapshot);
+  const completed = missionStatuses.filter((mission) => mission.done).length;
+  const allComplete = completed === missionStatuses.length;
+  let xpGain = 22 + (completed * 5);
+  if (allComplete) xpGain += 8;
+  if (lastPlanSource === 'manual') xpGain += 5;
+
+  challengeState.xp = (Number(challengeState.xp) || 0) + xpGain;
+  challengeState.streak = (Number(challengeState.streak) || 0) + 1;
+  challengeState.bestStreak = Math.max(Number(challengeState.bestStreak) || 0, challengeState.streak);
+  challengeState.wins = (Number(challengeState.wins) || 0) + 1;
+  challengeState.lastScoredSignature = signature;
+  saveChallengeState();
+
+  const streakNote = challengeState.streak > 1 ? ` · streak x${challengeState.streak}` : '';
+  const fullNote = allComplete ? ' All missions complete.' : '';
+  setMissionBanner(`+${xpGain} XP${streakNote}. ${completed}/${missionStatuses.length} missions complete.${fullNote}`, 'success');
+  renderMissionBoard(snapshot);
+}
+
+function awardChallengeMiss(snapshot) {
+  if ((Number(challengeState.streak) || 0) > 0) {
+    challengeState.streak = 0;
+  }
+  challengeState.losses = (Number(challengeState.losses) || 0) + 1;
+  saveChallengeState();
+  setMissionBanner('Plan has conflicts. Use Hint move to fix one step quickly.', 'warning');
+  renderMissionBoard(snapshot);
+}
+
 function checkPlan() {
   feedbackEl.textContent = '';
   clearCheckFlags();
 
-  const missingTasks = currentScenario.tasks.filter(t => !selections[t.id]);
-  if (missingTasks.length) {
-    lastCheck.missing = new Set(missingTasks.map(t => t.id));
-    feedbackEl.textContent = `Pick start times for: ${missingTasks.map(t => t.label).join(', ')}.`;
+  const snapshot = evaluatePlanSnapshot();
+  if (snapshot.missingTasks.length) {
+    lastCheck.missing = new Set(snapshot.missingTasks.map((task) => task.id));
+    feedbackEl.textContent = `Pick start times for: ${snapshot.missingTasks.map((task) => task.label).join(', ')}.`;
     renderTasks();
     renderTimeline();
+    setMissionBanner('Finish placing all tasks, then run Check Plan for XP.', 'warning');
+    renderMissionBoard(snapshot);
     hideReflection();
     return;
   }
 
-  const { intervals, problems } = getIntervals();
-  const sorted = intervals.slice().sort((a, b) => a.start - b.start);
-  const overlapIds = new Set();
+  lastCheck.overlaps = snapshot.overlapIds;
 
-  for (let i = 1; i < sorted.length; i += 1) {
-    const prev = sorted[i - 1];
-    const cur = sorted[i];
-    if (cur.start < prev.end) {
-      problems.push(`Overlap: ${prev.label} overlaps with ${cur.label}.`);
-      overlapIds.add(prev.id);
-      overlapIds.add(cur.id);
-    }
-  }
-
-  currentScenario.tasks.forEach(task => {
-    const chosen = selections[task.id];
-    if (!chosen) return;
-    if (task.mustStart && chosen !== task.mustStart) {
-      problems.push(`${task.label} must start at ${task.mustStart}.`);
-      overlapIds.add(task.id);
-    }
-    if (task.earliest && toMinutes(chosen) < toMinutes(task.earliest)) {
-      problems.push(`${task.label} starts too early (earliest: ${task.earliest}).`);
-    }
-    if (task.latestStart && toMinutes(chosen) > toMinutes(task.latestStart)) {
-      problems.push(`${task.label} starts too late (latest: ${task.latestStart}).`);
-    }
-  });
-
-  lastCheck.overlaps = overlapIds;
-
-  if (problems.length) {
-    feedbackEl.innerHTML = `<ul class="planit-feedback-list">${problems.map(p => `<li>⚠️ ${p}</li>`).join('')}</ul>`;
+  if (snapshot.issues.length) {
+    feedbackEl.innerHTML = `<ul class="planit-feedback-list">${snapshot.issues.map((problem) => `<li>⚠️ ${problem}</li>`).join('')}</ul>`;
     renderTasks();
     renderTimeline();
+    awardChallengeMiss(snapshot);
     hideReflection();
   } else {
     feedbackEl.textContent = '✅ Nice plan! Everything fits with no overlaps.';
     renderTasks();
     renderTimeline();
+    awardChallengeWin(snapshot);
     showReflection();
   }
 
@@ -636,11 +902,11 @@ function checkPlan() {
     window.DECODE_PLATFORM?.logActivity?.({
       activity: 'plan-it',
       label: 'Plan-It',
-      event: problems.length ? `Checked (${problems.length} issue${problems.length === 1 ? '' : 's'})` : 'Checked (no overlaps)',
+      event: snapshot.issues.length ? `Checked (${snapshot.issues.length} issue${snapshot.issues.length === 1 ? '' : 's'})` : 'Checked (no overlaps)',
       detail: {
         scenarioId: currentScenario.id,
         scenarioTitle: currentScenario.title,
-        issues: problems.length
+        issues: snapshot.issues.length
       }
     });
   } catch (e) {}
@@ -649,6 +915,7 @@ function checkPlan() {
 function autoPlan() {
   clearCheckFlags();
   hideReflection();
+  lastPlanSource = 'auto';
 
   const fixed = {};
   currentScenario.tasks.forEach(t => {
@@ -676,6 +943,8 @@ function autoPlan() {
   saveState();
   renderTasks();
   renderTimeline();
+  renderMissionBoard();
+  setMissionBanner('Auto-plan filled a draft. Use Hint move or drag-by-click to personalize it.', 'neutral');
   feedbackEl.textContent = 'Auto-plan filled what it could. Tap “Check Plan” to review.';
 }
 
@@ -683,10 +952,13 @@ function resetAll() {
   selections = {};
   initializeFixedTasks();
   activeTaskId = null;
+  lastPlanSource = 'manual';
   clearCheckFlags();
   saveState();
   renderTasks();
   renderTimeline();
+  renderMissionBoard();
+  setMissionBanner('Plan reset. Complete missions to rebuild your streak.', 'neutral');
   feedbackEl.textContent = '';
   hideReflection();
 }
@@ -877,13 +1149,77 @@ function hideReflection() {
   if (reflectionSavedEl) reflectionSavedEl.textContent = '';
 }
 
+function findBestSlotForTask(task) {
+  const options = getTaskOptions(task, currentScenario);
+  if (!options.length) return '';
+  const earliest = options.find((label) => isSlotAvailable(task, label));
+  if (earliest) return earliest;
+  return '';
+}
+
+function hintMove() {
+  clearCheckFlags();
+  const missingFlexTasks = currentScenario.tasks
+    .filter((task) => !task.mustStart && !selections[task.id])
+    .map((task) => ({ task, slot: findBestSlotForTask(task), window: getTaskOptions(task, currentScenario).length }))
+    .sort((a, b) => (a.window - b.window) || (b.task.durationMinutes - a.task.durationMinutes));
+
+  const nextMissing = missingFlexTasks.find((row) => row.slot);
+  if (nextMissing) {
+    activeTaskId = nextMissing.task.id;
+    renderTasks();
+    renderTimeline();
+    renderMissionBoard();
+    feedbackEl.textContent = `Hint: place ${nextMissing.task.label} at ${nextMissing.slot}.`;
+    setMissionBanner(`Try the highlighted slots for ${nextMissing.task.label}.`, 'neutral');
+    return;
+  }
+
+  const snapshot = evaluatePlanSnapshot();
+  const overlapId = Array.from(snapshot.overlapIds)[0];
+  if (overlapId) {
+    const task = currentScenario.tasks.find((row) => row.id === overlapId && !row.mustStart);
+    if (task) {
+      activeTaskId = task.id;
+      renderTasks();
+      renderTimeline();
+      renderMissionBoard(snapshot);
+      feedbackEl.textContent = `Hint: move ${task.label} to an available green slot.`;
+      setMissionBanner(`Resolve overlap by moving ${task.label}.`, 'warning');
+      return;
+    }
+  }
+
+  if (snapshot.clean) {
+    feedbackEl.textContent = 'Your timeline is already clean. Check plan to bank XP.';
+    setMissionBanner('Timeline looks ready. Run Check Plan to lock in points.', 'success');
+    renderMissionBoard(snapshot);
+    return;
+  }
+
+  feedbackEl.textContent = 'No automatic hint found. Try Auto-plan, then personalize one task at a time.';
+  setMissionBanner('Use Auto-plan as a draft, then adjust for student reality.', 'warning');
+  renderMissionBoard(snapshot);
+}
+
+function rerollMission() {
+  const nextId = pickBonusMission(challengeState.bonusMissionId);
+  challengeState.bonusMissionId = nextId;
+  saveChallengeState();
+  const snapshot = evaluatePlanSnapshot();
+  renderMissionBoard(snapshot);
+  setMissionBanner(`New challenge: ${getMissionDefinition(nextId).title}.`, 'neutral');
+}
+
 function init() {
   applyLightTheme();
+  loadChallengeState();
   loadState();
   if (!currentScenario || !SCENARIOS.find(s => s.id === currentScenario.id)) {
     currentScenario = pickDefaultScenario();
     selections = {};
   }
+  ensureBonusMissionForScenario();
   initializeFixedTasks();
 
   buildScenarioList();
@@ -894,6 +1230,7 @@ function init() {
   renderLesson();
   renderTasks();
   renderTimeline();
+  renderMissionBoard();
   syncTeacherVideoControls();
   hideReflection();
 
@@ -902,13 +1239,17 @@ function init() {
     if (pick) currentScenario = pick;
     selections = {};
     activeTaskId = null;
+    lastPlanSource = 'manual';
     clearCheckFlags();
     initializeFixedTasks();
+    ensureBonusMissionForScenario();
     saveState();
     renderScenario();
     renderLesson();
     renderTasks();
     renderTimeline();
+    renderMissionBoard();
+    setMissionBanner('');
     feedbackEl.textContent = '';
     syncTeacherVideoControls();
     hideReflection();
@@ -917,6 +1258,8 @@ function init() {
   resetBtn.addEventListener('click', resetAll);
   checkBtn.addEventListener('click', checkPlan);
   autoBtn?.addEventListener('click', autoPlan);
+  hintBtn?.addEventListener('click', hintMove);
+  missionRerollBtn?.addEventListener('click', rerollMission);
   quickGenerateBtn?.addEventListener('click', renderQuickLessonBuilder);
   quickGradeEl?.addEventListener('change', renderQuickLessonBuilder);
   quickFocusEl?.addEventListener('change', renderQuickLessonBuilder);

@@ -66,10 +66,41 @@
             <option value="8">8</option>
           </select>
         </div>
+
+        <div class="control-group control-group-subtle">
+          <label for="guess-count-select">Guesses</label>
+          <select id="guess-count-select" aria-label="Number of guesses">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+            <option value="6" selected>6</option>
+          </select>
+        </div>
       </div>
     </header>
 
     <main>
+      <section class="quick-custom-word-panel" aria-label="Custom challenge word">
+        <label for="quick-custom-word-input"><strong>Custom challenge word</strong></label>
+        <div class="quick-custom-word-row">
+          <input
+            id="quick-custom-word-input"
+            type="text"
+            placeholder="Type a class-safe word (3-12 letters)"
+            autocapitalize="none"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button id="quick-custom-word-start" type="button" class="hint-btn">Start Custom Word</button>
+          <button id="quick-custom-word-clear" type="button" class="hint-btn secondary">Back to Library</button>
+        </div>
+        <div id="quick-custom-word-status" class="quick-custom-word-status muted" aria-live="polite">
+          Library mode active. Pick a focus or enter a custom challenge word.
+        </div>
+      </section>
+
       <div id="focus-panel" class="focus-panel hidden" aria-label="Focus hint">
         <button id="focus-toggle-btn" class="focus-toggle-btn" type="button">💡 Hints</button>
         <div class="focus-copy">

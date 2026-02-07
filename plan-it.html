@@ -45,6 +45,40 @@
           <div id="planit-scenario-tip" class="planit-card-tip"></div>
         </div>
 
+        <section class="planit-mission-board" aria-label="Challenge board">
+          <div class="planit-mission-head">
+            <div>
+              <div class="planit-mission-title">Plan-It Challenge Board</div>
+              <div class="planit-mission-subtitle">Small wins build executive function stamina.</div>
+            </div>
+            <button id="planit-mission-reroll" type="button" class="secondary-btn">New challenge</button>
+          </div>
+          <div class="planit-mission-stats">
+            <div class="planit-mission-stat">
+              <div class="planit-mission-stat-label">XP</div>
+              <div id="planit-xp" class="planit-mission-stat-value">0</div>
+            </div>
+            <div class="planit-mission-stat">
+              <div class="planit-mission-stat-label">Streak</div>
+              <div id="planit-streak" class="planit-mission-stat-value">0</div>
+            </div>
+            <div class="planit-mission-stat">
+              <div class="planit-mission-stat-label">Level</div>
+              <div id="planit-level" class="planit-mission-stat-value">1</div>
+            </div>
+            <div class="planit-mission-progress">
+              <div class="planit-mission-progress-label">
+                <span id="planit-level-progress-text">0 / 100 XP to next level</span>
+              </div>
+              <div class="planit-mission-progress-track">
+                <div id="planit-level-progress-fill" class="planit-mission-progress-fill"></div>
+              </div>
+            </div>
+          </div>
+          <div id="planit-mission-list" class="planit-mission-list"></div>
+          <div id="planit-mission-banner" class="planit-mission-banner muted" aria-live="polite"></div>
+        </section>
+
         <div class="planit-quick-builder" aria-label="One-click lesson builder">
           <div class="planit-quick-title">One-Click 10/20/30 Lesson Builder</div>
           <div class="planit-quick-subtitle">Choose target skill + grade band, then generate a fast I do · We do · You do sequence.</div>
@@ -83,6 +117,7 @@
         <div class="planit-actions" aria-label="Actions">
           <div class="planit-actions-row">
             <button id="planit-auto" type="button" class="secondary-btn">Auto-plan</button>
+            <button id="planit-hint" type="button" class="secondary-btn">Hint move</button>
             <button id="planit-check" type="button" class="primary-btn">Check Plan</button>
             <button id="planit-reset" type="button" class="secondary-btn">Reset</button>
           </div>

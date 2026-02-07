@@ -6,6 +6,7 @@
     <title>CORNERSTONE MTSS — Learning Hub</title>
     <link rel="stylesheet" href="style.css" />
     <script src="platform.js" defer></script>
+    <script src="class-blocks.js" defer></script>
     <script src="home.js" defer></script>
   </head>
 
@@ -50,6 +51,14 @@
           <p class="home-lede">
             A multi-domain intervention hub for literacy, numeracy, SEL/executive function, and specialist collaboration.
           </p>
+          <div class="home-visual-mode" aria-label="Visual style controls">
+            <div class="home-mini-title">Visual style</div>
+            <div class="home-visual-mode-row" role="group" aria-label="Home visual style">
+              <button id="home-visual-fun" class="home-visual-chip active" type="button" aria-pressed="true">Fun</button>
+              <button id="home-visual-calm" class="home-visual-chip" type="button" aria-pressed="false">Calm</button>
+            </div>
+            <p class="home-visual-note muted">Calm mode lowers decorative visuals while keeping all features the same.</p>
+          </div>
 
           <div class="home-cta-row" aria-label="Quick start">
             <a class="home-cta primary" href="word-quest.html">Start Word Quest</a>
@@ -57,6 +66,7 @@
             <a class="home-cta ghost" href="comprehension.html">Read &amp; Think</a>
             <a class="home-cta ghost" href="number-sense.html">Number Sense</a>
             <a class="home-cta ghost" href="operations.html">Operations</a>
+            <a class="home-cta ghost" href="teacher-report.html?demo=autopilot" data-student-hidden="true">Run Demo Pack</a>
             <a class="home-cta ghost" href="teacher-report.html" data-student-hidden="true">Teacher Report</a>
           </div>
 
@@ -255,6 +265,12 @@
         <div id="home-role-summary" class="home-role-summary"></div>
         <div id="home-role-cards" class="home-role-grid"></div>
         <div id="home-role-actions" class="home-cta-row"></div>
+        <div class="home-class-block-panel" data-student-hidden="true">
+          <div class="home-mini-title">Class Block Launcher (20 / 30 / 50)</div>
+          <p class="home-subtitle">Uses the selected role + learner grade band. Launches auto-log into the intervention timeline.</p>
+          <div id="home-class-block-grid" class="home-class-block-grid"></div>
+          <div id="home-class-block-status" class="muted home-report-status" aria-live="polite"></div>
+        </div>
       </section>
 
       <section class="home-card" aria-label="Skill path">

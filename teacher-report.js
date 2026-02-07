@@ -1077,6 +1077,13 @@
   const shareCopyBtn = document.getElementById('report-share-copy');
   const shareStatusEl = document.getElementById('report-share-status');
   const outcomesEl = document.getElementById('report-outcomes');
+  const demoReadinessEl = document.getElementById('report-demo-readiness');
+  const showcaseFlowEl = document.getElementById('report-showcase-flow');
+  const demoAutopilotBtn = document.getElementById('report-demo-autopilot');
+  const demoCopyBtn = document.getElementById('report-demo-copy');
+  const showcaseCopyBtn = document.getElementById('report-showcase-copy');
+  const leadershipExportBtn = document.getElementById('report-leadership-export');
+  const demoStatusEl = document.getElementById('report-demo-status');
   const crosswalkEl = document.getElementById('report-framework-crosswalk');
   const benchmarksEl = document.getElementById('report-benchmarks');
   const goalDomainEl = document.getElementById('report-goal-domain');
@@ -1159,6 +1166,20 @@
   const iespTrackEl = document.getElementById('report-iesp-track');
   const iespCycleEl = document.getElementById('report-iesp-cycle');
   const iespOwnerEl = document.getElementById('report-iesp-owner');
+  const timelineFilterTrackEl = document.getElementById('report-timeline-filter-track');
+  const timelineFilterWindowEl = document.getElementById('report-timeline-filter-window');
+  const timelineFilterSearchEl = document.getElementById('report-timeline-filter-search');
+  const timelineDemoFillBtn = document.getElementById('report-timeline-demo-fill');
+  const timelineExportBtn = document.getElementById('report-timeline-export');
+  const timelineManualWhenEl = document.getElementById('report-timeline-manual-when');
+  const timelineManualTrackEl = document.getElementById('report-timeline-manual-track');
+  const timelineManualOwnerEl = document.getElementById('report-timeline-manual-owner');
+  const timelineManualLabelEl = document.getElementById('report-timeline-manual-label');
+  const timelineManualEventEl = document.getElementById('report-timeline-manual-event');
+  const timelineManualNoteEl = document.getElementById('report-timeline-manual-note');
+  const timelineManualAddBtn = document.getElementById('report-timeline-manual-add');
+  const timelineManualClearBtn = document.getElementById('report-timeline-manual-clear');
+  const timelineStatusEl = document.getElementById('report-timeline-status');
   const iespGenerateBtn = document.getElementById('report-iesp-generate');
   const iespCopyBtn = document.getElementById('report-iesp-copy');
   const iespExportTeamBtn = document.getElementById('report-iesp-export-team');
@@ -1173,9 +1194,16 @@
   const sprintExportBtn = document.getElementById('report-sprint-export');
   const sprintBoardEl = document.getElementById('report-sprint-board');
   const sprintStatusEl = document.getElementById('report-sprint-status');
+  const classBlockRoleEl = document.getElementById('report-class-block-role');
+  const classBlockGradeEl = document.getElementById('report-class-block-grade');
+  const classBlockGridEl = document.getElementById('report-class-block-grid');
+  const classBlockStatusEl = document.getElementById('report-class-block-status');
 
   let latestBuilderText = '';
   let latestShareText = '';
+  let latestDemoReadinessText = '';
+  let latestShowcaseScriptText = '';
+  let latestLeadershipPackText = '';
   let latestGoalText = '';
   let latestProtocolText = '';
   let latestNumeracyText = '';
@@ -1184,6 +1212,7 @@
   let latestIespText = '';
   let latestIespParentText = '';
   let latestTimelineText = '';
+  let latestTimelineRows = [];
   let latestSprintBoardText = '';
   let latestGoalContext = null;
   let latestProtocolContext = null;
@@ -1192,6 +1221,8 @@
   let latestParentContext = null;
   let latestIespContext = null;
   let latestSprintContext = null;
+  let latestClassBlockContext = null;
+  let latestLeadershipContext = null;
   let pendingNumeracyImport = null;
   let reportMediaDbPromise = null;
   let reportMediaRecorderState = null;
@@ -1199,6 +1230,8 @@
   let reportMediaClips = [];
   let reportMediaObjectUrls = [];
   const HOME_ROLE_KEY = 'cornerstone_home_role_v1';
+  const TIMELINE_MANUAL_KEY = 'cornerstone_timeline_manual_v1';
+  const SPRINT_COMPLETION_KEY = 'cornerstone_sprint_completion_v1';
 
   function normalizeHomeRolePathway(rawRole) {
     const raw = String(rawRole || '').trim().toLowerCase();
@@ -5968,6 +6001,158 @@
     }
   }
 
+  function setClassBlockStatus(message, isError = false) {
+    if (!classBlockStatusEl) return;
+    classBlockStatusEl.textContent = message || '';
+    classBlockStatusEl.classList.toggle('error', !!isError);
+    classBlockStatusEl.classList.toggle('success', !isError && !!message);
+  }
+
+  function getClassBlockLibrary() {
+    return window.CORNERSTONE_CLASS_BLOCKS || null;
+  }
+
+  function getClassBlockLaunchLogs() {
+    const classBlocks = getClassBlockLibrary();
+    if (!classBlocks?.readLaunchLogs) return [];
+    const rows = classBlocks.readLaunchLogs();
+    return Array.isArray(rows) ? rows : [];
+  }
+
+  function normalizeClassBlockRole(value) {
+    const classBlocks = getClassBlockLibrary();
+    if (!classBlocks?.normalizeRole) return 'teacher';
+    return classBlocks.normalizeRole(value || 'teacher');
+  }
+
+  function resolveClassBlockGradeBand(context = {}) {
+    if (classBlockGradeEl?.value) {
+      return normalizeGradeBand(classBlockGradeEl.value);
+    }
+    return normalizeGradeBand(context.learner?.gradeBand || builderGradeEl?.value || '3-5');
+  }
+
+  function getClassBlockStepHref(step, context = {}) {
+    if (!step?.activity) return '#';
+    if (step.activity === 'teacher-report') {
+      return '#report-intervention-timeline';
+    }
+    const numeracyActivities = new Set(['number-sense', 'operations', 'problem-solving', 'math-language']);
+    return getActivityHref(step.activity, {
+      numeracyMode: numeracyActivities.has(step.activity),
+      wordQuestFocus: context.wordQuestFocus || 'all',
+      wordQuestLength: context.wordQuestLength || 'any',
+      builderGradeBand: context.gradeBand || '3-5',
+      builderFocus: context.builderFocus || 'comprehension-evidence',
+      builderMinutes: context.builderMinutes || 20
+    });
+  }
+
+  function renderClassBlockLauncher(context = {}) {
+    if (!classBlockGridEl) return;
+    const classBlocks = getClassBlockLibrary();
+    if (!classBlocks?.buildPlansForRole) {
+      classBlockGridEl.innerHTML = '<div class="report-bench-note">Class block presets are unavailable. Reload to restore launcher data.</div>';
+      setClassBlockStatus('Class block presets unavailable.', true);
+      return;
+    }
+
+    if (classBlockRoleEl && !classBlockRoleEl.dataset.manualRole && roleSelectEl?.value) {
+      classBlockRoleEl.value = normalizeClassBlockRole(roleSelectEl.value);
+    }
+    const roleId = normalizeClassBlockRole(classBlockRoleEl?.value || roleSelectEl?.value || 'teacher');
+    if (classBlockRoleEl && classBlockRoleEl.value !== roleId) {
+      classBlockRoleEl.value = roleId;
+    }
+    const learnerGradeBand = normalizeGradeBand(context.learner?.gradeBand || builderGradeEl?.value || '3-5');
+    if (classBlockGradeEl && !classBlockGradeEl.dataset.manualGrade) {
+      classBlockGradeEl.value = learnerGradeBand;
+    }
+    const gradeBand = resolveClassBlockGradeBand(context);
+    if (classBlockGradeEl && classBlockGradeEl.value !== gradeBand) {
+      classBlockGradeEl.value = gradeBand;
+    }
+
+    const plans = classBlocks.buildPlansForRole({ roleId, gradeBand });
+    const placementRec = context.placementRec || {};
+    const cardsHtml = plans.map((plan) => {
+      const launchStep = plan.launchStep || plan.steps[0] || null;
+      const launchHref = launchStep
+        ? getClassBlockStepHref(launchStep, {
+          ...context,
+          gradeBand,
+          wordQuestFocus: placementRec.focus || 'all',
+          wordQuestLength: placementRec.length || 'any'
+        })
+        : '#';
+      const stepList = plan.steps.map((step) => {
+        const href = getClassBlockStepHref(step, {
+          ...context,
+          gradeBand,
+          wordQuestFocus: placementRec.focus || 'all',
+          wordQuestLength: placementRec.length || 'any'
+        });
+        return `<li><a class="report-pulse-link" href="${escapeHtml(href)}">${escapeHtml(step.activityLabel)}</a> · ${escapeHtml(String(step.minutes))} min</li>`;
+      }).join('');
+      return `
+        <article class="report-class-block-card">
+          <div class="report-class-block-head">
+            <div class="report-class-block-title">${escapeHtml(plan.title)}</div>
+            <div class="report-class-block-meta">${escapeHtml(gradeBand)}</div>
+          </div>
+          <div class="report-class-block-summary">${escapeHtml(plan.summary)}</div>
+          <ul class="report-class-block-steps">${stepList}</ul>
+          <div class="report-class-block-actions">
+            <a
+              class="primary-btn report-class-block-launch"
+              href="${escapeHtml(launchHref)}"
+              data-source="teacher-report"
+              data-role-id="${escapeHtml(roleId)}"
+              data-track="${escapeHtml(plan.track)}"
+              data-grade-band="${escapeHtml(gradeBand)}"
+              data-block-id="${escapeHtml(plan.id)}"
+              data-block-title="${escapeHtml(plan.title)}"
+              data-minutes="${escapeHtml(String(plan.minutes))}"
+              data-launch-activity="${escapeHtml(launchStep?.activity || '')}"
+              data-step-count="${escapeHtml(String(plan.steps.length || 0))}"
+              data-note="${escapeHtml(plan.summary)}"
+            >
+              Launch ${escapeHtml(String(plan.minutes))}-minute block
+            </a>
+          </div>
+        </article>
+      `;
+    }).join('');
+
+    classBlockGridEl.innerHTML = cardsHtml;
+    setClassBlockStatus(`Launcher ready for ${classBlocks.roleLabel(roleId)} (${gradeBand}).`);
+  }
+
+  function logClassBlockLaunchFromElement(element) {
+    const classBlocks = getClassBlockLibrary();
+    if (!classBlocks?.appendLaunchLog) return;
+    const minutes = Number(element.getAttribute('data-minutes') || 20);
+    const roleId = normalizeClassBlockRole(element.getAttribute('data-role-id') || 'teacher');
+    const roleLabel = classBlocks.roleLabel(roleId);
+    classBlocks.appendLaunchLog({
+      source: String(element.getAttribute('data-source') || 'teacher-report'),
+      roleId,
+      track: String(element.getAttribute('data-track') || 'integrated'),
+      gradeBand: String(element.getAttribute('data-grade-band') || '3-5'),
+      minutes,
+      blockId: String(element.getAttribute('data-block-id') || ''),
+      blockTitle: String(element.getAttribute('data-block-title') || ''),
+      launchActivity: String(element.getAttribute('data-launch-activity') || ''),
+      stepCount: Number(element.getAttribute('data-step-count') || 0),
+      note: String(element.getAttribute('data-note') || '')
+    });
+    setClassBlockStatus(`Logged launch: ${minutes}-minute block (${roleLabel}).`);
+    if (latestIespContext) {
+      latestIespContext.classBlockLogs = getClassBlockLaunchLogs();
+      renderInterventionTimeline(latestIespContext);
+    }
+  }
+
   function resolveIespTrack() {
     const selected = String(iespTrackEl?.value || 'integrated');
     if (selected === 'literacy' || selected === 'numeracy' || selected === 'integrated') return selected;
@@ -5986,7 +6171,84 @@
     return ROLE_PATHWAY_LIBRARY[normalized] ? normalized : 'teacher';
   }
 
+  function normalizeTimelineTrack(track) {
+    const raw = String(track || '').trim().toLowerCase();
+    if (raw === 'numeracy') return 'numeracy';
+    if (raw === 'manual') return 'manual';
+    return 'literacy';
+  }
+
+  function resolveTimelineFilterTrack() {
+    const selected = String(timelineFilterTrackEl?.value || 'all').toLowerCase();
+    if (selected === 'literacy' || selected === 'numeracy' || selected === 'manual') return selected;
+    return 'all';
+  }
+
+  function resolveTimelineFilterWindowDays() {
+    const selected = String(timelineFilterWindowEl?.value || '30').toLowerCase();
+    if (selected === 'all') return null;
+    const value = Number(selected);
+    if (value === 7 || value === 14 || value === 30 || value === 90) return value;
+    return 30;
+  }
+
+  function formatTimelineInputDate(dateValue) {
+    const date = new Date(dateValue);
+    if (Number.isNaN(date.getTime())) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hour = String(date.getHours()).padStart(2, '0');
+    const minute = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hour}:${minute}`;
+  }
+
+  function setDefaultTimelineManualWhen() {
+    if (!timelineManualWhenEl || timelineManualWhenEl.value) return;
+    timelineManualWhenEl.value = formatTimelineInputDate(Date.now());
+  }
+
+  function parseTimelineInputDate(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return Date.now();
+    const parsed = new Date(raw);
+    const ts = parsed.getTime();
+    if (Number.isNaN(ts)) return Date.now();
+    return ts;
+  }
+
+  function loadManualTimelineEntries() {
+    const parsed = safeParse(localStorage.getItem(TIMELINE_MANUAL_KEY) || '');
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((entry) => ({
+        id: String(entry?.id || ''),
+        ts: Number(entry?.ts || 0),
+        track: normalizeTimelineTrack(entry?.track || 'manual'),
+        label: String(entry?.label || '').trim(),
+        event: String(entry?.event || '').trim(),
+        note: String(entry?.note || '').trim(),
+        owner: String(entry?.owner || '').trim()
+      }))
+      .filter((entry) => entry.id && entry.ts > 0 && entry.label && entry.event && entry.note)
+      .sort((a, b) => b.ts - a.ts)
+      .slice(0, 120);
+  }
+
+  function saveManualTimelineEntries(entries) {
+    const list = Array.isArray(entries) ? entries : [];
+    localStorage.setItem(TIMELINE_MANUAL_KEY, JSON.stringify(list.slice(0, 120)));
+  }
+
+  function setTimelineStatus(message, isError = false) {
+    if (!timelineStatusEl) return;
+    timelineStatusEl.textContent = message || '';
+    timelineStatusEl.classList.toggle('error', !!isError);
+    timelineStatusEl.classList.toggle('success', !isError && !!message);
+  }
+
   function timelineTrackLabel(track) {
+    if (track === 'manual') return 'Team Log';
     if (track === 'numeracy') return 'Numeracy';
     return 'Literacy';
   }
@@ -5994,6 +6256,8 @@
   function buildInterventionTimelineEntries(context = {}) {
     const literacyLogs = Array.isArray(context.logs) ? context.logs : [];
     const numeracyLogs = Array.isArray(context.numeracyLogs) ? context.numeracyLogs : [];
+    const classBlockLogs = Array.isArray(context.classBlockLogs) ? context.classBlockLogs : getClassBlockLaunchLogs();
+    const manualTimelineLogs = Array.isArray(context.manualTimelineLogs) ? context.manualTimelineLogs : loadManualTimelineEntries();
 
     const mappedLiteracy = literacyLogs.map((entry) => {
       const score = scoreEntry(entry);
@@ -6002,6 +6266,7 @@
       return {
         ts: Number(entry?.ts || 0),
         track: 'literacy',
+        source: 'activity',
         label: entry?.label || ACTIVITY_LABELS[entry?.activity] || 'Literacy activity',
         event: String(entry?.event || 'Logged update'),
         note: `${domainName}${typeof score === 'number' && !Number.isNaN(score) ? ` · ${formatPercent(score)}` : ''}`
@@ -6015,16 +6280,70 @@
       return {
         ts: Number(entry?.ts || 0),
         track: 'numeracy',
+        source: 'activity',
         label: entry?.label || NUMERACY_ACTIVITY_LABELS[entry?.activity] || 'Numeracy activity',
         event: String(entry?.event || 'Logged update'),
         note: `${domainName}${typeof score === 'number' && !Number.isNaN(score) ? ` · ${formatPercent(score)}` : ''}`
       };
     });
 
-    return [...mappedLiteracy, ...mappedNumeracy]
+    const mappedClassBlocks = classBlockLogs.map((entry) => {
+      const minutes = Number(entry?.minutes || 0);
+      const roleLabel = String(entry?.roleLabel || entry?.roleId || 'Team');
+      const blockTitle = String(entry?.blockTitle || `Class block ${minutes || ''} min`).trim();
+      const launchLabel = String(entry?.launchActivityLabel || entry?.launchActivity || 'next activity');
+      const track = String(entry?.track || '').toLowerCase() === 'numeracy' ? 'numeracy' : 'literacy';
+      const launchMeta = launchLabel ? ` · starts with ${launchLabel}` : '';
+      return {
+        ts: Number(entry?.ts || 0),
+        track,
+        source: 'class-block',
+        label: 'Class Block Launcher',
+        event: `${roleLabel} launched ${minutes || 20}-minute block`,
+        note: `${blockTitle}${launchMeta}`
+      };
+    });
+
+    const mappedManual = manualTimelineLogs.map((entry) => {
+      const owner = String(entry?.owner || '').trim();
+      const ownerNote = owner ? `${owner} · ` : '';
+      return {
+        ts: Number(entry?.ts || 0),
+        track: normalizeTimelineTrack(entry?.track || 'manual'),
+        source: 'manual',
+        label: String(entry?.label || 'Manual intervention note'),
+        event: String(entry?.event || 'Team update'),
+        note: `${ownerNote}${String(entry?.note || '').trim()}`
+      };
+    });
+
+    return [...mappedLiteracy, ...mappedNumeracy, ...mappedClassBlocks, ...mappedManual]
       .filter((row) => row.ts > 0)
       .sort((a, b) => b.ts - a.ts)
-      .slice(0, 16);
+      .slice(0, 80);
+  }
+
+  function filterTimelineRows(rows = []) {
+    const trackFilter = resolveTimelineFilterTrack();
+    const windowDays = resolveTimelineFilterWindowDays();
+    const query = String(timelineFilterSearchEl?.value || '').trim().toLowerCase();
+    const cutoff = windowDays ? (Date.now() - (windowDays * 24 * 60 * 60 * 1000)) : 0;
+    return rows.filter((row) => {
+      if (trackFilter === 'manual' && row.source !== 'manual') return false;
+      if ((trackFilter === 'literacy' || trackFilter === 'numeracy') && row.track !== trackFilter) return false;
+      if (cutoff && row.ts < cutoff) return false;
+      if (query) {
+        const haystack = [
+          row.label,
+          row.event,
+          row.note,
+          row.track,
+          row.source
+        ].join(' ').toLowerCase();
+        if (!haystack.includes(query)) return false;
+      }
+      return true;
+    });
   }
 
   function renderInterventionTimeline(context = {}) {
@@ -6033,13 +6352,30 @@
     if (!rows.length) {
       interventionTimelineEl.innerHTML = '<div class="report-bench-note">No intervention evidence yet. Run activities, then refresh this report.</div>';
       latestTimelineText = '';
+      latestTimelineRows = [];
       return;
     }
 
-    const itemsHtml = rows.map((row) => `
+    const filteredRows = filterTimelineRows(rows);
+    if (!filteredRows.length) {
+      interventionTimelineEl.innerHTML = '<div class="report-bench-note">No timeline entries match the current filters. Adjust track, window, or search.</div>';
+      latestTimelineText = '';
+      latestTimelineRows = [];
+      return;
+    }
+
+    const displayRows = filteredRows.slice(0, 24);
+    const trackFilter = resolveTimelineFilterTrack();
+    const windowDays = resolveTimelineFilterWindowDays();
+    const recencyLabel = windowDays ? `last ${windowDays} days` : 'all time';
+    const trackLabel = trackFilter === 'all'
+      ? 'all tracks'
+      : (trackFilter === 'manual' ? 'manual notes only' : `${timelineTrackLabel(trackFilter)} only`);
+
+    const itemsHtml = displayRows.map((row) => `
       <article class="report-timeline-item">
         <div class="report-timeline-item-head">
-          <span class="report-timeline-track ${row.track === 'numeracy' ? 'numeracy' : 'literacy'}">${escapeHtml(timelineTrackLabel(row.track))}</span>
+          <span class="report-timeline-track ${row.track === 'numeracy' ? 'numeracy' : row.track === 'manual' ? 'manual' : 'literacy'}">${escapeHtml(timelineTrackLabel(row.track))}</span>
           <span>${escapeHtml(new Date(row.ts).toLocaleString())}</span>
         </div>
         <div class="report-timeline-event">${escapeHtml(row.label)}: ${escapeHtml(row.event)}</div>
@@ -6050,13 +6386,16 @@
     interventionTimelineEl.innerHTML = `
       <div class="report-builder-summary">
         <div><strong>Live intervention timeline:</strong> latest literacy + numeracy evidence for team review.</div>
+        <div><strong>Showing:</strong> ${displayRows.length} of ${filteredRows.length} entries (${escapeHtml(trackLabel)}, ${escapeHtml(recencyLabel)}).</div>
       </div>
       <div class="report-timeline-list">${itemsHtml}</div>
     `;
 
-    latestTimelineText = rows.map((row) => {
+    latestTimelineRows = filteredRows.slice(0, 80);
+    latestTimelineText = latestTimelineRows.map((row) => {
       const stamp = new Date(row.ts).toLocaleString();
-      return `[${stamp}] ${timelineTrackLabel(row.track)} · ${row.label}: ${row.event} (${row.note})`;
+      const sourceLabel = row.source === 'manual' ? 'Manual' : row.source === 'class-block' ? 'Class block' : 'Activity';
+      return `[${stamp}] ${timelineTrackLabel(row.track)} · ${row.label}: ${row.event} (${row.note}) [${sourceLabel}]`;
     }).join('\n');
   }
 
@@ -6065,6 +6404,201 @@
     iespStatusEl.textContent = message || '';
     iespStatusEl.classList.toggle('error', !!isError);
     iespStatusEl.classList.toggle('success', !isError && !!message);
+  }
+
+  function addManualTimelineEntry() {
+    const label = String(timelineManualLabelEl?.value || '').trim();
+    const event = String(timelineManualEventEl?.value || '').trim() || 'Team update';
+    const note = String(timelineManualNoteEl?.value || '').trim();
+    const owner = String(timelineManualOwnerEl?.value || '').trim();
+    const track = normalizeTimelineTrack(timelineManualTrackEl?.value || 'manual');
+
+    if (!label) {
+      setTimelineStatus('Add a short activity/routine label before saving the note.', true);
+      return;
+    }
+    if (!note) {
+      setTimelineStatus('Add a quick note so the team can act on this timeline entry.', true);
+      return;
+    }
+
+    const ts = parseTimelineInputDate(timelineManualWhenEl?.value || '');
+    const current = loadManualTimelineEntries();
+    const entry = {
+      id: `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      ts,
+      track,
+      label,
+      event,
+      note,
+      owner
+    };
+    const updated = [entry].concat(current).slice(0, 120);
+    saveManualTimelineEntries(updated);
+
+    if (timelineManualNoteEl) timelineManualNoteEl.value = '';
+    if (timelineManualLabelEl) timelineManualLabelEl.value = '';
+    if (timelineManualEventEl) timelineManualEventEl.value = '';
+    if (timelineManualWhenEl) timelineManualWhenEl.value = formatTimelineInputDate(Date.now());
+
+    if (latestIespContext) {
+      latestIespContext.manualTimelineLogs = updated;
+      renderInterventionTimeline(latestIespContext);
+      renderIespDraft(latestIespContext);
+    } else {
+      renderInterventionTimeline({ manualTimelineLogs: updated });
+    }
+
+    if (latestSprintContext) {
+      latestSprintContext.manualTimelineLogs = updated;
+      renderSprintBoard(latestSprintContext);
+    }
+
+    setTimelineStatus('Manual intervention note added to timeline.');
+    setIespStatus('IESP draft refreshed with latest timeline evidence.');
+  }
+
+  function clearManualTimelineEntries() {
+    saveManualTimelineEntries([]);
+    if (latestIespContext) {
+      latestIespContext.manualTimelineLogs = [];
+      renderInterventionTimeline(latestIespContext);
+      renderIespDraft(latestIespContext);
+    } else {
+      renderInterventionTimeline({ manualTimelineLogs: [] });
+    }
+    if (latestSprintContext) {
+      latestSprintContext.manualTimelineLogs = [];
+      renderSprintBoard(latestSprintContext);
+    }
+    setTimelineStatus('Manual timeline notes cleared.');
+    setIespStatus('IESP draft refreshed after clearing manual notes.');
+    if (timelineManualWhenEl) timelineManualWhenEl.value = formatTimelineInputDate(Date.now());
+  }
+
+  function seedDemoManualTimelineEntries() {
+    const context = latestIespContext || {};
+    const pulse = context.pulse || null;
+    const numeracyPulse = context.numeracyPulse || null;
+    const ownerRole = resolveIespOwnerRole();
+    const ownerLabel = ROLE_PATHWAY_LIBRARY[ownerRole]?.label || 'Teacher';
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+    const litPriority = pulse?.gaps?.[0]?.label || 'decoding accuracy and transfer';
+    const numPriority = numeracyPulse?.gaps?.[0]?.label || 'number sense strategy use';
+    const litStrength = pulse?.strengths?.[0]?.label || 'fluency momentum';
+    const numStrength = numeracyPulse?.strengths?.[0]?.label || 'strategy explanation language';
+
+    const demoRows = [
+      {
+        ts: now - (6 * day),
+        track: 'literacy',
+        label: 'Tiered literacy regroup',
+        event: 'R/Y/G groups adjusted from pulse',
+        note: `Red lane prioritized around ${litPriority}.`,
+        owner: ownerLabel
+      },
+      {
+        ts: now - (5 * day),
+        track: 'numeracy',
+        label: 'Conceptual strategy mini-lesson',
+        event: 'Manipulative-first routine launched',
+        note: `Targeted ${numPriority} with think-aloud modeling.`,
+        owner: ownerLabel
+      },
+      {
+        ts: now - (4 * day),
+        track: 'manual',
+        label: 'Family bridge message',
+        event: 'Parent update sent',
+        note: 'Shared one literacy and one numeracy at-home routine in plain language.',
+        owner: ownerLabel
+      },
+      {
+        ts: now - (3 * day),
+        track: 'literacy',
+        label: 'Guided transfer check',
+        event: 'Student evidence reviewed',
+        note: `Most consistent strength observed in ${litStrength}.`,
+        owner: ownerLabel
+      },
+      {
+        ts: now - (2 * day),
+        track: 'numeracy',
+        label: 'Cooldown reteach cycle',
+        event: 'Flexible group reteach complete',
+        note: `Students showed stronger carryover in ${numStrength}.`,
+        owner: ownerLabel
+      },
+      {
+        ts: now - day,
+        track: 'manual',
+        label: 'Case review prep',
+        event: 'IESP/sprint artifacts updated',
+        note: 'Timeline, goals, and progress checks aligned for team meeting.',
+        owner: ownerLabel
+      }
+    ].map((entry, index) => ({
+      ...entry,
+      id: `demo-${now}-${index}`,
+      track: normalizeTimelineTrack(entry.track)
+    }));
+
+    const existing = loadManualTimelineEntries().filter((entry) => !String(entry.id || '').startsWith('demo-'));
+    const updated = demoRows.concat(existing).sort((a, b) => b.ts - a.ts).slice(0, 120);
+    saveManualTimelineEntries(updated);
+
+    if (latestIespContext) {
+      latestIespContext.manualTimelineLogs = updated;
+      renderInterventionTimeline(latestIespContext);
+      renderIespDraft(latestIespContext);
+    } else {
+      renderInterventionTimeline({ manualTimelineLogs: updated });
+    }
+    if (latestSprintContext) {
+      latestSprintContext.manualTimelineLogs = updated;
+      renderSprintBoard(latestSprintContext);
+    }
+
+    setTimelineStatus('Demo timeline generated with six intervention checkpoints.');
+    setIespStatus('IESP draft refreshed with demo timeline evidence.');
+  }
+
+  function exportTimelineCsv() {
+    if (!latestTimelineRows.length) {
+      setTimelineStatus('No timeline rows to export. Refresh report or adjust filters.', true);
+      return;
+    }
+
+    const csvEscape = (value) => {
+      const text = String(value ?? '');
+      if (/[",\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+      return text;
+    };
+
+    const headers = ['date', 'time', 'track', 'source', 'label', 'event', 'note'];
+    const lines = [headers.join(',')];
+    latestTimelineRows.forEach((row) => {
+      const date = new Date(row.ts);
+      const dateText = Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString();
+      const timeText = Number.isNaN(date.getTime()) ? '' : date.toLocaleTimeString();
+      lines.push([
+        dateText,
+        timeText,
+        timelineTrackLabel(row.track),
+        row.source || 'activity',
+        row.label || '',
+        row.event || '',
+        row.note || ''
+      ].map(csvEscape).join(','));
+    });
+
+    const learnerName = latestIespContext?.learner?.name || 'learner';
+    const learnerSlug = slugify(learnerName || 'learner');
+    const dateSlug = buildDateSlug(new Date());
+    const fileName = `intervention-timeline-${learnerSlug}-${dateSlug}.csv`;
+    downloadBlobFile(fileName, new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' }));
+    setTimelineStatus('Timeline CSV exported.');
   }
 
   function buildIespDraft(context = {}) {
@@ -6234,6 +6768,50 @@
     return date;
   }
 
+  function loadSprintCompletionStore() {
+    const parsed = safeParse(localStorage.getItem(SPRINT_COMPLETION_KEY) || '');
+    if (!parsed || typeof parsed !== 'object') return {};
+    return parsed;
+  }
+
+  function saveSprintCompletionStore(store) {
+    const next = store && typeof store === 'object' ? store : {};
+    const keys = Object.keys(next).slice(0, 60);
+    const trimmed = {};
+    keys.forEach((key) => {
+      trimmed[key] = next[key];
+    });
+    localStorage.setItem(SPRINT_COMPLETION_KEY, JSON.stringify(trimmed));
+  }
+
+  function buildSprintCompletionContextKey({ learnerName = 'learner', track = 'integrated', windowDays = 7, ownerRole = 'teacher' } = {}) {
+    const learnerSlug = slugify(String(learnerName || 'learner')) || 'learner';
+    const ownerSlug = slugify(String(ownerRole || 'teacher')) || 'teacher';
+    const trackSlug = slugify(String(track || 'integrated')) || 'integrated';
+    const windowSlug = Number(windowDays || 7);
+    return `${learnerSlug}|${trackSlug}|${ownerSlug}|${windowSlug}`;
+  }
+
+  function getSprintCompletionMap(contextKey) {
+    if (!contextKey) return {};
+    const store = loadSprintCompletionStore();
+    const map = store[contextKey];
+    return map && typeof map === 'object' ? map : {};
+  }
+
+  function setSprintTaskCompletion(contextKey, taskId, isDone) {
+    if (!contextKey || !taskId) return;
+    const store = loadSprintCompletionStore();
+    const map = store[contextKey] && typeof store[contextKey] === 'object' ? { ...store[contextKey] } : {};
+    if (isDone) {
+      map[taskId] = true;
+    } else {
+      delete map[taskId];
+    }
+    store[contextKey] = map;
+    saveSprintCompletionStore(store);
+  }
+
   function buildSprintBoard(context = {}) {
     const learner = context.learner || null;
     const pulse = context.pulse || null;
@@ -6328,7 +6906,30 @@
       return acc;
     }, { red: 0, yellow: 0, green: 0 });
 
+    const completionContextKey = buildSprintCompletionContextKey({
+      learnerName,
+      track,
+      windowDays,
+      ownerRole
+    });
+    const completionMap = getSprintCompletionMap(completionContextKey);
     const dueOffsets = [0, 1, 2, 3, 4, Math.max(4, windowDays - 1)];
+    const sprintRows = tasks.map((task, index) => {
+      const dueDate = addInstructionalDays(today, dueOffsets[index] || 0);
+      const dueLabel = dueDate.toLocaleDateString();
+      const taskId = `${task.lane}-${slugify(task.title || `task-${index + 1}`)}-${index + 1}`;
+      const done = !!completionMap[taskId];
+      return {
+        ...task,
+        index,
+        taskId,
+        dueDate,
+        dueLabel,
+        done
+      };
+    });
+    const completedCount = sprintRows.filter((row) => row.done).length;
+    const completionPct = sprintRows.length ? Math.round((completedCount / sprintRows.length) * 100) : 0;
     const lines = [
       'Intervention Sprint Board',
       `Learner: ${learnerName}`,
@@ -6339,24 +6940,36 @@
       `Review date: ${reviewDate.toLocaleDateString()}`,
       '',
       `Lane mix: Urgent ${laneCounts.red} · Monitor ${laneCounts.yellow} · Maintain ${laneCounts.green}`,
+      `Completion: ${completedCount}/${sprintRows.length} actions complete (${completionPct}%)`,
       ''
     ];
 
-    const taskItemsHtml = tasks.map((task, index) => {
-      const dueDate = addInstructionalDays(today, dueOffsets[index] || 0);
-      const dueLabel = dueDate.toLocaleDateString();
-      lines.push(`${index + 1}) [${task.laneLabel}] ${task.title}`);
+    const taskItemsHtml = sprintRows.map((task) => {
+      const doneLabel = task.done ? 'Done' : 'Open';
+      lines.push(`${task.index + 1}) [${task.laneLabel}] ${task.title} [${doneLabel}]`);
       lines.push(`   Move: ${task.move}`);
-      lines.push(`   Owner: ${task.owner} · Time: ${task.minutes} min · Due: ${dueLabel}`);
+      lines.push(`   Owner: ${task.owner} · Time: ${task.minutes} min · Due: ${task.dueLabel}`);
       return `
-        <article class="report-sprint-item ${task.laneClass}">
+        <article class="report-sprint-item ${task.laneClass} ${task.done ? 'is-done' : ''}">
           <div class="report-sprint-item-head">
             <span class="report-sprint-lane-pill ${task.laneClass}">${escapeHtml(task.laneLabel)}</span>
-            <span>Due ${escapeHtml(dueLabel)}</span>
+            <span>Due ${escapeHtml(task.dueLabel)}</span>
           </div>
           <div class="report-sprint-title">${escapeHtml(task.title)}</div>
           <div class="report-sprint-move">${escapeHtml(task.move)}</div>
           <div class="report-sprint-meta"><strong>Owner:</strong> ${escapeHtml(task.owner)} · <strong>Time:</strong> ${escapeHtml(task.minutes)} min</div>
+          <div class="report-sprint-actions">
+            <button
+              type="button"
+              class="secondary-btn report-sprint-toggle"
+              data-sprint-context-key="${escapeHtml(completionContextKey)}"
+              data-sprint-task-id="${escapeHtml(task.taskId)}"
+              data-sprint-done="${task.done ? '1' : '0'}"
+            >
+              ${task.done ? 'Mark Open' : 'Mark Done'}
+            </button>
+            <span class="report-sprint-state">${task.done ? 'Completed' : 'Pending'}</span>
+          </div>
         </article>
       `;
     }).join('');
@@ -6380,6 +6993,7 @@
         <div><strong>Next-cycle sprint board:</strong> owner-assigned intervention actions with due dates.</div>
         <div><strong>Window:</strong> ${escapeHtml(String(windowDays))} instructional days · <strong>Owner:</strong> ${escapeHtml(ownerLabel)} · <strong>Review date:</strong> ${escapeHtml(reviewDate.toLocaleDateString())}</div>
         <div><strong>Lane mix:</strong> Urgent ${laneCounts.red} · Monitor ${laneCounts.yellow} · Maintain ${laneCounts.green}</div>
+        <div><strong>Execution:</strong> ${completedCount}/${sprintRows.length} complete (${completionPct}%).</div>
       </div>
       <div class="report-sprint-grid">${taskItemsHtml}</div>
       <div class="report-sprint-evidence">
@@ -6431,6 +7045,17 @@
     const fileName = `intervention-sprint-board-${learnerSlug}-${dateSlug}.txt`;
     downloadBlobFile(fileName, new Blob([text], { type: 'text/plain;charset=utf-8' }));
     setSprintStatus('Sprint board exported.');
+  }
+
+  function toggleSprintTaskFromUi(contextKey, taskId, wasDone) {
+    if (!latestSprintContext) {
+      setSprintStatus('Refresh report first, then update sprint completion.', true);
+      return;
+    }
+    const isDone = !wasDone;
+    setSprintTaskCompletion(contextKey, taskId, isDone);
+    renderSprintBoard(latestSprintContext);
+    setSprintStatus(isDone ? 'Sprint task marked done.' : 'Sprint task moved back to open.');
   }
 
   async function copyIespDraft() {
@@ -6759,6 +7384,402 @@
     }
   }
 
+  function setDemoStatus(message, isError = false) {
+    if (!demoStatusEl) return;
+    demoStatusEl.textContent = message || '';
+    demoStatusEl.classList.toggle('error', !!isError);
+    demoStatusEl.classList.toggle('success', !isError && !!message);
+  }
+
+  function roundToTenths(value) {
+    return Math.round(Number(value || 0) * 10) / 10;
+  }
+
+  function clampRating(value) {
+    return roundToTenths(clamp(Number(value || 0), 1, 10));
+  }
+
+  function buildDemoReadinessModel(context = {}) {
+    const learner = context.learner || null;
+    const pulse = context.pulse || null;
+    const numeracyPulse = context.numeracyPulse || null;
+    const logs = Array.isArray(context.logs) ? context.logs : [];
+    const numeracyLogs = Array.isArray(context.numeracyLogs) ? context.numeracyLogs : [];
+    const settings = readJson('decode_settings', {}) || {};
+
+    const allLogs = [...logs, ...numeracyLogs];
+    const totalSessions = allLogs.length;
+    const weekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+    const recentSessions = allLogs.filter((entry) => Number(entry?.ts || 0) >= weekAgo).length;
+    const activityBreadth = new Set(allLogs.map((entry) => String(entry?.activity || '')).filter(Boolean)).size;
+    const litDomainCoverage = Number(pulse?.engine?.evidence?.domainCoverage || pulse?.domainStats?.length || 0);
+    const numDomainCoverage = Number(numeracyPulse?.engine?.evidence?.domainCoverage || numeracyPulse?.domainStats?.length || 0);
+    const litConfidence = Number(pulse?.engine?.evidence?.confidenceScore || 0);
+    const numConfidence = Number(numeracyPulse?.engine?.evidence?.confidenceScore || 0);
+    const recommendedCount = Number((pulse?.recommendedActivities?.length || 0) + (numeracyPulse?.recommendedActivities?.length || 0));
+    const supportProfile = getSupportProfile();
+    const supportCount = supportProfile.length;
+    const roleCount = Object.keys(ROLE_PATHWAY_LIBRARY || {}).length;
+    const specialistRoleCount = ['learning-support', 'eal', 'slp', 'counselor', 'psychologist', 'parent']
+      .filter((roleId) => ROLE_PATHWAY_LIBRARY[roleId])
+      .length;
+    const frameworkCount = Object.keys(FRAMEWORK_ALIGNMENT || {}).length;
+    const benchmarkSignals = pulse?.engine?.benchmarkSignals?.statuses?.length || numeracyPulse?.engine?.benchmarkSignals?.statuses?.length || 0;
+    const equityGuardrailCount = Number((pulse?.engine?.equityGuardrails?.length || 0) + (numeracyPulse?.engine?.guardrails?.length || 0));
+    const hasSprint = !!latestSprintBoardText;
+    const hasIesp = !!latestIespText;
+    const hasRolePathway = !!latestRolePathwayText;
+    const hasParentPathway = !!(latestParentMessageText || getLatestParentMessage(learner)?.text);
+    const hasOutcomeProof = !!(outcomesEl && outcomesEl.textContent && outcomesEl.textContent.trim().length);
+    const voicePackId = String(settings.ttsPackId || 'default');
+    const audienceMode = String(settings.audienceMode || 'auto');
+    const hasEnhancedVoicePack = voicePackId && voicePackId !== 'default';
+    const hasAudienceGuardrails = audienceMode !== 'auto';
+    const funHudEnabled = !!settings?.funHud?.enabled;
+
+    const categories = [
+      {
+        id: 'functionality',
+        label: 'Functionality',
+        score: clampRating(5.3 + (activityBreadth * 0.34) + (Math.min(totalSessions, 28) * 0.07) + (hasIesp ? 0.6 : 0)),
+        evidence: `${activityBreadth} activity pathways used; ${totalSessions} logged sessions.`
+      },
+      {
+        id: 'fun',
+        label: 'Fun & Engagement',
+        score: clampRating(5.0 + (funHudEnabled ? 1.0 : 0.4) + (Math.min(recentSessions, 16) * 0.08) + (hasAudienceGuardrails ? 0.5 : 0)),
+        evidence: `${recentSessions} recent sessions; audience mode ${hasAudienceGuardrails ? audienceMode : 'auto'}.`
+      },
+      {
+        id: 'inspirational',
+        label: 'Inspirational',
+        score: clampRating(5.4 + (hasOutcomeProof ? 1.1 : 0.5) + (hasSprint ? 0.8 : 0.3) + (hasParentPathway ? 0.5 : 0.2)),
+        evidence: `Outcome narrative + sprint board${hasParentPathway ? ' + parent message' : ''} available.`
+      },
+      {
+        id: 'informational',
+        label: 'Informational',
+        score: clampRating(5.4 + (litConfidence * 1.6) + (numConfidence * 1.3) + (benchmarkSignals ? 0.7 : 0.2)),
+        evidence: `Engine confidence: literacy ${formatPercent(litConfidence)} / numeracy ${formatPercent(numConfidence)}.`
+      },
+      {
+        id: 'skill-building',
+        label: 'Skill Building',
+        score: clampRating(5.2 + ((litDomainCoverage + numDomainCoverage) * 0.35) + (recommendedCount * 0.2)),
+        evidence: `${litDomainCoverage + numDomainCoverage} domains represented; ${recommendedCount} next-activity suggestions.`
+      },
+      {
+        id: 'ease',
+        label: 'Ease of Use',
+        score: clampRating(5.1 + (supportCount * 0.22) + (hasRolePathway ? 0.8 : 0.3) + (hasSprint ? 0.7 : 0.2) + (hasIesp ? 0.8 : 0.2)),
+        evidence: `${supportCount} active accessibility supports; role/sprint/IESP workflows ${hasSprint && hasIesp ? 'ready' : 'in progress'}.`
+      },
+      {
+        id: 'navigation',
+        label: 'Intuitive Navigation',
+        score: clampRating(5.5 + (hasRolePathway ? 1.0 : 0.4) + (hasIesp ? 0.9 : 0.4) + (hasSprint ? 0.6 : 0.2)),
+        evidence: 'Direct pathway links across pulse, sprint board, role dashboard, and IESP.'
+      },
+      {
+        id: 'professional',
+        label: 'Professional + Modern Look',
+        score: clampRating(6.7 + (hasOutcomeProof ? 0.7 : 0.3) + (hasIesp ? 0.6 : 0.2) + (hasSprint ? 0.5 : 0.2)),
+        evidence: 'Leadership-ready report cards, exports, and intervention artifacts are visible in one screen.'
+      },
+      {
+        id: 'customization',
+        label: 'K-12 + Adult Customization',
+        score: clampRating(5.3 + (Math.min(roleCount, 12) * 0.22) + (supportCount * 0.18) + (hasEnhancedVoicePack ? 0.5 : 0)),
+        evidence: `${roleCount} role pathways, ${supportCount} support toggles, voice pack ${hasEnhancedVoicePack ? voicePackId : 'default'}.`
+      },
+      {
+        id: 'content-depth',
+        label: 'Content Depth + Breadth',
+        score: clampRating(5.3 + (frameworkCount * 0.3) + (activityBreadth * 0.18) + (benchmarkSignals ? 0.4 : 0.1)),
+        evidence: `${frameworkCount} alignment domains plus literacy/numeracy intervention tracks.`
+      },
+      {
+        id: 'specialist',
+        label: 'SPED / SEL / EAL / SLP Fit',
+        score: clampRating(5.6 + (specialistRoleCount * 0.34) + (equityGuardrailCount * 0.3) + (hasParentPathway ? 0.4 : 0)),
+        evidence: `${specialistRoleCount} specialist-facing role dashboards with equity guardrails and parent bridge tools.`
+      }
+    ];
+
+    const overall = clampRating(average(categories.map((row) => row.score)) || 1);
+    const readinessBand = overall >= 9
+      ? 'Demo 9+/10 ready'
+      : overall >= 8.5
+        ? 'Strong demo state (8.5+)'
+        : overall >= 7.5
+          ? 'Promising but needs polish'
+          : 'Foundational build stage';
+
+    const lines = [
+      `CORNERSTONE MTSS Demo Readiness`,
+      `Learner: ${learner?.name || 'Learner'}`,
+      `Generated: ${new Date().toLocaleString()}`,
+      '',
+      `Overall readiness: ${overall}/10 (${readinessBand})`,
+      `Evidence: ${totalSessions} total sessions · ${recentSessions} sessions in last 7 days · ${activityBreadth} activity pathways`,
+      ''
+    ];
+    categories.forEach((row) => {
+      lines.push(`- ${row.label}: ${row.score}/10`);
+      lines.push(`  ${row.evidence}`);
+    });
+
+    return {
+      overall,
+      readinessBand,
+      categories,
+      text: lines.join('\n')
+    };
+  }
+
+  function renderDemoReadiness(context = {}) {
+    if (!demoReadinessEl) return;
+    const model = buildDemoReadinessModel(context);
+    latestDemoReadinessText = model.text;
+    const categoryHtml = model.categories.map((row) => `
+      <article class="report-demo-card">
+        <h3>${escapeHtml(row.label)}</h3>
+        <div class="report-demo-score">${escapeHtml(String(row.score))}/10</div>
+        <div class="report-demo-note">${escapeHtml(row.evidence)}</div>
+      </article>
+    `).join('');
+    demoReadinessEl.innerHTML = `
+      <div class="report-demo-summary">
+        <div><strong>Overall readiness:</strong> ${escapeHtml(String(model.overall))}/10</div>
+        <div>${escapeHtml(model.readinessBand)}</div>
+      </div>
+      <div class="report-demo-grid">${categoryHtml}</div>
+    `;
+    setDemoStatus('');
+  }
+
+  function buildShowcaseFlowModel(context = {}) {
+    const pulse = context.pulse || null;
+    const numeracyPulse = context.numeracyPulse || null;
+    const litGap = pulse?.gaps?.[0]?.label || 'Top literacy gap';
+    const numGap = numeracyPulse?.gaps?.[0]?.label || 'Top numeracy gap';
+    const litTier = pulse?.engine?.tierRecommendation?.tierLabel || 'Tier recommendation pending';
+    const numTier = numeracyPulse?.engine?.tierRecommendation?.tierLabel || 'Tier recommendation pending';
+    const topPriority = pulse?.topPriority || 'Run a focused 4-week intervention cycle from top gap.';
+
+    const steps = [
+      {
+        title: 'Mission + Role Lens',
+        detail: 'Open Home role context to frame MTSS vision and team pathways.',
+        href: 'index.html#role-dashboard'
+      },
+      {
+        title: 'Literacy Pulse',
+        detail: `Show top literacy gap (${litGap}) and current support intensity (${litTier}).`,
+        href: '#report-pulse'
+      },
+      {
+        title: 'Numeracy Pulse',
+        detail: `Show top numeracy gap (${numGap}) and current support intensity (${numTier}).`,
+        href: '#report-numeracy-pulse'
+      },
+      {
+        title: 'Intervention Sprint Board',
+        detail: 'Show owner-assigned next-cycle actions with due dates and lane priorities.',
+        href: '#report-sprint-board-section'
+      },
+      {
+        title: 'IESP Auto-Draft',
+        detail: 'Generate copy-ready goals, monitoring cadence, and team handoff from live evidence.',
+        href: '#report-iesp-output'
+      },
+      {
+        title: 'Role + Parent Handoff',
+        detail: 'Open role dashboard and parent partnership message to show implementation coherence.',
+        href: '#report-role-dashboard'
+      }
+    ];
+
+    const scriptLines = [
+      'CORNERSTONE MTSS Showcase Flow (Hiring Committee)',
+      `1) Mission: "Strong foundations across every tier."`,
+      `2) Literacy pulse: ${litGap} is the top literacy target and ${litTier} is the current support intensity.`,
+      `3) Numeracy pulse: ${numGap} is the top numeracy target and ${numTier} is the current support intensity.`,
+      `4) Sprint board: owner-assigned actions + due dates convert data into daily execution.`,
+      `5) IESP draft: goals + progress monitoring + handoff are generated from current evidence.`,
+      `6) Role + parent handoff: specialists and families receive aligned next steps.`,
+      `Close: "${topPriority}"`
+    ];
+
+    return {
+      steps,
+      text: scriptLines.join('\n')
+    };
+  }
+
+  function renderShowcaseFlow(context = {}) {
+    if (!showcaseFlowEl) return;
+    const model = buildShowcaseFlowModel(context);
+    latestShowcaseScriptText = model.text;
+    const stepHtml = model.steps.map((step, index) => {
+      const href = String(step.href || '#');
+      const hrefLabel = href.startsWith('#') ? 'Open in report' : 'Open page';
+      return `
+        <article class="report-showcase-step">
+          <div class="report-showcase-phase">${index + 1}. ${escapeHtml(step.title)}</div>
+          <div class="report-showcase-detail">${escapeHtml(step.detail)}</div>
+          <a class="secondary-btn report-showcase-link" href="${escapeHtml(href)}">${escapeHtml(hrefLabel)}</a>
+        </article>
+      `;
+    }).join('');
+    showcaseFlowEl.innerHTML = `
+      <div class="report-showcase-steps">${stepHtml}</div>
+      <div class="report-showcase-note"><strong>Talk track:</strong> copy showcase script to present this flow in 3-5 minutes.</div>
+    `;
+  }
+
+  function buildLeadershipPackText(context = {}) {
+    const learner = context.learner || null;
+    const learnerName = learner?.name || 'Learner';
+    const sections = [
+      latestDemoReadinessText || 'Demo readiness not generated yet.',
+      latestShowcaseScriptText || 'Showcase script not generated yet.',
+      latestShareText || 'Share summary not generated yet.',
+      latestSprintBoardText || 'Sprint board not generated yet.',
+      latestIespText || 'IESP draft not generated yet.',
+      latestRolePathwayText || 'Role pathway not generated yet.',
+      latestParentMessageText || latestIespParentText || 'Parent snapshot not generated yet.'
+    ];
+    const text = [
+      `CORNERSTONE MTSS Leadership Pack`,
+      `Learner: ${learnerName}`,
+      `Generated: ${new Date().toLocaleString()}`,
+      '',
+      '--- Demo Readiness ---',
+      sections[0],
+      '',
+      '--- Showcase Script ---',
+      sections[1],
+      '',
+      '--- Shareable Summary ---',
+      sections[2],
+      '',
+      '--- Sprint Board ---',
+      sections[3],
+      '',
+      '--- IESP Draft ---',
+      sections[4],
+      '',
+      '--- Role Pathway ---',
+      sections[5],
+      '',
+      '--- Parent Snapshot ---',
+      sections[6]
+    ].join('\n');
+    latestLeadershipPackText = text;
+    return text;
+  }
+
+  async function copyDemoReadiness() {
+    if (!latestDemoReadinessText) {
+      setDemoStatus('Refresh report first to generate demo readiness.', true);
+      return;
+    }
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(latestDemoReadinessText);
+      } else {
+        throw new Error('clipboard-unavailable');
+      }
+      setDemoStatus('Demo readiness copied.');
+    } catch {
+      setDemoStatus('Clipboard unavailable. Copy directly from the readiness panel.', true);
+    }
+  }
+
+  async function copyShowcaseScript() {
+    if (!latestShowcaseScriptText) {
+      setDemoStatus('Refresh report first to generate showcase script.', true);
+      return;
+    }
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(latestShowcaseScriptText);
+      } else {
+        throw new Error('clipboard-unavailable');
+      }
+      setDemoStatus('Showcase script copied.');
+    } catch {
+      setDemoStatus('Clipboard unavailable. Copy directly from the showcase flow panel.', true);
+    }
+  }
+
+  function exportLeadershipPack() {
+    if (!latestLeadershipContext) {
+      setDemoStatus('Refresh report first to build leadership export.', true);
+      return;
+    }
+    const learnerName = latestLeadershipContext.learner?.name || 'learner';
+    const learnerSlug = slugify(learnerName || 'learner');
+    const dateSlug = buildDateSlug(new Date());
+    const text = buildLeadershipPackText(latestLeadershipContext);
+    const fileName = `cornerstone-leadership-pack-${learnerSlug}-${dateSlug}.txt`;
+    downloadBlobFile(fileName, new Blob([text], { type: 'text/plain;charset=utf-8' }));
+    setDemoStatus('Leadership pack exported.');
+  }
+
+  function runDemoAutopilot() {
+    loadSampleData();
+    refreshReport();
+
+    if (iespTrackEl) iespTrackEl.value = 'integrated';
+    if (iespCycleEl) iespCycleEl.value = '6';
+    if (iespOwnerEl) {
+      const preferredOwner = 'learning-support';
+      const hasOwner = Array.from(iespOwnerEl.options || []).some((option) => option.value === preferredOwner);
+      if (hasOwner) iespOwnerEl.value = preferredOwner;
+    }
+    if (sprintTrackEl) sprintTrackEl.value = 'integrated';
+    if (sprintWindowEl) sprintWindowEl.value = '7';
+    if (sprintOwnerEl) {
+      const preferredOwner = 'learning-support';
+      const hasOwner = Array.from(sprintOwnerEl.options || []).some((option) => option.value === preferredOwner);
+      if (hasOwner) sprintOwnerEl.value = preferredOwner;
+    }
+    if (timelineFilterTrackEl) timelineFilterTrackEl.value = 'all';
+    if (timelineFilterWindowEl) timelineFilterWindowEl.value = '30';
+    if (timelineFilterSearchEl) timelineFilterSearchEl.value = '';
+
+    seedDemoManualTimelineEntries();
+
+    if (latestIespContext) {
+      renderInterventionTimeline(latestIespContext);
+      renderIespDraft(latestIespContext);
+    }
+    if (latestSprintContext) {
+      renderSprintBoard(latestSprintContext);
+    }
+    if (latestLeadershipContext) {
+      renderDemoReadiness(latestLeadershipContext);
+      renderShowcaseFlow(latestLeadershipContext);
+      buildLeadershipPackText(latestLeadershipContext);
+    }
+
+    setDemoStatus('Demo autopilot complete: sample data, timeline checkpoints, IESP, sprint board, and showcase outputs refreshed.');
+  }
+
+  function runDemoAutopilotFromQuery() {
+    const params = new URLSearchParams(window.location.search || '');
+    const demoMode = String(params.get('demo') || '').trim().toLowerCase();
+    if (!demoMode || !['1', 'true', 'autopilot', 'pack'].includes(demoMode)) return;
+    runDemoAutopilot();
+    setDemoStatus('Demo autopilot launched from quick-start link.');
+    params.delete('demo');
+    const nextQuery = params.toString();
+    const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash || ''}`;
+    window.history.replaceState({}, '', nextUrl);
+  }
+
   function loadSampleData() {
     const now = Date.now();
     const day = 24 * 60 * 60 * 1000;
@@ -6818,6 +7839,7 @@
     const pulse = buildPulseModel(logs, placementRec, weakest, { gradeBand: learner?.gradeBand });
     renderPulse(pulse);
     const numeracyLogs = getNumeracyLogs();
+    const classBlockLogs = getClassBlockLaunchLogs();
     const numeracyPulse = buildNumeracyPulseModel(numeracyLogs, { gradeBand: learner?.gradeBand });
     renderNumeracyPulse(numeracyPulse);
     renderOutcomeProof(logs, pulse, placementRec, weakest);
@@ -6862,6 +7884,7 @@
       numeracyPulse,
       logs,
       numeracyLogs,
+      classBlockLogs,
       placementRec,
       weakestRow: weakest
     };
@@ -6880,7 +7903,29 @@
       pulse,
       numeracyPulse,
       logs,
-      numeracyLogs
+      numeracyLogs,
+      classBlockLogs,
+      manualTimelineLogs: loadManualTimelineEntries()
+    };
+    latestClassBlockContext = {
+      learner,
+      pulse,
+      numeracyPulse,
+      placementRec,
+      logs,
+      numeracyLogs,
+      classBlockLogs
+    };
+    latestLeadershipContext = {
+      learner,
+      pulse,
+      numeracyPulse,
+      logs,
+      numeracyLogs,
+      classBlockLogs,
+      metrics,
+      placementRec,
+      weakestRow: weakest
     };
     latestSprintContext = latestIespContext;
     if (sprintOwnerEl && !sprintOwnerEl.dataset.manualOwner) {
@@ -6891,6 +7936,10 @@
     renderInterventionTimeline(latestIespContext);
     renderIespDraft(latestIespContext);
     renderSprintBoard(latestSprintContext);
+    renderClassBlockLauncher(latestClassBlockContext);
+    renderDemoReadiness(latestLeadershipContext);
+    renderShowcaseFlow(latestLeadershipContext);
+    buildLeadershipPackText(latestLeadershipContext);
     renderParentMessagePanel(latestParentContext);
     renderReportMediaViewsFromCache();
   }
@@ -6902,10 +7951,22 @@
     refreshReport();
     if (shareStatusEl) shareStatusEl.textContent = 'Sample data loaded.';
   });
+  demoAutopilotBtn?.addEventListener('click', () => {
+    runDemoAutopilot();
+  });
   exportPdfBtn?.addEventListener('click', exportPdf);
   printBtn?.addEventListener('click', () => window.print());
   shareCopyBtn?.addEventListener('click', () => {
     copyShareSummary();
+  });
+  demoCopyBtn?.addEventListener('click', () => {
+    copyDemoReadiness();
+  });
+  showcaseCopyBtn?.addEventListener('click', () => {
+    copyShowcaseScript();
+  });
+  leadershipExportBtn?.addEventListener('click', () => {
+    exportLeadershipPack();
   });
   builderGenerateBtn?.addEventListener('click', () => renderBuilderPlan());
   builderCopyBtn?.addEventListener('click', () => {
@@ -7035,13 +8096,38 @@
       const normalized = normalizeRoleId(roleSelectEl.value || '');
       const hasProtocolRole = Array.from(protocolRoleEl.options || []).some((option) => option.value === normalized);
       if (hasProtocolRole) protocolRoleEl.value = normalized;
+      if (classBlockRoleEl && !classBlockRoleEl.dataset.manualRole) {
+        classBlockRoleEl.value = normalized;
+      }
     }
     if (latestRoleContext) {
       renderRolePathway(latestRoleContext);
     }
+    if (latestClassBlockContext) {
+      renderClassBlockLauncher(latestClassBlockContext);
+    }
   });
   roleCopyBtn?.addEventListener('click', () => {
     copyRolePathway();
+  });
+  classBlockRoleEl?.addEventListener('change', () => {
+    classBlockRoleEl.dataset.manualRole = 'true';
+    if (latestClassBlockContext) {
+      renderClassBlockLauncher(latestClassBlockContext);
+    }
+  });
+  classBlockGradeEl?.addEventListener('change', () => {
+    classBlockGradeEl.dataset.manualGrade = 'true';
+    if (latestClassBlockContext) {
+      renderClassBlockLauncher(latestClassBlockContext);
+    }
+  });
+  classBlockGridEl?.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const launchEl = target.closest('.report-class-block-launch');
+    if (!(launchEl instanceof HTMLElement)) return;
+    logClassBlockLaunchFromElement(launchEl);
   });
   parentGenerateBtn?.addEventListener('click', () => {
     generateParentMessageDraft();
@@ -7108,6 +8194,39 @@
       if (hasOwner) sprintOwnerEl.value = suggestedOwner;
       if (latestSprintContext) renderSprintBoard(latestSprintContext);
     }
+  });
+  timelineExportBtn?.addEventListener('click', () => {
+    exportTimelineCsv();
+  });
+  timelineDemoFillBtn?.addEventListener('click', () => {
+    seedDemoManualTimelineEntries();
+  });
+  timelineFilterTrackEl?.addEventListener('change', () => {
+    if (latestIespContext) {
+      renderInterventionTimeline(latestIespContext);
+    } else {
+      renderInterventionTimeline({ manualTimelineLogs: loadManualTimelineEntries() });
+    }
+  });
+  timelineFilterWindowEl?.addEventListener('change', () => {
+    if (latestIespContext) {
+      renderInterventionTimeline(latestIespContext);
+    } else {
+      renderInterventionTimeline({ manualTimelineLogs: loadManualTimelineEntries() });
+    }
+  });
+  timelineFilterSearchEl?.addEventListener('input', () => {
+    if (latestIespContext) {
+      renderInterventionTimeline(latestIespContext);
+    } else {
+      renderInterventionTimeline({ manualTimelineLogs: loadManualTimelineEntries() });
+    }
+  });
+  timelineManualAddBtn?.addEventListener('click', () => {
+    addManualTimelineEntry();
+  });
+  timelineManualClearBtn?.addEventListener('click', () => {
+    clearManualTimelineEntries();
   });
   sprintGenerateBtn?.addEventListener('click', () => {
     if (!latestSprintContext) {
@@ -7202,6 +8321,13 @@
     const parentLoadBtn = target.closest('.report-parent-load-btn');
     if (parentLoadBtn instanceof HTMLElement && parentLoadBtn.dataset.parentLoad) {
       loadSavedParentMessageById(parentLoadBtn.dataset.parentLoad, latestParentContext?.learner || null);
+      return;
+    }
+
+    const sprintToggleBtn = target.closest('.report-sprint-toggle');
+    if (sprintToggleBtn instanceof HTMLElement && sprintToggleBtn.dataset.sprintTaskId && sprintToggleBtn.dataset.sprintContextKey) {
+      const wasDone = sprintToggleBtn.dataset.sprintDone === '1';
+      toggleSprintTaskFromUi(sprintToggleBtn.dataset.sprintContextKey, sprintToggleBtn.dataset.sprintTaskId, wasDone);
     }
   });
   document.addEventListener('keydown', (event) => {
@@ -7215,6 +8341,7 @@
 
   renderReportMediaSelects();
   applyInitialRoleFromQuery();
+  setDefaultTimelineManualWhen();
   updateReportMediaPrompt();
   syncReportMediaRecorderButtons();
   renderReportMediaViewsFromCache();
@@ -7223,4 +8350,5 @@
   renderNumeracyImportPreview();
   syncNumeracyImportActions();
   refreshReport();
+  runDemoAutopilotFromQuery();
 })();

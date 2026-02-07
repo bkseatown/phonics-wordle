@@ -42,6 +42,53 @@
         </div>
 
         <div id="fluency-passage" class="fluency-passage" aria-label="Passage text"></div>
+
+        <div id="fluency-read-coach" class="fluency-read-coach" aria-label="Live read coach">
+          <div class="fluency-read-coach-head">
+            <h3>Live Read Coach</h3>
+            <div class="muted">Beta: compares heard words to passage and shows mismatch cues.</div>
+          </div>
+          <div class="fluency-read-coach-controls">
+            <label class="fluency-coach-field">
+              Target
+              <select id="fluency-coach-target" aria-label="Coach target text">
+                <option value="sentence">First sentence</option>
+                <option value="passage">Whole passage</option>
+              </select>
+            </label>
+            <button id="fluency-coach-start" type="button" class="primary-btn">Start listening</button>
+            <button id="fluency-coach-stop" type="button" class="secondary-btn">Stop</button>
+            <button id="fluency-coach-clear" type="button" class="secondary-btn">Clear coach</button>
+          </div>
+          <canvas id="fluency-wave-canvas" class="fluency-wave-canvas" width="640" height="150" aria-label="Voice wave and inflection guide"></canvas>
+          <div class="fluency-coach-cards">
+            <article class="fluency-coach-card">
+              <h4>Heard Transcript</h4>
+              <div id="fluency-coach-heard" class="fluency-coach-text muted">Start listening, then read aloud.</div>
+            </article>
+            <article class="fluency-coach-card">
+              <h4>Mismatch Focus</h4>
+              <div id="fluency-coach-mismatch" class="fluency-coach-text muted">Mismatches will appear here with targeted letter cues.</div>
+            </article>
+          </div>
+          <div id="fluency-coach-status" class="fluency-coach-status muted" aria-live="polite"></div>
+        </div>
+
+        <div id="fluency-sound-clips" class="fluency-sound-clips" aria-label="Teacher sound clips">
+          <div class="fluency-sound-clips-head">
+            <h3>Teacher Sound Clips</h3>
+            <div class="muted">Record clips in Section Media Studio, then filter by sound tag (example: <code>sh</code>).</div>
+          </div>
+          <div class="fluency-sound-clips-controls">
+            <label class="fluency-coach-field">
+              Sound tag
+              <input id="fluency-sound-filter" type="text" placeholder="e.g., sh, th, short-a" />
+            </label>
+            <button id="fluency-sound-refresh" type="button" class="secondary-btn">Refresh clips</button>
+            <a class="secondary-btn fluency-sound-open" href="teacher-report.html#report-media-library">Open recorder studio</a>
+          </div>
+          <div id="fluency-sound-clips-list" class="fluency-sound-clips-list"></div>
+        </div>
       </section>
 
       <section class="fluency-panel" aria-label="Timer and scoring">

@@ -6,6 +6,7 @@
     <title>CORNERSTONE MTSS — Teacher Report</title>
     <link rel="stylesheet" href="style.css" />
     <script src="platform.js" defer></script>
+    <script src="class-blocks.js" defer></script>
     <script src="teacher-report.js" defer></script>
   </head>
 
@@ -201,6 +202,24 @@
         <div id="report-outcomes" class="report-outcomes"></div>
       </section>
 
+      <section class="report-card" aria-label="Demo readiness and showcase">
+        <div class="report-card-header">
+          <div>
+            <h2>Demo Readiness + Showcase Flow</h2>
+            <p class="home-subtitle">Auto-rates hiring-committee readiness and provides a one-click walkthrough script.</p>
+          </div>
+          <div class="report-actions">
+            <button id="report-demo-autopilot" class="primary-btn" type="button">Auto-Build Demo Pack</button>
+            <button id="report-demo-copy" class="secondary-btn" type="button">Copy Demo Readiness</button>
+            <button id="report-showcase-copy" class="secondary-btn" type="button">Copy Showcase Script</button>
+            <button id="report-leadership-export" class="secondary-btn" type="button">Export Leadership Pack (.txt)</button>
+          </div>
+        </div>
+        <div id="report-demo-readiness" class="report-demo-readiness"></div>
+        <div id="report-showcase-flow" class="report-showcase-flow"></div>
+        <div id="report-demo-status" class="muted"></div>
+      </section>
+
       <section class="report-card" aria-label="Framework alignment">
         <div class="report-card-header">
           <div>
@@ -376,9 +395,74 @@
           </label>
           <button id="report-iesp-generate" class="primary-btn" type="button">Generate IESP Draft</button>
         </div>
+        <div class="report-protocol-controls report-timeline-controls">
+          <label class="report-builder-label">
+            Timeline view
+            <select id="report-timeline-filter-track" aria-label="Timeline filter track">
+              <option value="all">All evidence</option>
+              <option value="literacy">Literacy only</option>
+              <option value="numeracy">Numeracy only</option>
+              <option value="manual">Manual notes only</option>
+            </select>
+          </label>
+          <label class="report-builder-label">
+            Recency window
+            <select id="report-timeline-filter-window" aria-label="Timeline recency window">
+              <option value="all">All time</option>
+              <option value="7">Last 7 days</option>
+              <option value="14">Last 14 days</option>
+              <option value="30" selected>Last 30 days</option>
+              <option value="90">Last 90 days</option>
+            </select>
+          </label>
+          <label class="report-builder-label">
+            Search
+            <input id="report-timeline-filter-search" type="search" placeholder="Search event, note, owner..." />
+          </label>
+          <button id="report-timeline-demo-fill" class="secondary-btn" type="button">Generate Demo Timeline</button>
+          <button id="report-timeline-export" class="secondary-btn" type="button">Export Timeline (.csv)</button>
+        </div>
+        <details class="report-timeline-manual">
+          <summary>Add manual intervention note</summary>
+          <div class="report-timeline-manual-grid">
+            <label class="report-builder-label">
+              Date and time
+              <input id="report-timeline-manual-when" type="datetime-local" />
+            </label>
+            <label class="report-builder-label">
+              Track
+              <select id="report-timeline-manual-track" aria-label="Manual timeline track">
+                <option value="literacy">Literacy</option>
+                <option value="numeracy">Numeracy</option>
+                <option value="manual">General support</option>
+              </select>
+            </label>
+            <label class="report-builder-label">
+              Owner
+              <input id="report-timeline-manual-owner" type="text" placeholder="Teacher / EAL / SLP / Counselor" />
+            </label>
+            <label class="report-builder-label">
+              Activity or routine
+              <input id="report-timeline-manual-label" type="text" placeholder="Example: Schwa mini-lesson" />
+            </label>
+            <label class="report-builder-label">
+              Event summary
+              <input id="report-timeline-manual-event" type="text" placeholder="Example: Guided transfer check" />
+            </label>
+            <label class="report-builder-label report-timeline-note-field">
+              What happened / next step
+              <input id="report-timeline-manual-note" type="text" placeholder="Example: 4/6 learners applied strategy; reteach tomorrow." />
+            </label>
+          </div>
+          <div class="report-actions report-timeline-manual-actions">
+            <button id="report-timeline-manual-add" class="primary-btn" type="button">Add Note to Timeline</button>
+            <button id="report-timeline-manual-clear" class="secondary-btn" type="button">Clear Manual Notes</button>
+          </div>
+        </details>
         <div id="report-intervention-timeline" class="report-timeline"></div>
         <div id="report-iesp-output" class="report-protocol-output"></div>
         <div class="report-media-slot" data-media-slot="timeline-iesp"></div>
+        <div id="report-timeline-status" class="muted"></div>
         <div id="report-iesp-status" class="muted"></div>
       </section>
 
@@ -462,6 +546,43 @@
         <div id="report-role-pathway" class="report-role-pathway"></div>
         <div class="report-media-slot" data-media-slot="role-pathway"></div>
         <div id="report-role-status" class="muted"></div>
+      </section>
+
+      <section class="report-card" aria-label="Class block launcher">
+        <div class="report-card-header">
+          <div>
+            <h2>Class Block Launcher (20 / 30 / 50)</h2>
+            <p class="home-subtitle">One-click role-aligned class blocks with automatic evidence logging for timeline review.</p>
+          </div>
+        </div>
+        <div class="report-role-controls">
+          <label class="report-builder-label" for="report-class-block-role">
+            Launch role
+            <select id="report-class-block-role" aria-label="Class block role selector">
+              <option value="teacher">Teacher</option>
+              <option value="admin">Administrator</option>
+              <option value="dean">Dean</option>
+              <option value="learning-support">Learning Support / SPED</option>
+              <option value="eal">EAL</option>
+              <option value="slp">Speech-Language (SLP)</option>
+              <option value="counselor">School Counselor</option>
+              <option value="psychologist">School Psychologist</option>
+              <option value="student">Student</option>
+              <option value="parent">Parent / Caregiver</option>
+            </select>
+          </label>
+          <label class="report-builder-label" for="report-class-block-grade">
+            Grade band
+            <select id="report-class-block-grade" aria-label="Class block grade band">
+              <option value="K-2">K-2</option>
+              <option value="3-5">3-5</option>
+              <option value="6-8">6-8</option>
+              <option value="9-12">9-12</option>
+            </select>
+          </label>
+        </div>
+        <div id="report-class-block-grid" class="report-class-block-grid"></div>
+        <div id="report-class-block-status" class="muted"></div>
       </section>
 
       <section id="report-parent-communication" class="report-card" aria-label="Parent partnership pathway">

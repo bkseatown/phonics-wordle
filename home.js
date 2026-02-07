@@ -2,6 +2,7 @@
 (function () {
   const PLACEMENT_KEY = 'decode_placement_v1';
   const SETTINGS_KEY = 'decode_settings';
+  const HOME_VISUAL_MODE_KEY = 'cornerstone_home_visual_mode_v1';
 
   const overlay = document.getElementById('modal-overlay');
   const modal = document.getElementById('placement-modal');
@@ -14,6 +15,8 @@
   const result = document.getElementById('placement-result');
   const goWordQuest = document.getElementById('placement-go-word-quest');
   const openWordQuest = document.getElementById('placement-open-word-quest');
+  const homeVisualFunBtn = document.getElementById('home-visual-fun');
+  const homeVisualCalmBtn = document.getElementById('home-visual-calm');
 
   const gradeSelect = document.getElementById('placement-grade');
   const skillEls = {
@@ -26,6 +29,44 @@
     rControlled: document.getElementById('skill-r-controlled'),
     multisyllable: document.getElementById('skill-multisyllable')
   };
+
+  function normalizeHomeVisualMode(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    return raw === 'calm' ? 'calm' : 'fun';
+  }
+
+  function readHomeVisualMode() {
+    return normalizeHomeVisualMode(localStorage.getItem(HOME_VISUAL_MODE_KEY));
+  }
+
+  function applyHomeVisualMode(mode, options = {}) {
+    const normalized = normalizeHomeVisualMode(mode);
+    const body = document.body;
+    if (body) {
+      body.classList.toggle('home-visual-fun', normalized === 'fun');
+      body.classList.toggle('home-visual-calm', normalized === 'calm');
+    }
+    if (homeVisualFunBtn) {
+      homeVisualFunBtn.classList.toggle('active', normalized === 'fun');
+      homeVisualFunBtn.setAttribute('aria-pressed', normalized === 'fun' ? 'true' : 'false');
+    }
+    if (homeVisualCalmBtn) {
+      homeVisualCalmBtn.classList.toggle('active', normalized === 'calm');
+      homeVisualCalmBtn.setAttribute('aria-pressed', normalized === 'calm' ? 'true' : 'false');
+    }
+    if (options.persist) {
+      localStorage.setItem(HOME_VISUAL_MODE_KEY, normalized);
+    }
+    return normalized;
+  }
+
+  applyHomeVisualMode(readHomeVisualMode(), { persist: false });
+  homeVisualFunBtn?.addEventListener('click', () => {
+    applyHomeVisualMode('fun', { persist: true });
+  });
+  homeVisualCalmBtn?.addEventListener('click', () => {
+    applyHomeVisualMode('calm', { persist: true });
+  });
 
   if (!overlay || !modal || !summary || !startBtn || !calcBtn || !clearBtn || !result || !goWordQuest || !gradeSelect) {
     return;
@@ -71,6 +112,8 @@
   const homeRoleSummary = document.getElementById('home-role-summary');
   const homeRoleCards = document.getElementById('home-role-cards');
   const homeRoleActions = document.getElementById('home-role-actions');
+  const homeClassBlockGrid = document.getElementById('home-class-block-grid');
+  const homeClassBlockStatus = document.getElementById('home-class-block-status');
   let editingLearnerId = '';
 
   const REPORT_VERSION = 1;
@@ -407,6 +450,137 @@
     return hash ? `${base}${hash}` : base;
   }
 
+  function setHomeClassBlockStatus(message, isError = false) {
+    if (!homeClassBlockStatus) return;
+    homeClassBlockStatus.textContent = message || '';
+    homeClassBlockStatus.classList.toggle('error', !!isError);
+    homeClassBlockStatus.classList.toggle('success', !isError && !!message);
+  }
+
+  function normalizeLauncherGradeBand(value) {
+    const normalized = normalizeGradeBand(value || '');
+    if (normalized === 'K-2' || normalized === '3-5' || normalized === '6-8' || normalized === '9-12') {
+      return normalized;
+    }
+    return '3-5';
+  }
+
+  function getHomeActivityHref(activityId, options = {}) {
+    const fileByActivity = {
+      'word-quest': 'word-quest.html',
+      cloze: 'cloze.html',
+      comprehension: 'comprehension.html',
+      fluency: 'fluency.html',
+      madlibs: 'madlibs.html',
+      writing: 'writing.html',
+      'plan-it': 'plan-it.html',
+      'number-sense': 'number-sense.html',
+      operations: 'operations.html',
+      'problem-solving': 'number-sense.html',
+      'math-language': 'number-sense.html',
+      'teacher-report': 'teacher-report.html'
+    };
+    const file = fileByActivity[activityId] || 'index.html';
+    const url = new URL(file, window.location.href);
+    if (activityId === 'word-quest') {
+      const focus = options.wordQuestFocus || 'all';
+      const length = options.wordQuestLength || 'any';
+      if (focus) url.searchParams.set('focus', focus);
+      if (length) url.searchParams.set('len', length);
+    }
+    if (activityId === 'number-sense' || activityId === 'problem-solving' || activityId === 'math-language') {
+      const domain = activityId === 'problem-solving'
+        ? 'problem-solving'
+        : activityId === 'math-language'
+          ? 'math-language'
+          : 'number-sense';
+      url.searchParams.set('domain', domain);
+      if (options.gradeBand) url.searchParams.set('gradeBand', options.gradeBand);
+    }
+    if (activityId === 'teacher-report' && options.roleId) {
+      url.searchParams.set('role', options.roleId);
+    }
+    return url.toString();
+  }
+
+  function renderHomeClassBlockLauncher(roleId, context = {}) {
+    if (!homeClassBlockGrid) return;
+    const classBlocks = window.CORNERSTONE_CLASS_BLOCKS;
+    if (!classBlocks?.buildPlansForRole) {
+      homeClassBlockGrid.innerHTML = '<div class="muted">Class Block Launcher is unavailable. Reload the page to restore launcher presets.</div>';
+      setHomeClassBlockStatus('Launcher presets unavailable.', true);
+      return;
+    }
+
+    const normalizedRole = classBlocks.normalizeRole(roleId || 'teacher');
+    const gradeBand = normalizeLauncherGradeBand(context?.learner?.gradeBand || '');
+    const placement = context?.recommendation || {};
+    const plans = classBlocks.buildPlansForRole({ roleId: normalizedRole, gradeBand });
+    const cardsHtml = plans.map((plan) => {
+      const launchStep = plan.launchStep || plan.steps[0] || null;
+      const launchHref = launchStep
+        ? getHomeActivityHref(launchStep.activity, {
+          wordQuestFocus: placement.focus || 'all',
+          wordQuestLength: placement.length || 'any',
+          gradeBand,
+          roleId: normalizedRole
+        })
+        : '#';
+      const stepsHtml = plan.steps
+        .map((step) => `<li>${escapeHtml(step.activityLabel)} · ${escapeHtml(String(step.minutes))} min</li>`)
+        .join('');
+      return `
+        <article class="home-class-block-card">
+          <div class="home-class-block-head">
+            <div class="home-class-block-title">${escapeHtml(plan.title)}</div>
+            <div class="home-class-block-meta">${escapeHtml(gradeBand)}</div>
+          </div>
+          <div class="home-class-block-summary">${escapeHtml(plan.summary)}</div>
+          <ul class="home-class-block-steps">${stepsHtml}</ul>
+          <a
+            class="home-cta primary home-class-block-launch"
+            href="${escapeHtml(launchHref)}"
+            data-source="home"
+            data-role-id="${escapeHtml(normalizedRole)}"
+            data-track="${escapeHtml(plan.track)}"
+            data-grade-band="${escapeHtml(gradeBand)}"
+            data-block-id="${escapeHtml(plan.id)}"
+            data-block-title="${escapeHtml(plan.title)}"
+            data-minutes="${escapeHtml(String(plan.minutes))}"
+            data-launch-activity="${escapeHtml(launchStep?.activity || '')}"
+            data-step-count="${escapeHtml(String(plan.steps.length || 0))}"
+            data-note="${escapeHtml(plan.summary)}"
+          >
+            Launch ${escapeHtml(String(plan.minutes))}-minute block
+          </a>
+        </article>
+      `;
+    }).join('');
+    homeClassBlockGrid.innerHTML = cardsHtml;
+    setHomeClassBlockStatus(`Launcher ready for ${classBlocks.roleLabel(normalizedRole)} (${gradeBand}).`);
+  }
+
+  function logClassBlockLaunchFromElement(element) {
+    const classBlocks = window.CORNERSTONE_CLASS_BLOCKS;
+    if (!classBlocks?.appendLaunchLog) return;
+    const minutes = Number(element.getAttribute('data-minutes') || 20);
+    const roleId = String(element.getAttribute('data-role-id') || 'teacher');
+    const roleLabel = classBlocks.roleLabel(roleId);
+    classBlocks.appendLaunchLog({
+      source: String(element.getAttribute('data-source') || 'home'),
+      roleId,
+      track: String(element.getAttribute('data-track') || 'integrated'),
+      gradeBand: String(element.getAttribute('data-grade-band') || '3-5'),
+      minutes,
+      blockId: String(element.getAttribute('data-block-id') || ''),
+      blockTitle: String(element.getAttribute('data-block-title') || ''),
+      launchActivity: String(element.getAttribute('data-launch-activity') || ''),
+      stepCount: Number(element.getAttribute('data-step-count') || 0),
+      note: String(element.getAttribute('data-note') || '')
+    });
+    setHomeClassBlockStatus(`Logged launch: ${minutes}-minute block (${roleLabel}).`);
+  }
+
   function buildRoleModel(roleId, context) {
     const learnerLabel = context?.learner?.name || 'Current learner';
     const literacyGap = context?.literacySummary?.topGap?.label || 'Gather more literacy evidence';
@@ -643,6 +817,8 @@
         <a class="home-cta ${action.kind === 'primary' ? 'primary' : 'ghost'}" href="${escapeHtml(action.href)}">${escapeHtml(action.label)}</a>
       `)
       .join('');
+
+    renderHomeClassBlockLauncher(selectedRole, context);
   }
 
   function safeParse(json) {
@@ -1576,6 +1752,13 @@
     setPinStatus(`PIN reset to default ${STUDENT_MODE_PIN_DEFAULT}.`);
     setRecoveryStatus('');
     renderRoleDashboard();
+  });
+  homeClassBlockGrid?.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const launchEl = target.closest('.home-class-block-launch');
+    if (!(launchEl instanceof HTMLElement)) return;
+    logClassBlockLaunchFromElement(launchEl);
   });
   learnerList?.addEventListener('click', (event) => {
     const target = event.target;

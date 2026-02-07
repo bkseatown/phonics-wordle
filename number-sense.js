@@ -135,6 +135,19 @@ const FUN_LIBRARY = {
   }
 };
 
+const FUN_LIBRARY_YOUNG = {
+  success: [
+    'Joke: Why did the number 10 smile? It found a friend to make 20.',
+    'Fun fact: Octopuses have three hearts.',
+    'Quote: "Small steps every day make big progress."'
+  ],
+  retry: [
+    'Try-again tip: Use one model first, then solve.',
+    'Keep going: Not yet means your brain is growing.',
+    'Reset: Take one breath, then try the next step.'
+  ]
+};
+
 const state = {
   gradeBand: '3-5',
   domain: PAGE_CONFIG.defaultDomain,
@@ -261,6 +274,34 @@ function clampNumber(value, min, max, fallback = min) {
 function average(values) {
   if (!Array.isArray(values) || !values.length) return 0;
   return values.reduce((sum, value) => sum + Number(value || 0), 0) / values.length;
+}
+
+function getNumeracyAudienceMode() {
+  const settings = safeParse(localStorage.getItem('decode_settings') || '') || {};
+  const mode = String(settings?.audienceMode || 'auto').trim().toLowerCase();
+  if (mode === 'young-eal' || mode === 'young' || mode === 'eal') return 'young-eal';
+  if (mode === 'general') return 'general';
+  if (state.gradeBand === 'K-2') return 'young-eal';
+  return 'general';
+}
+
+function simplifyHintForAudience(text = '') {
+  const raw = String(text || '').trim();
+  if (!raw) return 'Use one visual model, then compute.';
+  if (getNumeracyAudienceMode() !== 'young-eal') return raw;
+  const simplified = raw
+    .replace(/backward/gi, 'back')
+    .replace(/mental number line/gi, 'number line')
+    .replace(/denominator/gi, 'bottom number')
+    .replace(/numerator/gi, 'top number')
+    .replace(/percent change/gi, 'percent increase or decrease')
+    .replace(/coefficient/gi, 'number in front')
+    .replace(/substitute/gi, 'plug in')
+    .replace(/strategy/gi, 'way')
+    .replace(/compute/gi, 'solve')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return simplified;
 }
 
 function normalizeGradeBand(value) {
@@ -1033,8 +1074,11 @@ function setFeedback(message, type = 'neutral') {
 
 function setFunLine(correct) {
   if (!ui.fun) return;
-  const band = FUN_LIBRARY[state.gradeBand] ? state.gradeBand : '3-5';
-  const list = correct ? FUN_LIBRARY[band].success : FUN_LIBRARY[band].retry;
+  const mode = getNumeracyAudienceMode();
+  const pool = mode === 'young-eal'
+    ? FUN_LIBRARY_YOUNG
+    : (FUN_LIBRARY[state.gradeBand] || FUN_LIBRARY['3-5']);
+  const list = correct ? pool.success : pool.retry;
   ui.fun.textContent = pick(list);
 }
 
@@ -1647,7 +1691,8 @@ function submitTypedAnswer() {
 
 function showHint() {
   if (!state.sessionActive || !state.currentItem || !ui.hintText) return;
-  ui.hintText.textContent = state.currentItem.hint || 'Use one visual model, then compute.';
+  const hint = state.currentItem.hint || 'Use one visual model, then compute.';
+  ui.hintText.textContent = simplifyHintForAudience(hint);
 }
 
 function skipItem() {
