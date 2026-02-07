@@ -1165,6 +1165,14 @@
   const iespExportParentBtn = document.getElementById('report-iesp-export-parent');
   const iespOutputEl = document.getElementById('report-iesp-output');
   const iespStatusEl = document.getElementById('report-iesp-status');
+  const sprintTrackEl = document.getElementById('report-sprint-track');
+  const sprintWindowEl = document.getElementById('report-sprint-window');
+  const sprintOwnerEl = document.getElementById('report-sprint-owner');
+  const sprintGenerateBtn = document.getElementById('report-sprint-generate');
+  const sprintCopyBtn = document.getElementById('report-sprint-copy');
+  const sprintExportBtn = document.getElementById('report-sprint-export');
+  const sprintBoardEl = document.getElementById('report-sprint-board');
+  const sprintStatusEl = document.getElementById('report-sprint-status');
 
   let latestBuilderText = '';
   let latestShareText = '';
@@ -1176,12 +1184,14 @@
   let latestIespText = '';
   let latestIespParentText = '';
   let latestTimelineText = '';
+  let latestSprintBoardText = '';
   let latestGoalContext = null;
   let latestProtocolContext = null;
   let latestNumeracyContext = null;
   let latestRoleContext = null;
   let latestParentContext = null;
   let latestIespContext = null;
+  let latestSprintContext = null;
   let pendingNumeracyImport = null;
   let reportMediaDbPromise = null;
   let reportMediaRecorderState = null;
@@ -6176,6 +6186,253 @@
     setIespStatus('');
   }
 
+  function setSprintStatus(message, isError = false) {
+    if (!sprintStatusEl) return;
+    sprintStatusEl.textContent = message || '';
+    sprintStatusEl.classList.toggle('error', !!isError);
+    sprintStatusEl.classList.toggle('success', !isError && !!message);
+  }
+
+  function resolveSprintTrack() {
+    const selected = String(sprintTrackEl?.value || 'integrated');
+    if (selected === 'literacy' || selected === 'numeracy' || selected === 'integrated') return selected;
+    return 'integrated';
+  }
+
+  function resolveSprintWindowDays() {
+    const selected = Number(sprintWindowEl?.value || 7);
+    if (selected === 5 || selected === 7 || selected === 10) return selected;
+    return 7;
+  }
+
+  function resolveSprintOwnerRole() {
+    const selected = String(sprintOwnerEl?.value || resolveIespOwnerRole());
+    const normalized = normalizeRoleId(selected);
+    return ROLE_PATHWAY_LIBRARY[normalized] ? normalized : 'teacher';
+  }
+
+  function sprintLaneMeta(lane) {
+    if (lane === 'red') return { label: 'Urgent', className: 'report-sprint-lane-red' };
+    if (lane === 'yellow') return { label: 'Monitor', className: 'report-sprint-lane-yellow' };
+    return { label: 'Maintain', className: 'report-sprint-lane-green' };
+  }
+
+  function laneFromTraffic(traffic = {}) {
+    if (Array.isArray(traffic.red) && traffic.red.length) return 'red';
+    if (Array.isArray(traffic.yellow) && traffic.yellow.length) return 'yellow';
+    return 'green';
+  }
+
+  function addInstructionalDays(baseDate, dayCount) {
+    const date = new Date(baseDate);
+    let remaining = Math.max(0, Number(dayCount) || 0);
+    while (remaining > 0) {
+      date.setDate(date.getDate() + 1);
+      const day = date.getDay();
+      if (day !== 0 && day !== 6) remaining -= 1;
+    }
+    return date;
+  }
+
+  function buildSprintBoard(context = {}) {
+    const learner = context.learner || null;
+    const pulse = context.pulse || null;
+    const numeracyPulse = context.numeracyPulse || null;
+    const track = resolveSprintTrack();
+    const windowDays = resolveSprintWindowDays();
+    const ownerRole = resolveSprintOwnerRole();
+    const ownerLabel = ROLE_PATHWAY_LIBRARY[ownerRole]?.label || 'Teacher';
+    const ownerGuidance = ROLE_PROTOCOL_GUIDANCE[ownerRole] || ROLE_PROTOCOL_GUIDANCE['learning-support'];
+    const learnerName = learner?.name || 'Learner';
+    const gradeBand = normalizeGradeBand(learner?.gradeBand || builderGradeEl?.value || '3-5');
+    const today = new Date();
+    const reviewDate = addInstructionalDays(today, windowDays);
+
+    const literacyLane = laneFromTraffic(pulse?.traffic || {});
+    const numeracyLane = laneFromTraffic(numeracyPulse?.traffic || {});
+    const literacyMeta = sprintLaneMeta(literacyLane);
+    const numeracyMeta = sprintLaneMeta(numeracyLane);
+    const litGap = pulse?.gaps?.[0] || null;
+    const litStrength = pulse?.strengths?.[0] || null;
+    const numGap = numeracyPulse?.gaps?.[0] || null;
+    const numStrength = numeracyPulse?.strengths?.[0] || null;
+    const litTier = pulse?.engine?.tierRecommendation?.tierLabel || 'Tier 2';
+    const numTier = numeracyPulse?.engine?.tierRecommendation?.tierLabel || 'Tier 2';
+    const litActivity = pulse?.recommendedActivities?.[0]?.label || 'Word Quest';
+    const numActivity = numeracyPulse?.recommendedActivities?.[0]?.label || 'Number Sense Sprint';
+    const timelineRows = buildInterventionTimelineEntries(context).slice(0, 3);
+
+    const tasks = [];
+    if (track !== 'numeracy') {
+      tasks.push({
+        lane: literacyLane,
+        laneLabel: literacyMeta.label,
+        laneClass: literacyMeta.className,
+        title: `Literacy priority: ${litGap?.label || 'Collect baseline literacy signal'}`,
+        move: `Run explicit teach -> guided practice -> transfer using ${litActivity}; target ${litTier}.`,
+        minutes: '15-25',
+        owner: ownerLabel
+      });
+    }
+    if (track !== 'literacy') {
+      tasks.push({
+        lane: numeracyLane,
+        laneLabel: numeracyMeta.label,
+        laneClass: numeracyMeta.className,
+        title: `Numeracy priority: ${numGap?.label || 'Collect baseline numeracy signal'}`,
+        move: `Use manipulatives + strategy talk in ${numActivity}; target ${numTier}.`,
+        minutes: '15-25',
+        owner: ownerLabel
+      });
+    }
+
+    tasks.push({
+      lane: 'yellow',
+      laneLabel: 'Monitor',
+      laneClass: 'report-sprint-lane-yellow',
+      title: 'R/Y/G grouping refresh',
+      move: `Set red/yellow/green groups from current pulse and assign one concrete move per group.`,
+      minutes: '8-12',
+      owner: ownerLabel
+    });
+    tasks.push({
+      lane: 'yellow',
+      laneLabel: 'Monitor',
+      laneClass: 'report-sprint-lane-yellow',
+      title: 'Evidence logging cadence',
+      move: 'Capture at least two scored checks per focus domain this cycle and verify trend direction.',
+      minutes: '6-8',
+      owner: ownerLabel
+    });
+    tasks.push({
+      lane: 'green',
+      laneLabel: 'Maintain',
+      laneClass: 'report-sprint-lane-green',
+      title: 'Family bridge update',
+      move: 'Send one plain-language parent message (EN/ES/ZH template) with one literacy and one numeracy home routine.',
+      minutes: '5-8',
+      owner: ownerLabel
+    });
+    tasks.push({
+      lane: 'green',
+      laneLabel: 'Maintain',
+      laneClass: 'report-sprint-lane-green',
+      title: 'Team handoff + review',
+      move: ownerGuidance.handoff || 'Prepare handoff notes and review progress with team.',
+      minutes: '10-12',
+      owner: ownerLabel
+    });
+
+    const laneCounts = tasks.reduce((acc, task) => {
+      acc[task.lane] = (acc[task.lane] || 0) + 1;
+      return acc;
+    }, { red: 0, yellow: 0, green: 0 });
+
+    const dueOffsets = [0, 1, 2, 3, 4, Math.max(4, windowDays - 1)];
+    const lines = [
+      'Intervention Sprint Board',
+      `Learner: ${learnerName}`,
+      `Grade band: ${gradeBand}`,
+      `Track: ${track}`,
+      `Owner: ${ownerLabel}`,
+      `Window: ${windowDays} instructional days`,
+      `Review date: ${reviewDate.toLocaleDateString()}`,
+      '',
+      `Lane mix: Urgent ${laneCounts.red} · Monitor ${laneCounts.yellow} · Maintain ${laneCounts.green}`,
+      ''
+    ];
+
+    const taskItemsHtml = tasks.map((task, index) => {
+      const dueDate = addInstructionalDays(today, dueOffsets[index] || 0);
+      const dueLabel = dueDate.toLocaleDateString();
+      lines.push(`${index + 1}) [${task.laneLabel}] ${task.title}`);
+      lines.push(`   Move: ${task.move}`);
+      lines.push(`   Owner: ${task.owner} · Time: ${task.minutes} min · Due: ${dueLabel}`);
+      return `
+        <article class="report-sprint-item ${task.laneClass}">
+          <div class="report-sprint-item-head">
+            <span class="report-sprint-lane-pill ${task.laneClass}">${escapeHtml(task.laneLabel)}</span>
+            <span>Due ${escapeHtml(dueLabel)}</span>
+          </div>
+          <div class="report-sprint-title">${escapeHtml(task.title)}</div>
+          <div class="report-sprint-move">${escapeHtml(task.move)}</div>
+          <div class="report-sprint-meta"><strong>Owner:</strong> ${escapeHtml(task.owner)} · <strong>Time:</strong> ${escapeHtml(task.minutes)} min</div>
+        </article>
+      `;
+    }).join('');
+
+    const timelineHtml = timelineRows.length
+      ? timelineRows.map((row) => `<li>${escapeHtml(new Date(row.ts).toLocaleDateString())} · ${escapeHtml(timelineTrackLabel(row.track))}: ${escapeHtml(row.label)} (${escapeHtml(row.event)})</li>`).join('')
+      : '<li>No recent timeline entries yet. Run activities to generate evidence.</li>';
+
+    lines.push('');
+    lines.push('Recent timeline evidence:');
+    if (timelineRows.length) {
+      timelineRows.forEach((row) => {
+        lines.push(`- ${new Date(row.ts).toLocaleDateString()} · ${timelineTrackLabel(row.track)}: ${row.label} (${row.event})`);
+      });
+    } else {
+      lines.push('- No recent timeline entries yet.');
+    }
+
+    const html = `
+      <div class="report-builder-summary">
+        <div><strong>Next-cycle sprint board:</strong> owner-assigned intervention actions with due dates.</div>
+        <div><strong>Window:</strong> ${escapeHtml(String(windowDays))} instructional days · <strong>Owner:</strong> ${escapeHtml(ownerLabel)} · <strong>Review date:</strong> ${escapeHtml(reviewDate.toLocaleDateString())}</div>
+        <div><strong>Lane mix:</strong> Urgent ${laneCounts.red} · Monitor ${laneCounts.yellow} · Maintain ${laneCounts.green}</div>
+      </div>
+      <div class="report-sprint-grid">${taskItemsHtml}</div>
+      <div class="report-sprint-evidence">
+        <div class="report-sprint-evidence-title">Recent timeline evidence</div>
+        <ul>${timelineHtml}</ul>
+      </div>
+    `;
+
+    return {
+      text: lines.join('\n'),
+      html
+    };
+  }
+
+  function renderSprintBoard(context = {}) {
+    if (!sprintBoardEl) return;
+    const board = buildSprintBoard(context);
+    latestSprintBoardText = board.text;
+    sprintBoardEl.innerHTML = board.html;
+    setSprintStatus('');
+  }
+
+  async function copySprintBoard() {
+    if (!latestSprintBoardText) {
+      setSprintStatus('Generate the sprint board first, then copy.', true);
+      return;
+    }
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(latestSprintBoardText);
+      } else {
+        throw new Error('clipboard-unavailable');
+      }
+      setSprintStatus('Sprint board copied.');
+    } catch {
+      setSprintStatus('Clipboard unavailable. Copy directly from the sprint board.', true);
+    }
+  }
+
+  function exportSprintBoard() {
+    if (!latestSprintContext) {
+      setSprintStatus('Refresh report first to generate sprint board export.', true);
+      return;
+    }
+    const learnerName = latestSprintContext.learner?.name || 'learner';
+    const learnerSlug = slugify(learnerName || 'learner');
+    const dateSlug = buildDateSlug(new Date());
+    const text = latestSprintBoardText || buildSprintBoard(latestSprintContext).text;
+    const fileName = `intervention-sprint-board-${learnerSlug}-${dateSlug}.txt`;
+    downloadBlobFile(fileName, new Blob([text], { type: 'text/plain;charset=utf-8' }));
+    setSprintStatus('Sprint board exported.');
+  }
+
   async function copyIespDraft() {
     if (!latestIespText) {
       setIespStatus('Generate an IESP draft first, then copy.', true);
@@ -6625,8 +6882,15 @@
       logs,
       numeracyLogs
     };
+    latestSprintContext = latestIespContext;
+    if (sprintOwnerEl && !sprintOwnerEl.dataset.manualOwner) {
+      const suggestedOwner = resolveIespOwnerRole();
+      const hasOwner = Array.from(sprintOwnerEl.options || []).some((option) => option.value === suggestedOwner);
+      if (hasOwner) sprintOwnerEl.value = suggestedOwner;
+    }
     renderInterventionTimeline(latestIespContext);
     renderIespDraft(latestIespContext);
+    renderSprintBoard(latestSprintContext);
     renderParentMessagePanel(latestParentContext);
     renderReportMediaViewsFromCache();
   }
@@ -6838,6 +7102,36 @@
   });
   iespOwnerEl?.addEventListener('change', () => {
     if (latestIespContext) renderIespDraft(latestIespContext);
+    if (sprintOwnerEl && !sprintOwnerEl.dataset.manualOwner) {
+      const suggestedOwner = resolveIespOwnerRole();
+      const hasOwner = Array.from(sprintOwnerEl.options || []).some((option) => option.value === suggestedOwner);
+      if (hasOwner) sprintOwnerEl.value = suggestedOwner;
+      if (latestSprintContext) renderSprintBoard(latestSprintContext);
+    }
+  });
+  sprintGenerateBtn?.addEventListener('click', () => {
+    if (!latestSprintContext) {
+      setSprintStatus('Refresh report first to build a sprint board.', true);
+      return;
+    }
+    renderSprintBoard(latestSprintContext);
+    setSprintStatus('Sprint board generated.');
+  });
+  sprintCopyBtn?.addEventListener('click', () => {
+    copySprintBoard();
+  });
+  sprintExportBtn?.addEventListener('click', () => {
+    exportSprintBoard();
+  });
+  sprintTrackEl?.addEventListener('change', () => {
+    if (latestSprintContext) renderSprintBoard(latestSprintContext);
+  });
+  sprintWindowEl?.addEventListener('change', () => {
+    if (latestSprintContext) renderSprintBoard(latestSprintContext);
+  });
+  sprintOwnerEl?.addEventListener('change', () => {
+    sprintOwnerEl.dataset.manualOwner = 'true';
+    if (latestSprintContext) renderSprintBoard(latestSprintContext);
   });
   reportMediaOpenBtn?.addEventListener('click', () => {
     openReportMediaModal(reportMediaFilterSectionEl?.value && reportMediaFilterSectionEl.value !== 'all'

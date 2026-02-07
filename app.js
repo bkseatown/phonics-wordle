@@ -549,6 +549,7 @@ function normalizePackedTtsType(type = 'word') {
     const raw = String(type || 'word').trim().toLowerCase();
     if (raw === 'definition' || raw === 'def') return 'def';
     if (raw === 'sentence' || raw === 'sent') return 'sentence';
+    if (raw === 'phoneme' || raw === 'sound') return 'phoneme';
     return 'word';
 }
 
@@ -595,6 +596,47 @@ function getPackedTtsManifestKey(word, languageCode, type) {
     const lang = normalizePackedTtsLanguage(languageCode);
     const entryType = normalizePackedTtsType(type);
     return `${normalizedWord}|${lang}|${entryType}`;
+}
+
+function normalizePhonemeSoundKey(soundKey = '') {
+    const raw = String(soundKey || '').trim().toLowerCase();
+    if (!raw) return '';
+    return raw.replace(/\s+/g, '-');
+}
+
+function getPackedPhonemeManifestKey(soundKey = '', languageCode = 'en') {
+    const normalizedSound = normalizePhonemeSoundKey(soundKey);
+    if (!normalizedSound) return '';
+    const lang = normalizePackedTtsLanguage(languageCode);
+    return `@phoneme:${normalizedSound}|${lang}|phoneme`;
+}
+
+function parsePackedTtsManifestKey(key = '') {
+    const parts = String(key || '').split('|');
+    if (parts.length < 3) return null;
+    const [word, languageCode, type] = parts;
+    if (!word || !languageCode || !type) return null;
+    return {
+        word: word.toLowerCase(),
+        languageCode: normalizePackedTtsLanguage(languageCode),
+        type: normalizePackedTtsType(type)
+    };
+}
+
+function summarizePackedTtsEntries(entries = {}) {
+    const summary = {
+        total: 0,
+        byLanguage: {},
+        byType: {}
+    };
+    Object.keys(entries || {}).forEach((key) => {
+        const parsed = parsePackedTtsManifestKey(key);
+        if (!parsed) return;
+        summary.total += 1;
+        summary.byLanguage[parsed.languageCode] = (summary.byLanguage[parsed.languageCode] || 0) + 1;
+        summary.byType[parsed.type] = (summary.byType[parsed.type] || 0) + 1;
+    });
+    return summary;
 }
 
 function clearPackedTtsCaches() {
@@ -783,6 +825,30 @@ async function tryPlayPackedTtsForCurrentWord({ text = '', languageCode = 'en', 
             return playAudioClipUrl(fallbackClip);
         }
     }
+    return false;
+}
+
+async function tryPlayPackedPhoneme(soundKey = '', languageCode = 'en') {
+    const normalizedSound = normalizePhonemeSoundKey(soundKey);
+    if (!normalizedSound) return false;
+
+    const manifest = await loadPackedTtsManifest();
+    const key = getPackedPhonemeManifestKey(normalizedSound, languageCode);
+    const primaryClip = manifest?.entries?.[key];
+    if (primaryClip) {
+        const played = await playAudioClipUrl(primaryClip);
+        if (played) return true;
+    }
+
+    const activePackId = normalizeTtsPackId(manifest?.__packId || 'default');
+    if (activePackId !== 'default') {
+        const fallbackManifest = await loadPackedTtsManifestFromPath(PACKED_TTS_DEFAULT_MANIFEST_PATH);
+        const fallbackClip = fallbackManifest?.entries?.[key];
+        if (fallbackClip) {
+            return playAudioClipUrl(fallbackClip);
+        }
+    }
+
     return false;
 }
 
@@ -1348,6 +1414,10 @@ function positionFunHud() {
     hud.style.right = window.innerWidth < 720 ? '8px' : '16px';
 }
 
+function isCoarsePointerLayout() {
+    return window.matchMedia && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+}
+
 function applyWordQuestDesktopScale() {
     const body = document.body;
     if (!body || !body.classList.contains('word-quest-page')) return;
@@ -1382,7 +1452,10 @@ function applyWordQuestDesktopScale() {
 
     const keyboardMax = Math.round((keySize * 10) + 86);
     const canvasMax = Math.round(Math.max(840, Math.min(1100, keyboardMax + 286)));
-    const bottomGap = Math.max(12, Math.min(24, Math.round((viewportHeight - headerHeight) * 0.03)));
+    let bottomGap = Math.max(22, Math.min(42, Math.round((viewportHeight - headerHeight) * 0.045)));
+    if (isCoarsePointerLayout()) {
+        bottomGap = Math.min(46, bottomGap + 6);
+    }
 
     body.style.setProperty('--wq-tile-size-desktop', `${tileSize.toFixed(1)}px`);
     body.style.setProperty('--wq-key-size-desktop', `${keySize.toFixed(1)}px`);
@@ -1406,17 +1479,20 @@ function updateWordQuestScrollFallback() {
         return;
     }
 
+    const coarsePointer = isCoarsePointerLayout();
     const viewportBottom = window.visualViewport
-        ? window.visualViewport.height
+        ? (window.visualViewport.offsetTop + window.visualViewport.height)
         : (window.innerHeight || document.documentElement.clientHeight || 0);
-    const safeBottom = Math.max(0, viewportBottom - 6);
+    const safeBottom = Math.max(0, viewportBottom - (coarsePointer ? 14 : 8));
     const canvasRect = canvas.getBoundingClientRect();
     const keyboardRect = keyboardEl.getBoundingClientRect();
     const isClipped = canvasRect.bottom > safeBottom || keyboardRect.bottom > safeBottom || (canvas.scrollHeight > canvas.clientHeight + 8);
+    const forceFallback = coarsePointer && window.innerWidth >= 821;
+    const shouldFallback = forceFallback || isClipped;
 
-    if (wordQuestScrollFallback !== isClipped) {
-        wordQuestScrollFallback = isClipped;
-        body.classList.toggle('wq-scroll-fallback', isClipped);
+    if (wordQuestScrollFallback !== shouldFallback) {
+        wordQuestScrollFallback = shouldFallback;
+        body.classList.toggle('wq-scroll-fallback', shouldFallback);
     }
 }
 
@@ -2698,6 +2774,14 @@ function initTeacherTools() {
         };
     }
 
+    const ttsPackSampleBtn = document.getElementById('tts-pack-sample-btn');
+    if (ttsPackSampleBtn && !ttsPackSampleBtn.dataset.bound) {
+        ttsPackSampleBtn.dataset.bound = 'true';
+        ttsPackSampleBtn.onclick = () => {
+            playTtsPackSampleClip();
+        };
+    }
+
     const translationSelect = document.getElementById('translation-default-select');
     if (translationSelect) {
         translationSelect.onchange = () => {
@@ -3359,6 +3443,95 @@ function describeTtsPackLanguages(pack) {
     return pack.languages.map((lang) => String(lang || '').toUpperCase()).join(', ');
 }
 
+function getCurrentWordPackCoverage(manifestEntries = {}, languageCode = 'en') {
+    const word = String(currentWord || '').trim().toLowerCase();
+    const lang = normalizePackedTtsLanguage(languageCode);
+    const fieldKeys = ['word', 'def', 'sentence'];
+    const result = {
+        hasWord: !!word,
+        present: 0,
+        total: fieldKeys.length,
+        missing: []
+    };
+    if (!word) return result;
+    fieldKeys.forEach((field) => {
+        const key = getPackedTtsManifestKey(word, lang, field);
+        if (key && manifestEntries[key]) {
+            result.present += 1;
+        } else {
+            result.missing.push(field);
+        }
+    });
+    return result;
+}
+
+async function updateTtsPackStatusFromManifest({ pack = null } = {}) {
+    const activePack = pack || await resolvePackedTtsManifestInfo();
+    const manifest = await loadPackedTtsManifestFromPath(activePack.manifestPath);
+    const entries = manifest?.entries || {};
+    const summary = summarizePackedTtsEntries(entries);
+    const activeLang = normalizePackedTtsLanguage(appSettings?.translation?.lang || 'en');
+    const langCount = summary.byLanguage[activeLang] || 0;
+    const phonemeCount = summary.byType.phoneme || 0;
+    const coverage = getCurrentWordPackCoverage(entries, 'en');
+
+    if (!summary.total) {
+        if (activePack.id === 'default') {
+            setTtsPackStatus('Default pack has no clips yet. Generate audio to enable premium playback.', 'warn');
+        } else {
+            setTtsPackStatus(`Pack "${activePack.name}" has no clips yet.`, 'warn');
+        }
+        return;
+    }
+
+    const prefix = activePack.id === 'default'
+        ? 'Default pack'
+        : `Pack "${activePack.name}"`;
+    const coverageText = coverage.hasWord
+        ? ` Current word EN coverage: ${coverage.present}/${coverage.total}.`
+        : '';
+    const phonemeText = phonemeCount ? ` Phoneme clips: ${phonemeCount}.` : '';
+    setTtsPackStatus(
+        `${prefix}: ${summary.total} clips loaded. ${activeLang.toUpperCase()} clips: ${langCount}.${phonemeText}${coverageText}`,
+        'info'
+    );
+}
+
+async function playTtsPackSampleClip() {
+    const sentence = String(currentEntry?.en?.sentence || '').trim();
+    const definition = String(currentEntry?.en?.def || '').trim();
+    const word = String(currentWord || '').trim();
+
+    let played = false;
+    if (sentence) {
+        played = await tryPlayPackedTtsForCurrentWord({
+            text: sentence,
+            languageCode: 'en',
+            type: 'sentence'
+        });
+    }
+    if (!played && definition) {
+        played = await tryPlayPackedTtsForCurrentWord({
+            text: definition,
+            languageCode: 'en',
+            type: 'def'
+        });
+    }
+    if (!played && word) {
+        played = await tryPlayPackedTtsForCurrentWord({
+            text: word,
+            languageCode: 'en',
+            type: 'word'
+        });
+    }
+
+    if (played) {
+        showToast('Voice-pack clip played.');
+    } else {
+        showToast('No clip found in this pack for the current word yet.');
+    }
+}
+
 async function populateTtsPackSelect({ forceRefresh = false } = {}) {
     const selectEl = document.getElementById('tts-pack-select');
     if (!selectEl) return;
@@ -3395,6 +3568,7 @@ async function populateTtsPackSelect({ forceRefresh = false } = {}) {
         } else {
             setTtsPackStatus(`Using pack: ${activePack.name}${languageText}.`, 'info');
         }
+        await updateTtsPackStatusFromManifest({ pack: activePack });
     } catch {
         setTtsPackStatus('Could not load pack registry. Falling back to default pack.', 'warn');
     }
@@ -3545,6 +3719,7 @@ function ensureVoicePreferencesControls() {
                 <option value="default">Default voice pack</option>
             </select>
             <button type="button" id="tts-pack-refresh-btn" class="teacher-secondary-btn">Refresh packs</button>
+            <button type="button" id="tts-pack-sample-btn" class="teacher-secondary-btn">Play pack sample</button>
         </div>
         <div id="tts-pack-status" class="teacher-subtext">Using default voice pack.</div>
         <div class="teacher-subtext">Natural-only blocks robotic fallback voices but requires enhanced system voices.</div>
@@ -4272,6 +4447,7 @@ async function speakPhoneme(sound) {
     if (!sound) return;
     const lower = sound.toString().toLowerCase();
     if (await tryPlayRecordedPhoneme(lower)) return;
+    if (await tryPlayPackedPhoneme(lower, 'en')) return;
     const phonemeData = window.PHONEME_DATA ? window.PHONEME_DATA[sound.toLowerCase()] : null;
     const text = phonemeData ? getPhonemeTts(phonemeData, sound) : sound;
     speakText(text, 'phoneme');
@@ -7762,7 +7938,10 @@ async function speakPhonemeSound(phoneme, soundKey = '') {
     if (key) {
         const played = await tryPlayRecordedPhoneme(key);
         if (played) return;
+        const packedPlayed = await tryPlayPackedPhoneme(key, 'en');
+        if (packedPlayed) return;
     }
+    if (await tryPlayPackedPhoneme(soundKey || phoneme?.grapheme || '', 'en')) return;
     speakText(tts, 'phoneme');
 }
 

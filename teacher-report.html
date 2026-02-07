@@ -382,6 +382,53 @@
         <div id="report-iesp-status" class="muted"></div>
       </section>
 
+      <section id="report-sprint-board-section" class="report-card" aria-label="Intervention sprint board">
+        <div class="report-card-header">
+          <div>
+            <h2>Intervention Sprint Board (Next Cycle)</h2>
+            <p class="home-subtitle">Converts current literacy + numeracy signals into owner-assigned actions with due dates for the next 5-10 days.</p>
+          </div>
+          <div class="report-actions">
+            <button id="report-sprint-copy" class="secondary-btn" type="button">Copy Sprint Board</button>
+            <button id="report-sprint-export" class="secondary-btn" type="button">Export Sprint Board (.txt)</button>
+          </div>
+        </div>
+        <div class="report-protocol-controls">
+          <label class="report-builder-label">
+            Track
+            <select id="report-sprint-track" aria-label="Sprint board track">
+              <option value="integrated">Integrated literacy + numeracy</option>
+              <option value="literacy">Literacy only</option>
+              <option value="numeracy">Numeracy only</option>
+            </select>
+          </label>
+          <label class="report-builder-label">
+            Window
+            <select id="report-sprint-window" aria-label="Sprint board window">
+              <option value="5">5 instructional days</option>
+              <option value="7" selected>7 instructional days</option>
+              <option value="10">10 instructional days</option>
+            </select>
+          </label>
+          <label class="report-builder-label">
+            Owner
+            <select id="report-sprint-owner" aria-label="Sprint board owner">
+              <option value="teacher">Teacher</option>
+              <option value="learning-support">Learning Support / SPED</option>
+              <option value="eal">EAL</option>
+              <option value="slp">Speech-Language (SLP)</option>
+              <option value="counselor">School Counselor</option>
+              <option value="psychologist">School Psychologist</option>
+              <option value="dean">Dean</option>
+              <option value="admin">Administrator</option>
+            </select>
+          </label>
+          <button id="report-sprint-generate" class="primary-btn" type="button">Generate Sprint Board</button>
+        </div>
+        <div id="report-sprint-board" class="report-sprint-board"></div>
+        <div id="report-sprint-status" class="muted"></div>
+      </section>
+
       <section class="report-card" aria-label="Role pathways">
         <div class="report-card-header">
           <div>

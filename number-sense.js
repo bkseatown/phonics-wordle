@@ -138,6 +138,7 @@ const FUN_LIBRARY = {
 const state = {
   gradeBand: '3-5',
   domain: PAGE_CONFIG.defaultDomain,
+  answerMode: 'both',
   totalRounds: 10,
   roundIndex: 0,
   correct: 0,
@@ -154,6 +155,7 @@ const state = {
 const ui = {
   grade: document.getElementById('numsense-grade'),
   domain: document.getElementById('numsense-domain'),
+  answerMode: document.getElementById('numsense-answer-mode'),
   rounds: document.getElementById('numsense-rounds'),
   start: document.getElementById('numsense-start'),
   correct: document.getElementById('numsense-correct'),
@@ -163,6 +165,7 @@ const ui = {
   prompt: document.getElementById('numsense-prompt'),
   stem: document.getElementById('numsense-stem'),
   options: document.getElementById('numsense-options'),
+  answerRow: document.querySelector('.numsense-answer-row'),
   answerInput: document.getElementById('numsense-answer-input'),
   submitBtn: document.getElementById('numsense-submit'),
   hintBtn: document.getElementById('numsense-hint'),
@@ -273,6 +276,21 @@ function normalizeDomain(value) {
   const raw = String(value || '').trim().toLowerCase();
   if (DOMAIN_META[raw]) return raw;
   return PAGE_CONFIG.defaultDomain;
+}
+
+function normalizeAnswerMode(value) {
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw === 'choice' || raw === 'choices' || raw === 'choices-only') return 'choice';
+  if (raw === 'type' || raw === 'typed' || raw === 'type-only') return 'type';
+  return 'both';
+}
+
+function allowsChoiceInput() {
+  return state.answerMode === 'both' || state.answerMode === 'choice';
+}
+
+function allowsTypedInput() {
+  return state.answerMode === 'both' || state.answerMode === 'type';
 }
 
 function getDefaultGradeBand() {
@@ -563,15 +581,15 @@ function generateOperationsQuestion(gradeBand) {
       });
     }
     const a = randomInt(8, 18);
-    const b = randomInt(2, 7);
-    const answer = a - b;
+    const stepCount = Math.round(clampNumber(randomInt(2, 7), 2, 7, 4));
+    const answer = a - stepCount;
     return createChoiceItem({
       kicker: 'Operation strategy',
-      prompt: `${a} - ${b} = ?`,
+      prompt: `${a} - ${stepCount} = ?`,
       answer,
-      distractors: [answer - 1, answer + 1, a - (b - 1)],
-      hint: `Count backward by ${b} steps.`,
-      explain: `${a} - ${b} = ${answer}.`,
+      distractors: [answer - 1, answer + 1, a - (stepCount - 1)],
+      hint: `Count backward by ${stepCount} steps.`,
+      explain: `${a} - ${stepCount} = ${answer}.`,
       tag: 'operations-k2',
       coach: 'Use number-line jumps for subtraction accuracy.'
     });
@@ -868,6 +886,7 @@ function saveSettings() {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify({
     gradeBand: state.gradeBand,
     domain: state.domain,
+    answerMode: state.answerMode,
     totalRounds: state.totalRounds
   }));
 }
@@ -876,6 +895,7 @@ function loadSettings() {
   const parsed = safeParse(localStorage.getItem(SETTINGS_KEY) || '') || {};
   state.gradeBand = normalizeGradeBand(parsed.gradeBand || getDefaultGradeBand());
   state.domain = normalizeDomain(parsed.domain || PAGE_CONFIG.defaultDomain);
+  state.answerMode = normalizeAnswerMode(parsed.answerMode || 'both');
   state.totalRounds = [8, 10, 12].includes(Number(parsed.totalRounds)) ? Number(parsed.totalRounds) : 10;
 }
 
@@ -895,14 +915,32 @@ function applyQueryDefaults() {
 function syncControls() {
   if (ui.grade) ui.grade.value = state.gradeBand;
   if (ui.domain) ui.domain.value = state.domain;
+  if (ui.answerMode) ui.answerMode.value = state.answerMode;
   if (ui.rounds) ui.rounds.value = String(state.totalRounds);
 }
 
 function setSessionControlsDisabled(disabled) {
   if (ui.grade) ui.grade.disabled = disabled;
   if (ui.domain) ui.domain.disabled = disabled || PAGE_CONFIG.lockDomain;
+  if (ui.answerMode) ui.answerMode.disabled = disabled;
   if (ui.rounds) ui.rounds.disabled = disabled;
   if (ui.start) ui.start.textContent = disabled ? PAGE_CONFIG.startRunningLabel : PAGE_CONFIG.startIdleLabel;
+}
+
+function applyAnswerModeVisibility() {
+  const showChoices = allowsChoiceInput();
+  const showTyped = allowsTypedInput();
+  if (ui.options) {
+    ui.options.classList.toggle('is-hidden', !showChoices);
+    ui.options.setAttribute('aria-hidden', showChoices ? 'false' : 'true');
+  }
+  if (ui.answerRow) {
+    ui.answerRow.classList.toggle('is-hidden', !showTyped);
+    ui.answerRow.setAttribute('aria-hidden', showTyped ? 'false' : 'true');
+  }
+  if (!showTyped && ui.answerInput) {
+    ui.answerInput.value = '';
+  }
 }
 
 function renderHud() {
@@ -1010,12 +1048,13 @@ function addCoachMove(move) {
 function renderCurrentItem() {
   if (!ui.options || !ui.prompt || !ui.kicker || !ui.stem) return;
   ui.options.innerHTML = '';
+  applyAnswerModeVisibility();
   if (ui.answerInput) {
     ui.answerInput.value = '';
-    ui.answerInput.disabled = !state.currentItem;
+    ui.answerInput.disabled = !state.currentItem || !allowsTypedInput();
   }
   if (ui.submitBtn) {
-    ui.submitBtn.disabled = !state.currentItem;
+    ui.submitBtn.disabled = !state.currentItem || !allowsTypedInput();
   }
   if (!state.currentItem) {
     ui.kicker.textContent = 'Ready';
@@ -1028,17 +1067,19 @@ function renderCurrentItem() {
   ui.prompt.textContent = state.currentItem.prompt;
   ui.stem.textContent = state.currentItem.stem || '';
 
-  state.currentItem.options.forEach((option, index) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'numsense-option';
-    button.dataset.value = option;
-    button.innerHTML = `<span class="numsense-option-index">${index + 1}</span><span>${option}</span>`;
-    button.addEventListener('click', () => {
-      handleAnswer(option);
+  if (allowsChoiceInput()) {
+    state.currentItem.options.forEach((option, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'numsense-option';
+      button.dataset.value = option;
+      button.innerHTML = `<span class="numsense-option-index">${index + 1}</span><span>${option}</span>`;
+      button.addEventListener('click', () => {
+        handleAnswer(option);
+      });
+      ui.options.appendChild(button);
     });
-    ui.options.appendChild(button);
-  });
+  }
 }
 
 function setManipTool(toolId) {
@@ -1592,6 +1633,10 @@ function handleAnswer(rawValue) {
 
 function submitTypedAnswer() {
   if (!state.sessionActive || state.locked || !state.currentItem || !ui.answerInput) return;
+  if (!allowsTypedInput()) {
+    setFeedback('Typed input is off. Switch Answer mode to Type only or Both.', 'neutral');
+    return;
+  }
   const typed = String(ui.answerInput.value || '').trim();
   if (!typed) {
     setFeedback('Type an answer first, or choose one of the options.', 'neutral');
@@ -1615,6 +1660,7 @@ function startSession() {
   state.domain = PAGE_CONFIG.lockDomain
     ? PAGE_CONFIG.defaultDomain
     : normalizeDomain(ui.domain?.value || state.domain);
+  state.answerMode = normalizeAnswerMode(ui.answerMode?.value || state.answerMode);
   state.totalRounds = [8, 10, 12].includes(Number(ui.rounds?.value)) ? Number(ui.rounds.value) : 10;
   saveSettings();
 
@@ -1657,8 +1703,10 @@ function onSetupChange() {
   state.domain = PAGE_CONFIG.lockDomain
     ? PAGE_CONFIG.defaultDomain
     : normalizeDomain(ui.domain?.value || state.domain);
+  state.answerMode = normalizeAnswerMode(ui.answerMode?.value || state.answerMode);
   state.totalRounds = [8, 10, 12].includes(Number(ui.rounds?.value)) ? Number(ui.rounds.value) : state.totalRounds;
   saveSettings();
+  renderCurrentItem();
   renderHud();
 }
 
@@ -1682,6 +1730,7 @@ function handleKeydown(event) {
     if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
   }
   if (event.key === '1' || event.key === '2' || event.key === '3' || event.key === '4') {
+    if (!allowsChoiceInput()) return;
     const index = Number(event.key) - 1;
     const options = state.currentItem.options || [];
     if (options[index] !== undefined) {
@@ -1725,6 +1774,7 @@ function init() {
   });
   ui.grade?.addEventListener('change', onSetupChange);
   ui.domain?.addEventListener('change', onSetupChange);
+  ui.answerMode?.addEventListener('change', onSetupChange);
   ui.rounds?.addEventListener('change', onSetupChange);
   document.addEventListener('keydown', handleKeydown);
 }
