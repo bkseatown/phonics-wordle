@@ -7,6 +7,11 @@
   const HOME_LANGUAGE_PREF_KEY = 'cornerstone_home_language_pref_v1';
   const HOME_VOICE_DIALECT_PREF_KEY = 'cornerstone_home_voice_dialect_pref_v1';
   const HOME_VOICE_PACK_PREF_KEY = 'cornerstone_home_voice_pack_pref_v1';
+  const QUICKCHECK_SUMMARY_KEY = 'cornerstone_quickcheck_summary_v1';
+  const HOME_STUDENT_NAME_KEY = 'cm_student_name';
+  const HOME_GRADE_BAND_KEY = 'cm_grade_band';
+  const HOME_FOCUS_TODAY_KEY = 'cm_focus_today';
+  const HOME_ROLE_WIZARD_KEY = 'cm_role';
 
   const overlay = document.getElementById('modal-overlay');
   const modal = document.getElementById('placement-modal');
@@ -33,6 +38,16 @@
   const homeQuickVoiceNote = document.getElementById('home-quick-voice-note');
   const homeRolePickButtons = Array.from(document.querySelectorAll('.home-role-pick[data-role-target]'));
   const homeEntryGroupButtons = Array.from(document.querySelectorAll('.home-entry-segment[data-entry-group]'));
+  const homeWizard = document.getElementById('home-onboarding-wizard');
+  const homeWizardSteps = Array.from(document.querySelectorAll('.home-step[data-step-index]'));
+  const homeTeamRoleWrap = document.getElementById('home-team-role-wrap');
+  const homeTeamRoleSelect = document.getElementById('home-team-role-select');
+  const homeStudentSetup = document.getElementById('home-student-setup');
+  const homeStudentNameInput = document.getElementById('home-student-name');
+  const homeGradeBandButtons = Array.from(document.querySelectorAll('.home-grade-band-btn[data-grade-band]'));
+  const homeFocusButtons = Array.from(document.querySelectorAll('.home-focus-btn[data-focus-value]'));
+  const placementSubtitle = document.getElementById('placement-subtitle');
+  const quickCheckStage = document.getElementById('quickcheck-stage');
 
   const HOME_ENTRY_GROUP_KEY = 'cornerstone_home_entry_group_v1';
   const HOME_ENTRY_GROUP_DEFAULT_ROLE = Object.freeze({
@@ -53,18 +68,6 @@
     psychologist: 'school'
   });
 
-  const gradeSelect = document.getElementById('placement-grade');
-  const skillEls = {
-    letterSounds: document.getElementById('skill-letter-sounds'),
-    cvc: document.getElementById('skill-cvc'),
-    digraph: document.getElementById('skill-digraph'),
-    blends: document.getElementById('skill-blends'),
-    magicE: document.getElementById('skill-magic-e'),
-    vowelTeam: document.getElementById('skill-vowel-team'),
-    rControlled: document.getElementById('skill-r-controlled'),
-    multisyllable: document.getElementById('skill-multisyllable')
-  };
-
   function normalizeHomeVisualMode(value) {
     const raw = String(value || '').trim().toLowerCase();
     return raw === 'calm' ? 'calm' : 'fun';
@@ -80,6 +83,43 @@
     if (raw === 'parent') return 'parent';
     if (raw === 'school') return 'school';
     return 'student';
+  }
+
+  function normalizeFocusToday(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (raw === 'numeracy') return 'numeracy';
+    if (raw === 'both') return 'both';
+    return 'literacy';
+  }
+
+  function readFocusToday() {
+    return normalizeFocusToday(localStorage.getItem(HOME_FOCUS_TODAY_KEY));
+  }
+
+  function readStudentName() {
+    return String(localStorage.getItem(HOME_STUDENT_NAME_KEY) || '').trim();
+  }
+
+  function readStudentGradeBand() {
+    return normalizeGradeBand(localStorage.getItem(HOME_GRADE_BAND_KEY) || '');
+  }
+
+  function applyWizardStepState(activeStep = 1) {
+    homeWizardSteps.forEach((stepEl) => {
+      const idx = Number(stepEl.dataset.stepIndex || 0);
+      stepEl.classList.toggle('active', idx === activeStep);
+      stepEl.classList.toggle('complete', idx > 0 && idx < activeStep);
+    });
+  }
+
+  function activeWizardStepForGroup(group) {
+    const normalizedGroup = normalizeHomeEntryGroup(group);
+    if (normalizedGroup !== 'student') return 1;
+    const hasName = !!readStudentName();
+    const focus = readFocusToday();
+    if (!hasName) return 2;
+    if (!focus) return 3;
+    return 4;
   }
 
   function readHomeEntryGroup() {
@@ -113,13 +153,34 @@
 
     const defaultRole = HOME_ENTRY_GROUP_DEFAULT_ROLE[normalizedGroup] || 'teacher';
     const selectedRole = normalizeRoleId(homeRoleSelect?.value || '');
-    const selectedIsVisible = visibleRoleButtons.some((button) => normalizeRoleId(button.dataset.roleTarget || '') === selectedRole);
+    const selectedIsVisible = visibleRoleButtons.length
+      ? visibleRoleButtons.some((button) => normalizeRoleId(button.dataset.roleTarget || '') === selectedRole)
+      : getEntryGroupForRole(selectedRole) === normalizedGroup;
     if (!preserveCurrentRole && homeRoleSelect && (!selectedRole || !selectedIsVisible)) {
       homeRoleSelect.value = defaultRole;
     }
 
+    if (homeTeamRoleWrap) {
+      homeTeamRoleWrap.classList.toggle('hidden', normalizedGroup !== 'school');
+    }
+    if (homeStudentSetup) {
+      homeStudentSetup.classList.toggle('hidden', normalizedGroup !== 'student');
+    }
+    if (normalizedGroup === 'school' && homeTeamRoleSelect) {
+      const teamRole = normalizeRoleId(homeTeamRoleSelect.value || '') || 'teacher';
+      if (!preserveCurrentRole && homeRoleSelect) {
+        homeRoleSelect.value = teamRole;
+      }
+    }
+
+    applyWizardStepState(activeWizardStepForGroup(normalizedGroup));
+
     if (shouldPersist) {
       localStorage.setItem(HOME_ENTRY_GROUP_KEY, normalizedGroup);
+      const wizardRole = normalizedGroup === 'school'
+        ? (normalizeRoleId(homeTeamRoleSelect?.value || '') || normalizeRoleId(homeRoleSelect?.value || '') || 'teacher')
+        : defaultRole;
+      localStorage.setItem(HOME_ROLE_WIZARD_KEY, wizardRole);
     }
     return normalizedGroup;
   }
@@ -381,7 +442,7 @@
     applyHomeDetailsMode(expanded ? 'collapsed' : 'expanded', { persist: true, focusStart: !expanded });
   });
 
-  if (!overlay || !modal || !summary || !startBtn || !calcBtn || !clearBtn || !result || !goWordQuest || !gradeSelect) {
+  if (!overlay || !modal || !summary || !calcBtn || !clearBtn || !result || !goWordQuest || !quickCheckStage) {
     return;
   }
 
@@ -528,6 +589,52 @@
     fluency: 'Math Fluency',
     'math-language': 'Math Language',
     general: 'General Numeracy'
+  };
+
+  const QUICKCHECK_LEVELS = {
+    literacy: [
+      { id: 'phonemic-awareness', label: 'Phonemic awareness', focus: 'cvc', length: '3' },
+      { id: 'graphemes', label: 'Grapheme recognition', focus: 'cvc', length: '3' },
+      { id: 'cvc', label: 'CVC decoding', focus: 'cvc', length: '3' },
+      { id: 'digraphs-blends', label: 'Digraphs + blends', focus: 'digraph', length: '4' },
+      { id: 'vowel-teams', label: 'Vowel teams', focus: 'vowel_team', length: '5' }
+    ],
+    numeracy: [
+      { id: 'counting-quantity', label: 'Counting + quantity' },
+      { id: 'make-10', label: 'Making 10' },
+      { id: 'place-value', label: 'Place value to 100' },
+      { id: 'add-sub-strategies', label: 'Add/sub strategies' }
+    ]
+  };
+
+  const QUICKCHECK_STRATEGIES = {
+    literacy: ['I stretched sounds', 'I used chunks', 'I looked for patterns', 'I asked for replay'],
+    numeracy: ['I counted on', 'I made 10', 'I broke it apart', 'I used a number line']
+  };
+
+  const QUICKCHECK_QUESTION_BANK = {
+    literacy: [
+      { id: 'lit-pa-1', level: 0, prompt: 'Which word starts with the same sound as sun?', choices: ['sock', 'cat', 'map', 'dog'], answer: 0 },
+      { id: 'lit-pa-2', level: 0, prompt: 'What word do these sounds make: /m/ /a/ /p/?', choices: ['map', 'mop', 'tap', 'mat'], answer: 0 },
+      { id: 'lit-gr-1', level: 1, prompt: 'Which letters make the /sh/ sound?', choices: ['ch', 'th', 'sh', 'wh'], answer: 2 },
+      { id: 'lit-gr-2', level: 1, prompt: 'Which letter team spells the long /e/ in "seed"?', choices: ['ea', 'ee', 'ie', 'oa'], answer: 1 },
+      { id: 'lit-cvc-1', level: 2, prompt: 'Pick the CVC word.', choices: ['ship', 'cat', 'rain', 'smile'], answer: 1 },
+      { id: 'lit-cvc-2', level: 2, prompt: 'Which word rhymes with "pin"?', choices: ['pan', 'pen', 'fin', 'fan'], answer: 2 },
+      { id: 'lit-db-1', level: 3, prompt: 'Pick the word with an initial blend.', choices: ['ship', 'trip', 'chin', 'math'], answer: 1 },
+      { id: 'lit-db-2', level: 3, prompt: 'Pick the word with a digraph.', choices: ['stop', 'frog', 'chat', 'clap'], answer: 2 },
+      { id: 'lit-vt-1', level: 4, prompt: 'Which word has a vowel team?', choices: ['train', 'trap', 'trim', 'truck'], answer: 0 },
+      { id: 'lit-vt-2', level: 4, prompt: 'Pick the word with long /o/ from a vowel team.', choices: ['boat', 'bot', 'hot', 'hop'], answer: 0 }
+    ],
+    numeracy: [
+      { id: 'num-cq-1', level: 0, prompt: 'How many dots are there? ●●●●●', choices: ['4', '5', '6', '7'], answer: 1 },
+      { id: 'num-cq-2', level: 0, prompt: 'What number comes after 39?', choices: ['38', '40', '41', '49'], answer: 1 },
+      { id: 'num-m10-1', level: 1, prompt: 'What makes 10 with 6?', choices: ['2', '3', '4', '5'], answer: 2 },
+      { id: 'num-m10-2', level: 1, prompt: '8 + __ = 10', choices: ['1', '2', '3', '4'], answer: 1 },
+      { id: 'num-pv-1', level: 2, prompt: 'In 47, the 4 means...', choices: ['4 ones', '4 tens', '40 ones', '7 tens'], answer: 1 },
+      { id: 'num-pv-2', level: 2, prompt: 'Which number is greater?', choices: ['58', '85', '55', '48'], answer: 1 },
+      { id: 'num-str-1', level: 3, prompt: 'What is 27 + 6?', choices: ['32', '33', '34', '31'], answer: 1 },
+      { id: 'num-str-2', level: 3, prompt: 'What is 42 - 9?', choices: ['31', '32', '33', '34'], answer: 2 }
+    ]
   };
 
   function escapeHtml(value) {
@@ -1074,10 +1181,9 @@
       button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
 
-    const primaryAction = model?.actions?.[0] || null;
     if (homeRoleLaunchBtn) {
-      homeRoleLaunchBtn.href = primaryAction?.href || 'word-quest.html';
-      homeRoleLaunchBtn.textContent = primaryAction?.label || 'Start My Pathway';
+      homeRoleLaunchBtn.textContent = 'Start Quick Check';
+      homeRoleLaunchBtn.setAttribute('data-role-target', normalizedRole);
     }
 
     if (homeRolePreviewEl) {
@@ -1098,19 +1204,15 @@
       || storedRole
       || fallbackRole;
     let selectedRole = requestedRole;
-
-    if (storedRole === 'student' && selectedRole !== 'student') {
-      selectedRole = 'student';
-    }
+    const pinState = resolvePinState();
 
     if (!homeRoleSelect.value || normalizeRoleId(homeRoleSelect.value) !== selectedRole) {
       homeRoleSelect.value = selectedRole;
     }
-    updateRoleSelectorStudentLock(selectedRole === 'student');
+    updateRoleSelectorStudentLock(selectedRole === 'student' && !!pinState.strictMode);
     applyStudentMode(selectedRole);
     writePreferredRole(selectedRole);
 
-    const pinState = resolvePinState();
     refreshRecoveryPhraseDisplay();
     if (homePinStrictToggle) {
       homePinStrictToggle.checked = !!pinState.strictMode;
@@ -1649,89 +1751,83 @@
     applyLookClass(look);
   }
 
-  function getSkillState() {
-    return {
-      letterSounds: !!skillEls.letterSounds?.checked,
-      cvc: !!skillEls.cvc?.checked,
-      digraph: !!skillEls.digraph?.checked,
-      blends: !!skillEls.blends?.checked,
-      magicE: !!skillEls.magicE?.checked,
-      vowelTeam: !!skillEls.vowelTeam?.checked,
-      rControlled: !!skillEls.rControlled?.checked,
-      multisyllable: !!skillEls.multisyllable?.checked
-    };
+  let quickCheckSession = null;
+
+  function initialQuickCheckLevel(domain, gradeBand) {
+    const band = normalizeGradeBand(gradeBand);
+    if (domain === 'literacy') {
+      if (band === '6-8' || band === '9-12') return 3;
+      if (band === '3-5') return 2;
+      return 1;
+    }
+    if (band === '6-8' || band === '9-12') return 2;
+    if (band === '3-5') return 1;
+    return 0;
   }
 
-  function computeRecommendation(skills) {
-    if (!skills.letterSounds) {
-      return {
-        focus: 'cvc',
-        length: '3',
-        headline: 'Start with sound-letter connections + 3-letter words.',
-        notes: 'Tip: open Sound Lab in Word Quest (Tools ▾) and practice short vowels + consonants.'
-      };
+  function quickCheckDomainsForFocus(focusToday) {
+    const normalized = normalizeFocusToday(focusToday);
+    if (normalized === 'both') return ['literacy', 'numeracy'];
+    return [normalized];
+  }
+
+  function pickQuestionForLevel(domain, targetLevel, askedIds) {
+    const pool = (QUICKCHECK_QUESTION_BANK[domain] || []).filter((question) => !askedIds.has(question.id));
+    if (!pool.length) return null;
+    const exact = pool.find((question) => Number(question.level) === Number(targetLevel));
+    if (exact) return exact;
+    return pool
+      .slice()
+      .sort((a, b) => Math.abs(Number(a.level) - Number(targetLevel)) - Math.abs(Number(b.level) - Number(targetLevel)))[0] || null;
+  }
+
+  function activeWizardRole() {
+    const group = readHomeEntryGroup();
+    const storedRole = normalizeRoleId(localStorage.getItem(HOME_ROLE_WIZARD_KEY) || '');
+    if (group === 'student') return 'student';
+    if (group === 'parent') return 'parent';
+    if (group === 'school') {
+      return normalizeRoleId(homeTeamRoleSelect?.value || '') || storedRole || normalizeRoleId(homeRoleSelect?.value || '') || 'teacher';
     }
-    if (!skills.cvc) {
-      return {
-        focus: 'cvc',
-        length: '3',
-        headline: 'Start with CVC short vowels.',
-        notes: 'Keep words short and repeat patterns daily.'
-      };
-    }
-    if (!skills.digraph) {
-      return {
-        focus: 'digraph',
-        length: '4',
-        headline: 'Next focus: digraphs (sh/ch/th).',
-        notes: 'Practice the digraph sound, then read words with that pattern.'
-      };
-    }
-    if (!skills.blends) {
-      return {
-        focus: 'ccvc',
-        length: '4',
-        headline: 'Next focus: blends (st/bl/cr).',
-        notes: 'Start with initial blends (CCVC), then move to final blends (CVCC).'
-      };
-    }
-    if (!skills.magicE) {
-      return {
-        focus: 'cvce',
-        length: '4',
-        headline: 'Next focus: silent‑e (CVCe).',
-        notes: 'Contrast pairs help: cap → cape, kit → kite.'
-      };
-    }
-    if (!skills.vowelTeam) {
-      return {
-        focus: 'vowel_team',
-        length: '5',
-        headline: 'Next focus: vowel teams.',
-        notes: 'Try one team per day (ai, ee, oa…).'
-      };
-    }
-    if (!skills.rControlled) {
-      return {
-        focus: 'r_controlled',
-        length: '5',
-        headline: 'Next focus: r‑controlled vowels.',
-        notes: 'Group by sound (ar / er / or) to reduce confusion.'
-      };
-    }
-    if (!skills.multisyllable) {
-      return {
-        focus: 'multisyllable',
-        length: 'any',
-        headline: 'Next focus: multisyllable words.',
-        notes: 'Teach “chunking”: syllables, prefixes/suffixes, and known patterns.'
-      };
-    }
+    return storedRole || normalizeRoleId(homeRoleSelect?.value || '') || 'student';
+  }
+
+  function createQuickCheckSession(options = {}) {
+    const roleId = normalizeRoleId(options.roleId || activeWizardRole()) || 'student';
+    const entryGroup = getEntryGroupForRole(roleId);
+    const gradeBand = normalizeGradeBand(options.gradeBand || readStudentGradeBand());
+    const focusToday = normalizeFocusToday(options.focusToday || readFocusToday());
+    const domains = quickCheckDomainsForFocus(focusToday);
+    const asked = {};
+    const counts = {};
+    const correct = {};
+    const levels = {};
+    const highestCorrectLevel = {};
+    domains.forEach((domain) => {
+      asked[domain] = new Set();
+      counts[domain] = 0;
+      correct[domain] = 0;
+      levels[domain] = initialQuickCheckLevel(domain, gradeBand);
+      highestCorrectLevel[domain] = -1;
+    });
     return {
-      focus: 'multisyllable',
-      length: 'any',
-      headline: 'You can start with multisyllable practice.',
-      notes: 'Mix in prefixes/suffixes and vocabulary work.'
+      roleId,
+      entryGroup,
+      studentName: options.studentName || readStudentName(),
+      gradeBand,
+      focusToday,
+      domains,
+      domainIndex: 0,
+      counts,
+      correct,
+      levels,
+      highestCorrectLevel,
+      asked,
+      pendingAnswer: null,
+      strategyLog: [],
+      history: [],
+      currentQuestion: null,
+      maxQuestionsPerDomain: 4
     };
   }
 
@@ -1756,13 +1852,245 @@
     delete modal.dataset.open;
   }
 
+  function quickCheckCurrentDomain(session) {
+    if (!session) return '';
+    return session.domains[session.domainIndex] || '';
+  }
+
+  function advanceQuickCheckQuestion(session) {
+    if (!session) return null;
+    while (session.domainIndex < session.domains.length) {
+      const domain = quickCheckCurrentDomain(session);
+      const askedCount = Number(session.counts[domain] || 0);
+      if (askedCount >= session.maxQuestionsPerDomain) {
+        session.domainIndex += 1;
+        continue;
+      }
+      const level = Number(session.levels[domain] || 0);
+      const nextQuestion = pickQuestionForLevel(domain, level, session.asked[domain]);
+      if (!nextQuestion) {
+        session.domainIndex += 1;
+        continue;
+      }
+      session.currentQuestion = nextQuestion;
+      session.asked[domain].add(nextQuestion.id);
+      return nextQuestion;
+    }
+    session.currentQuestion = null;
+    return null;
+  }
+
+  function setQuickCheckButtonState(inProgress) {
+    calcBtn.textContent = inProgress ? 'Restart Quick Check' : 'Start Quick Check';
+  }
+
+  function setFocusButtons(value, options = {}) {
+    const normalized = normalizeFocusToday(value);
+    homeFocusButtons.forEach((button) => {
+      const isActive = normalizeFocusToday(button.dataset.focusValue || '') === normalized;
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+    if (options.persist) {
+      localStorage.setItem(HOME_FOCUS_TODAY_KEY, normalized);
+    }
+    return normalized;
+  }
+
+  function setGradeBandButtons(value, options = {}) {
+    const normalized = normalizeGradeBand(value || '');
+    homeGradeBandButtons.forEach((button) => {
+      const isActive = normalizeGradeBand(button.dataset.gradeBand || '') === normalized;
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+    if (options.persist) {
+      if (normalized) {
+        localStorage.setItem(HOME_GRADE_BAND_KEY, normalized);
+      } else {
+        localStorage.removeItem(HOME_GRADE_BAND_KEY);
+      }
+    }
+    return normalized;
+  }
+
+  function quickCheckLevelLabel(domain, levelIndex) {
+    const levels = QUICKCHECK_LEVELS[domain] || [];
+    const safeIndex = Math.max(0, Math.min(levels.length - 1, Number(levelIndex) || 0));
+    return levels[safeIndex]?.label || 'Starting point';
+  }
+
+  function summarizeQuickCheckDomain(session, domain) {
+    const total = Number(session.counts[domain] || 0);
+    const correct = Number(session.correct[domain] || 0);
+    const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
+    const highestCorrect = Number(session.highestCorrectLevel[domain] || -1);
+    const fallbackLevel = Number(session.levels[domain] || 0);
+    const safeLevel = Math.max(0, Math.min((QUICKCHECK_LEVELS[domain] || []).length - 1, highestCorrect >= 0 ? highestCorrect : fallbackLevel));
+    return {
+      domain,
+      total,
+      correct,
+      accuracy,
+      levelIndex: safeLevel,
+      levelLabel: quickCheckLevelLabel(domain, safeLevel)
+    };
+  }
+
+  function recommendationFromQuickCheck(summaryPayload) {
+    const domains = summaryPayload?.domains || {};
+    const focusToday = normalizeFocusToday(summaryPayload?.focusToday || 'literacy');
+    const literacy = domains.literacy || null;
+    const numeracy = domains.numeracy || null;
+    let selectedDomain = focusToday;
+    if (focusToday === 'both') {
+      if (literacy && numeracy) {
+        selectedDomain = literacy.accuracy <= numeracy.accuracy ? 'literacy' : 'numeracy';
+      } else {
+        selectedDomain = literacy ? 'literacy' : 'numeracy';
+      }
+    }
+
+    if (selectedDomain === 'numeracy' && numeracy) {
+      const level = numeracy.levelIndex;
+      if (level <= 0) {
+        return {
+          focus: 'all',
+          length: 'any',
+          headline: 'Start with Number Sense: counting and quantity.',
+          notes: 'Use concrete visuals first, then quick verbal checks.',
+          activityLabel: 'Number Sense Lab',
+          activityHref: 'number-sense.html?lane=counting',
+          ctaLabel: 'Start Number Sense'
+        };
+      }
+      if (level === 1) {
+        return {
+          focus: 'all',
+          length: 'any',
+          headline: 'Start with Number Sense: making 10.',
+          notes: 'Use make-10 strategy cards and short number talks.',
+          activityLabel: 'Number Sense Lab',
+          activityHref: 'number-sense.html?lane=make10',
+          ctaLabel: 'Start Number Sense'
+        };
+      }
+      if (level === 2) {
+        return {
+          focus: 'all',
+          length: 'any',
+          headline: 'Start with Number Sense: place value to 100.',
+          notes: 'Bridge tens and ones with visual models before timed practice.',
+          activityLabel: 'Number Sense Lab',
+          activityHref: 'number-sense.html?lane=place-value',
+          ctaLabel: 'Start Number Sense'
+        };
+      }
+      return {
+        focus: 'all',
+        length: 'any',
+        headline: 'Start with strategy-first operations practice.',
+        notes: 'Prioritize explain-your-thinking prompts before speed goals.',
+        activityLabel: 'Strategy Studio',
+        activityHref: 'operations.html?lane=strategy',
+        ctaLabel: 'Start Strategy Studio'
+      };
+    }
+
+    const literacyLevel = literacy?.levelIndex ?? 0;
+    const levels = QUICKCHECK_LEVELS.literacy || [];
+    const levelMeta = levels[Math.max(0, Math.min(levels.length - 1, literacyLevel))] || levels[0];
+    const notesByLevel = {
+      'phonemic-awareness': 'Use listen-repeat routines and short sound-box rounds.',
+      graphemes: 'Practice sound-symbol mapping before adding word chains.',
+      cvc: 'Use short-vowel contrast sets and immediate feedback loops.',
+      'digraphs-blends': 'Mix digraphs and blends in short, high-success rounds.',
+      'vowel-teams': 'Use one vowel team at a time with clear examples.'
+    };
+    return {
+      focus: levelMeta?.focus || 'cvc',
+      length: levelMeta?.length || '3',
+      headline: `Start with ${(levelMeta?.label || 'CVC decoding').toLowerCase()} in Word Quest.`,
+      notes: notesByLevel[levelMeta?.id] || 'Use short rounds and explicit strategy language.',
+      activityLabel: 'Word Quest',
+      activityHref: wordQuestHref(levelMeta?.focus || 'cvc', levelMeta?.length || '3'),
+      ctaLabel: 'Start Word Quest'
+    };
+  }
+
+  function buildQuickCheckPayload(session) {
+    const domains = {};
+    session.domains.forEach((domain) => {
+      domains[domain] = summarizeQuickCheckDomain(session, domain);
+    });
+    const payload = {
+      version: 2,
+      roleId: session.roleId,
+      entryGroup: session.entryGroup,
+      studentName: session.studentName || '',
+      gradeBand: session.gradeBand || '',
+      focusToday: session.focusToday,
+      domains,
+      strategyLog: session.strategyLog.slice(),
+      updatedAt: new Date().toISOString()
+    };
+    payload.recommendation = recommendationFromQuickCheck(payload);
+    return payload;
+  }
+
+  function store(data) {
+    localStorage.setItem(PLACEMENT_KEY, JSON.stringify(data));
+    localStorage.setItem(QUICKCHECK_SUMMARY_KEY, JSON.stringify(data));
+  }
+
+  function load() {
+    const parsed = safeParse(localStorage.getItem(PLACEMENT_KEY) || '') || safeParse(localStorage.getItem(QUICKCHECK_SUMMARY_KEY) || '');
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed;
+  }
+
+  function showResult(payload) {
+    const rec = payload?.recommendation || null;
+    if (!rec) {
+      result.classList.remove('hidden');
+      result.innerHTML = '<div class="placement-result-title">Quick Check complete</div><div class="muted">No recommendation generated. Please run it again.</div>';
+      return;
+    }
+    const literacySummary = payload?.domains?.literacy;
+    const numeracySummary = payload?.domains?.numeracy;
+    const studentName = String(payload?.studentName || '').trim();
+    const kidLead = studentName
+      ? `Nice work, ${escapeHtml(studentName)}. You are ready to start here.`
+      : 'Nice work. You are ready to start here.';
+    const teacherRows = [literacySummary, numeracySummary]
+      .filter(Boolean)
+      .map((domainSummary) => `<li>${escapeHtml(domainSummary.levelLabel)} · ${domainSummary.correct}/${domainSummary.total} correct</li>`)
+      .join('');
+
+    result.classList.remove('hidden');
+    result.innerHTML = `
+      <div class="placement-result-title">You are ready to start here</div>
+      <div class="placement-result-main">${kidLead}</div>
+      <div class="muted" style="margin-top:6px;"><strong>${escapeHtml(rec.activityLabel || 'Recommended activity')}</strong>: ${escapeHtml(rec.headline || '')}</div>
+      ${rec.notes ? `<div class="muted" style="margin-top:6px;">${escapeHtml(rec.notes)}</div>` : ''}
+      <div class="placement-teacher-block" style="margin-top:10px;">
+        <div class="home-mini-title">Teacher view</div>
+        <ul class="home-progress-list" style="margin-top:4px;">${teacherRows || '<li>No domain summary available.</li>'}</ul>
+      </div>
+    `;
+    const href = String(rec.activityHref || wordQuestHref(rec.focus, rec.length));
+    goWordQuest.href = href;
+    goWordQuest.textContent = rec.ctaLabel || 'Start Recommended Path';
+    goWordQuest.classList.remove('hidden');
+  }
+
   function renderSummary(data) {
     if (!summary) return;
 
     if (!data || !data.recommendation) {
       summary.innerHTML = `
         <div class="home-mini-title">Current recommendation</div>
-        <div class="muted">Not set yet. Run the screener to get a starting focus.</div>
+        <div class="muted">Not set yet. Run Quick Check to get a starting path.</div>
       `;
       if (openWordQuest) openWordQuest.href = 'word-quest.html';
       return;
@@ -1774,81 +2102,230 @@
       ? updated.toLocaleDateString()
       : '—';
 
-    const focusLabel = rec.focus === 'vowel_team'
-      ? 'Vowel Teams'
-      : rec.focus === 'r_controlled'
-        ? 'R-Controlled'
-        : rec.focus === 'cvce'
-          ? 'Silent‑e (CVCe)'
-          : rec.focus === 'ccvc'
-            ? 'Blends (CCVC)'
-            : rec.focus === 'digraph'
-              ? 'Digraphs'
-              : rec.focus === 'cvc'
-                ? 'CVC'
-                : rec.focus === 'multisyllable'
-                  ? 'Multisyllable'
-                  : 'All Words';
+    const literacySummary = data?.domains?.literacy;
+    const numeracySummary = data?.domains?.numeracy;
+    const summaryParts = [];
+    if (literacySummary) summaryParts.push(`Literacy: ${literacySummary.levelLabel}`);
+    if (numeracySummary) summaryParts.push(`Numeracy: ${numeracySummary.levelLabel}`);
 
     summary.innerHTML = `
       <div class="home-mini-title">Current recommendation</div>
-      <div class="home-placement-line"><strong>${focusLabel}</strong> · length <strong>${rec.length}</strong> · updated <strong>${updatedText}</strong></div>
-      <div class="muted">${rec.headline || ''}</div>
+      <div class="home-placement-line"><strong>${escapeHtml(rec.activityLabel || 'Next path')}</strong> · updated <strong>${updatedText}</strong></div>
+      <div class="muted">${escapeHtml(rec.headline || '')}</div>
+      ${summaryParts.length ? `<div class="muted">${summaryParts.map((part) => escapeHtml(part)).join(' · ')}</div>` : ''}
     `;
 
-    const href = wordQuestHref(rec.focus, rec.length);
+    const href = String(rec.activityHref || wordQuestHref(rec.focus, rec.length));
     goWordQuest.href = href;
-    openWordQuest.href = href;
+    if (openWordQuest) openWordQuest.href = href;
   }
 
-  function store(data) {
-    localStorage.setItem(PLACEMENT_KEY, JSON.stringify(data));
-  }
-
-  function load() {
-    return safeParse(localStorage.getItem(PLACEMENT_KEY) || '');
-  }
-
-  function setFormFromData(data) {
-    if (!data) return;
-    if (gradeSelect && data.gradeBand !== undefined) {
-      gradeSelect.value = normalizeGradeBand(data.gradeBand) || '';
+  function renderQuickCheckIntro() {
+    const group = readHomeEntryGroup();
+    const roleId = activeWizardRole();
+    const studentName = readStudentName();
+    const gradeBand = readStudentGradeBand();
+    const focusToday = readFocusToday();
+    const roleLabel = HOME_ROLE_LABELS[roleId] || 'Student';
+    const focusLabel = focusToday === 'numeracy'
+      ? 'Math & Numbers'
+      : focusToday === 'both'
+        ? 'Reading & Words + Math & Numbers'
+        : 'Reading & Words';
+    const nameLine = group === 'student' && studentName
+      ? `<div class="quickcheck-inline-note">Learner: <strong>${escapeHtml(studentName)}</strong>${gradeBand ? ` (${escapeHtml(gradeBand)})` : ''}</div>`
+      : '';
+    if (placementSubtitle) {
+      placementSubtitle.textContent = group === 'student'
+        ? 'A short adaptive check to find the best starting point.'
+        : 'A quick check to set a clear first step for this pathway.';
     }
-    const skills = data.skills || {};
-    if (skillEls.letterSounds) skillEls.letterSounds.checked = !!skills.letterSounds;
-    if (skillEls.cvc) skillEls.cvc.checked = !!skills.cvc;
-    if (skillEls.digraph) skillEls.digraph.checked = !!skills.digraph;
-    if (skillEls.blends) skillEls.blends.checked = !!skills.blends;
-    if (skillEls.magicE) skillEls.magicE.checked = !!skills.magicE;
-    if (skillEls.vowelTeam) skillEls.vowelTeam.checked = !!skills.vowelTeam;
-    if (skillEls.rControlled) skillEls.rControlled.checked = !!skills.rControlled;
-    if (skillEls.multisyllable) skillEls.multisyllable.checked = !!skills.multisyllable;
-  }
-
-  function showResult(rec) {
-    result.classList.remove('hidden');
-    result.innerHTML = `
-      <div class="placement-result-title">Recommended Word Quest focus</div>
-      <div class="placement-result-main"><strong>${rec.focus}</strong> · length <strong>${rec.length}</strong></div>
-      <div class="muted" style="margin-top:6px;">${rec.headline || ''}</div>
-      ${rec.notes ? `<div class="muted" style="margin-top:6px;">${rec.notes}</div>` : ''}
+    quickCheckStage.innerHTML = `
+      <div class="quickcheck-card">
+        <div class="quickcheck-title">Ready to run Quick Check?</div>
+        <p class="quickcheck-copy">Role: <strong>${escapeHtml(roleLabel)}</strong> · Focus: <strong>${escapeHtml(focusLabel)}</strong>.</p>
+        ${nameLine}
+        <p class="quickcheck-copy">You will answer short items with strategy choices, then get a recommended next step.</p>
+      </div>
     `;
-
-    const href = wordQuestHref(rec.focus, rec.length);
-    goWordQuest.href = href;
-    goWordQuest.classList.remove('hidden');
+    result.classList.add('hidden');
+    goWordQuest.classList.add('hidden');
+    setQuickCheckButtonState(false);
   }
 
-  startBtn.addEventListener('click', () => {
-    const existing = load();
-    setFormFromData(existing);
-    if (existing?.recommendation) {
-      showResult(existing.recommendation);
+  function renderQuickCheckQuestion(session) {
+    const domain = quickCheckCurrentDomain(session);
+    const question = session.currentQuestion || advanceQuickCheckQuestion(session);
+    if (!question) {
+      const payload = buildQuickCheckPayload(session);
+      store(payload);
+      syncProfileAndLook(payload.gradeBand || '');
+      showResult(payload);
+      renderSummary(payload);
+      setQuickCheckButtonState(true);
+      return;
+    }
+    const index = Number(session.counts[domain] || 0) + 1;
+    const total = session.maxQuestionsPerDomain;
+    const progressLabel = domain === 'literacy' ? 'Literacy Quick Check' : 'Numeracy Quick Check';
+    quickCheckStage.innerHTML = `
+      <div class="quickcheck-card">
+        <div class="quickcheck-progress">${escapeHtml(progressLabel)} · Item ${index} of ${total}</div>
+        <div class="quickcheck-title">${escapeHtml(question.prompt)}</div>
+        <div class="quickcheck-choice-grid">
+          ${question.choices.map((choice, choiceIndex) => `
+            <button type="button" class="quickcheck-choice" data-choice-index="${choiceIndex}">
+              ${escapeHtml(choice)}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderQuickCheckPostAnswer(session) {
+    const pending = session.pendingAnswer;
+    if (!pending) return;
+    const question = pending.question;
+    const domain = pending.domain;
+    const isCorrect = !!pending.correct;
+    const strategies = QUICKCHECK_STRATEGIES[domain] || [];
+    quickCheckStage.innerHTML = `
+      <div class="quickcheck-card">
+        <div class="quickcheck-feedback ${isCorrect ? 'success' : 'needs-support'}">${isCorrect ? 'Nice work.' : 'Good try. Let’s keep going.'}</div>
+        <div class="quickcheck-copy">How did you solve it?</div>
+        <div class="quickcheck-strategy-grid">
+          ${strategies.map((strategy) => `
+            <button type="button" class="quickcheck-strategy-chip" data-strategy="${escapeHtml(strategy)}">${escapeHtml(strategy)}</button>
+          `).join('')}
+        </div>
+        <div class="quickcheck-copy">Answer selected: <strong>${escapeHtml(question.choices[pending.selectedIndex] || '')}</strong>${isCorrect ? '' : ` · Correct: <strong>${escapeHtml(question.choices[question.answer] || '')}</strong>`}</div>
+        <div class="quickcheck-next-row">
+          <button type="button" class="primary-btn quickcheck-next-btn" data-action="next-question">Next</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function startQuickCheck(options = {}) {
+    quickCheckSession = createQuickCheckSession(options);
+    result.classList.add('hidden');
+    goWordQuest.classList.add('hidden');
+    setQuickCheckButtonState(true);
+    renderQuickCheckQuestion(quickCheckSession);
+  }
+
+  function syncWizardFromStorage() {
+    const group = readHomeEntryGroup();
+    const storedRole = normalizeRoleId(localStorage.getItem(HOME_ROLE_WIZARD_KEY) || '');
+    const role = group === 'school'
+      ? (storedRole || normalizeRoleId(homeTeamRoleSelect?.value || '') || 'teacher')
+      : group === 'parent'
+        ? 'parent'
+        : 'student';
+    if (homeRoleSelect) {
+      homeRoleSelect.value = role;
+    }
+    if (homeTeamRoleSelect && group === 'school') {
+      homeTeamRoleSelect.value = role;
+    }
+    const resolvedGroup = getEntryGroupForRole(role);
+    applyHomeEntryGroup(resolvedGroup, { persist: false, preserveCurrentRole: true });
+    if (homeStudentNameInput) {
+      homeStudentNameInput.value = readStudentName();
+    }
+    setGradeBandButtons(readStudentGradeBand(), { persist: false });
+    setFocusButtons(readFocusToday(), { persist: false });
+  }
+
+  function handleQuickCheckStageClick(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement) || !quickCheckSession) return;
+
+    const choiceBtn = target.closest('.quickcheck-choice');
+    if (choiceBtn && quickCheckSession.currentQuestion) {
+      const domain = quickCheckCurrentDomain(quickCheckSession);
+      const selectedIndex = Number(choiceBtn.getAttribute('data-choice-index'));
+      if (Number.isNaN(selectedIndex)) return;
+      const question = quickCheckSession.currentQuestion;
+      const isCorrect = selectedIndex === Number(question.answer);
+      quickCheckSession.currentQuestion = null;
+      quickCheckSession.pendingAnswer = { domain, question, selectedIndex, correct: isCorrect, strategy: '' };
+      quickCheckSession.counts[domain] = Number(quickCheckSession.counts[domain] || 0) + 1;
+      if (isCorrect) {
+        quickCheckSession.correct[domain] = Number(quickCheckSession.correct[domain] || 0) + 1;
+        quickCheckSession.highestCorrectLevel[domain] = Math.max(Number(quickCheckSession.highestCorrectLevel[domain] || -1), Number(question.level) || 0);
+        quickCheckSession.levels[domain] = Math.min((QUICKCHECK_LEVELS[domain] || []).length - 1, Number(quickCheckSession.levels[domain] || 0) + 1);
+      } else {
+        quickCheckSession.levels[domain] = Math.max(0, Number(quickCheckSession.levels[domain] || 0) - 1);
+      }
+      renderQuickCheckPostAnswer(quickCheckSession);
+      return;
+    }
+
+    const strategyBtn = target.closest('.quickcheck-strategy-chip');
+    if (strategyBtn && quickCheckSession.pendingAnswer) {
+      const strategy = String(strategyBtn.getAttribute('data-strategy') || '').trim();
+      quickCheckSession.pendingAnswer.strategy = strategy;
+      quickCheckStage.querySelectorAll('.quickcheck-strategy-chip').forEach((chip) => {
+        chip.classList.toggle('active', chip === strategyBtn);
+      });
+      return;
+    }
+
+    const nextBtn = target.closest('[data-action="next-question"]');
+    if (nextBtn && quickCheckSession.pendingAnswer) {
+      const pending = quickCheckSession.pendingAnswer;
+      quickCheckSession.strategyLog.push({
+        domain: pending.domain,
+        questionId: pending.question.id,
+        strategy: pending.strategy || 'Not selected',
+        correct: !!pending.correct
+      });
+      quickCheckSession.history.push({
+        domain: pending.domain,
+        questionId: pending.question.id,
+        selectedIndex: pending.selectedIndex,
+        correct: !!pending.correct
+      });
+      quickCheckSession.pendingAnswer = null;
+      renderQuickCheckQuestion(quickCheckSession);
+    }
+  }
+
+  function openQuickCheckFromWizard() {
+    const roleId = activeWizardRole();
+    const group = getEntryGroupForRole(roleId);
+    const studentName = String(homeStudentNameInput?.value || '').trim();
+    if (group === 'student') {
+      if (!studentName) {
+        if (homeRolePreviewEl) {
+          homeRolePreviewEl.textContent = 'Step 2: enter a student name before running Quick Check.';
+        }
+        homeStudentNameInput?.focus();
+        applyWizardStepState(2);
+        return;
+      }
+      if (studentName) {
+        localStorage.setItem(HOME_STUDENT_NAME_KEY, studentName);
+      }
+      localStorage.setItem(HOME_ROLE_WIZARD_KEY, 'student');
     } else {
-      result.classList.add('hidden');
-      goWordQuest.classList.add('hidden');
+      localStorage.removeItem(HOME_STUDENT_NAME_KEY);
+      localStorage.setItem(HOME_ROLE_WIZARD_KEY, roleId);
     }
+    const gradeBand = readStudentGradeBand();
+    if (gradeBand) syncProfileAndLook(gradeBand);
     openModal();
+    renderQuickCheckIntro();
+  }
+
+  startBtn?.addEventListener('click', () => {
+    openQuickCheckFromWizard();
+  });
+
+  homeRoleLaunchBtn?.addEventListener('click', () => {
+    openQuickCheckFromWizard();
   });
 
   closeBtn?.addEventListener('click', closeModal);
@@ -1863,35 +2340,40 @@
     }
   });
 
+  quickCheckStage.addEventListener('click', handleQuickCheckStageClick);
+
   calcBtn.addEventListener('click', () => {
-    const gradeBand = normalizeGradeBand(gradeSelect.value || '');
-    const skills = getSkillState();
-    const recommendation = computeRecommendation(skills);
-    const payload = {
-      version: 1,
-      gradeBand,
-      skills,
-      recommendation,
-      updatedAt: new Date().toISOString()
-    };
-    store(payload);
-    syncProfileAndLook(gradeBand);
-    showResult(recommendation);
-    renderSummary(payload);
+    if (!quickCheckSession) {
+      const roleId = activeWizardRole();
+      startQuickCheck({
+        roleId,
+        gradeBand: readStudentGradeBand(),
+        focusToday: readFocusToday(),
+        studentName: readStudentName()
+      });
+      return;
+    }
+    startQuickCheck({
+      roleId: quickCheckSession.roleId,
+      gradeBand: quickCheckSession.gradeBand,
+      focusToday: quickCheckSession.focusToday,
+      studentName: quickCheckSession.studentName
+    });
   });
 
   clearBtn.addEventListener('click', () => {
     localStorage.removeItem(PLACEMENT_KEY);
-    Object.values(skillEls).forEach((el) => {
-      if (el) el.checked = false;
-    });
-    gradeSelect.value = '';
+    localStorage.removeItem(QUICKCHECK_SUMMARY_KEY);
     result.classList.add('hidden');
     goWordQuest.classList.add('hidden');
+    quickCheckSession = null;
+    renderQuickCheckIntro();
     renderSummary(null);
   });
 
   // Initial render
+  syncWizardFromStorage();
+  renderQuickCheckIntro();
   renderSummary(load());
 
   function renderProgress() {
@@ -1975,15 +2457,35 @@
   });
   homeRoleSelect?.addEventListener('change', () => {
     const nextRole = normalizeRoleId(homeRoleSelect.value || '');
+    if (nextRole) {
+      localStorage.setItem(HOME_ROLE_WIZARD_KEY, nextRole);
+    }
+    if (homeTeamRoleSelect && getEntryGroupForRole(nextRole) === 'school') {
+      homeTeamRoleSelect.value = nextRole;
+    }
     applyHomeEntryGroup(getEntryGroupForRole(nextRole), { persist: true, preserveCurrentRole: true });
     renderRoleDashboard();
+    renderQuickCheckIntro();
   });
   homeEntryGroupButtons.forEach((button) => {
     button.addEventListener('click', () => {
       const nextGroup = normalizeHomeEntryGroup(button.dataset.entryGroup || '');
       applyHomeEntryGroup(nextGroup, { persist: true, preserveCurrentRole: false });
+      const roleId = normalizeRoleId(homeRoleSelect?.value || HOME_ENTRY_GROUP_DEFAULT_ROLE[nextGroup] || 'student');
+      if (roleId) localStorage.setItem(HOME_ROLE_WIZARD_KEY, roleId);
       renderRoleDashboard();
+      renderQuickCheckIntro();
     });
+  });
+  homeTeamRoleSelect?.addEventListener('change', () => {
+    const roleId = normalizeRoleId(homeTeamRoleSelect.value || '') || 'teacher';
+    if (homeRoleSelect) {
+      homeRoleSelect.value = roleId;
+    }
+    localStorage.setItem(HOME_ROLE_WIZARD_KEY, roleId);
+    applyHomeEntryGroup('school', { persist: true, preserveCurrentRole: true });
+    renderRoleDashboard();
+    renderQuickCheckIntro();
   });
   homeRolePickButtons.forEach((button) => {
     button.addEventListener('click', () => {
@@ -1994,6 +2496,35 @@
         homeRoleSelect.value = roleId;
       }
       renderRoleDashboard();
+      renderQuickCheckIntro();
+    });
+  });
+  homeStudentNameInput?.addEventListener('input', () => {
+    const value = String(homeStudentNameInput.value || '').trim();
+    if (value) {
+      localStorage.setItem(HOME_STUDENT_NAME_KEY, value);
+    } else {
+      localStorage.removeItem(HOME_STUDENT_NAME_KEY);
+    }
+    applyWizardStepState(activeWizardStepForGroup('student'));
+    renderQuickCheckIntro();
+  });
+  homeGradeBandButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const band = normalizeGradeBand(button.dataset.gradeBand || '');
+      if (!band) return;
+      setGradeBandButtons(band, { persist: true });
+      syncProfileAndLook(band);
+      applyWizardStepState(activeWizardStepForGroup(readHomeEntryGroup()));
+      renderQuickCheckIntro();
+    });
+  });
+  homeFocusButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const focusValue = normalizeFocusToday(button.dataset.focusValue || '');
+      setFocusButtons(focusValue, { persist: true });
+      applyWizardStepState(activeWizardStepForGroup(readHomeEntryGroup()));
+      renderQuickCheckIntro();
     });
   });
   homePinSaveBtn?.addEventListener('click', () => {

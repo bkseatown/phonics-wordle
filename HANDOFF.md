@@ -55,10 +55,28 @@ node -e "const https=require('https');https.get('https://bkseatown.github.io/Cor
 - Kid-safe reveal clarity: `9.3/10`
 - Overall stabilization: `9.2/10`
 
+## New local (not yet pushed) work
+- Files changed: `index.html`, `home.js`, `style.css`.
+- Home now runs as a real 4-step onboarding wizard:
+  - Step 1 role (Student / Parent-Caregiver / School Team)
+  - Step 2 student name + grade band
+  - Step 3 focus (Reading & Words / Math & Numbers / Both)
+  - Step 4 Quick Check (primary CTA)
+- Duplicate "Student" hero state removed; role chips are the single role control.
+- Home CTA is now `Start Quick Check` (Word Quest no longer the default start path).
+- Added local adaptive Quick Check flow in `home.js`:
+  - literacy and numeracy short branching item banks
+  - "How did you solve it?" strategy chips
+  - local summary persistence + recommended route CTA
+- Home collapsed first view is re-tuned to no-scroll at `1280x780`.
+
+## Remaining known gap
+- Tagalog translation audio can still show as unavailable for some words in Word Quest when no packed TL clip exists (UI now fails safely instead of playing wrong-language audio).
+
 ## Next max-impact steps
-1. Full explicit sweep of remaining edgy-tone reveal lines (`scary/hurt/hate/fight/gross`) across EN/ES/ZH/TL.
-2. Re-export only changed Azure clips (targeted words only) and re-verify translation hear-buttons on live HTTP pages.
-3. Run focused visual pass on root-served `index.html` + `word-quest.html` with cache-busted checks.
+1. Push the new Home wizard pass to `main`, then verify live behavior with cache-busted URLs.
+2. Finish TL/ES/ZH Azure clip coverage for any words still falling back to disabled translation audio.
+3. Refresh visual baselines (`home`, `word-quest`) after stakeholder sign-off on new Home layout.
 
 ## Clean working tree note
 - Keep these out of commits unless intentionally needed:
