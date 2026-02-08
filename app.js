@@ -74,8 +74,16 @@ const PHONEME_VIDEO_LIBRARY_CANDIDATE_DIRS = [
     'public/assets/articulation/clips'
 ];
 let activeSoundVideoObjectUrl = '';
-const PACKED_TTS_DEFAULT_MANIFEST_PATH = 'literacy-platform/audio/tts/tts-manifest.json';
-const PACKED_TTS_PACK_REGISTRY_PATH = 'literacy-platform/audio/tts/packs/pack-registry.json';
+function resolvePackedTtsBasePath() {
+    const pathname = String(window?.location?.pathname || '').toLowerCase();
+    if (pathname.includes('/literacy-platform/')) {
+        return 'audio/tts';
+    }
+    return 'literacy-platform/audio/tts';
+}
+const PACKED_TTS_BASE_PATH = resolvePackedTtsBasePath();
+const PACKED_TTS_DEFAULT_MANIFEST_PATH = `${PACKED_TTS_BASE_PATH}/tts-manifest.json`;
+const PACKED_TTS_PACK_REGISTRY_PATH = `${PACKED_TTS_BASE_PATH}/packs/pack-registry.json`;
 const packedTtsManifestCacheByPath = new Map();
 const packedTtsManifestPromiseByPath = new Map();
 let packedTtsPackRegistryCache = null;
@@ -4294,7 +4302,7 @@ async function populateTtsPackSelect({ forceRefresh = false } = {}) {
         const languageSummary = describeTtsPackLanguages(activePack);
         const languageText = languageSummary ? ` (${languageSummary})` : '';
         if (activePack.id === 'default') {
-            setTtsPackStatus('Using default voice pack from literacy-platform/audio/tts.', 'info');
+            setTtsPackStatus(`Using default voice pack from ${PACKED_TTS_BASE_PATH}.`, 'info');
         } else {
             setTtsPackStatus(`Using pack: ${activePack.name}${languageText}.`, 'info');
         }
