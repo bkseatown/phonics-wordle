@@ -6,6 +6,7 @@ window.TRANSLATIONS = {
         if (!wordData || !wordData[langCode]) return null;
 
         return {
+            word: wordData[langCode].word || wordData[langCode].label || '',
             definition: wordData[langCode].def || '',
             sentence: wordData[langCode].sentence || ''
         };

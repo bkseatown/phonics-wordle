@@ -60,54 +60,149 @@
     {
       id: 'word-quest',
       href: 'word-quest.html',
-      navLabel: 'Word Quest'
+      navLabel: 'Decode Quest'
     },
     {
       id: 'cloze',
       href: 'cloze.html',
-      navLabel: 'Story Fill'
+      navLabel: 'Sentence Lab'
     },
     {
       id: 'comprehension',
       href: 'comprehension.html',
-      navLabel: 'Read & Think'
+      navLabel: 'Meaning Lab'
     },
     {
       id: 'fluency',
       href: 'fluency.html',
-      navLabel: 'Speed Sprint'
+      navLabel: 'Fluency Sprint'
     },
     {
       id: 'madlibs',
       href: 'madlibs.html',
-      navLabel: 'Silly Stories'
+      navLabel: 'Story Remix'
     },
     {
       id: 'writing',
       href: 'writing.html',
-      navLabel: 'Write & Build'
+      navLabel: 'Writing Studio'
     },
     {
       id: 'plan-it',
       href: 'plan-it.html',
-      navLabel: 'Plan-It'
+      navLabel: 'Intervention Studio'
     },
     {
       id: 'number-sense',
       href: 'number-sense.html',
-      navLabel: 'Number Sense'
+      navLabel: 'Number Sense Lab'
     },
     {
       id: 'operations',
       href: 'operations.html',
-      navLabel: 'Operations'
+      navLabel: 'Strategy Studio'
+    },
+    {
+      id: 'assessments',
+      href: 'assessments.html',
+      navLabel: 'Assessments Hub'
     },
     {
       id: 'teacher-report',
       href: 'teacher-report.html',
-      navLabel: 'Reports'
+      navLabel: 'Impact Dashboard'
     }
   ];
+
+  const PRIMARY_GUIDED_LINKS = [
+    { id: 'home', href: 'index.html', label: 'Home' }
+  ];
+
+  const NAV_MENU_GROUPS = [
+    {
+      id: 'literacy',
+      label: 'Literacy',
+      items: [
+        { activityId: 'word-quest', label: 'Word Quest' },
+        { activityId: 'cloze', label: 'Story Fill' },
+        { activityId: 'comprehension', label: 'Read & Think' },
+        { activityId: 'fluency', label: 'Speed Sprint' },
+        { activityId: 'madlibs', label: 'Silly Stories' },
+        { activityId: 'writing', label: 'Write & Build' },
+        { activityId: 'plan-it', label: 'Plan-It' }
+      ]
+    },
+    {
+      id: 'numeracy',
+      label: 'Numeracy',
+      items: [
+        { activityId: 'number-sense', label: 'Number Sense' },
+        { activityId: 'operations', label: 'Operations' }
+      ]
+    },
+    {
+      id: 'reports',
+      label: 'Reports',
+      items: [
+        { activityId: 'assessments', label: 'Assessments', studentHidden: true },
+        { activityId: 'teacher-report', label: 'Impact Dashboard', studentHidden: true }
+      ]
+    },
+    {
+      id: 'tools',
+      label: 'Tools',
+      items: [
+        { id: 'guided-start', label: 'Guided Start', href: 'index.html#role-dashboard' },
+        { id: 'session-setup', label: 'Session Setup', href: 'word-quest.html?tool=session', action: 'session-setup', studentHidden: true },
+        { id: 'recording-studio', label: 'Recording Studio', href: 'word-quest.html?tool=studio', action: 'recording-studio', studentHidden: true },
+        { id: 'sound-lab', label: 'Sound Lab', href: 'word-quest.html?soundlab=1', action: 'sound-lab' }
+      ]
+    }
+  ];
+
+  const GUIDE_TIP_DISMISS_PREFIX = 'cornerstone_guide_tip_dismissed_v1::';
+  const GUIDE_TIPS = {
+    home: {
+      title: 'Welcome to CORNERSTONE MTSS',
+      body: 'Start by choosing Student, Parent, or School Team. We guide the next best step from there.'
+    },
+    'word-quest': {
+      title: 'Decode Quest Quick Start',
+      body: 'Set focus + word length, press New Round, then use Hear Word for first-pass support.'
+    },
+    cloze: {
+      title: 'Sentence Lab Quick Start',
+      body: 'Use this after decoding practice to strengthen meaning, syntax, and transfer.'
+    },
+    comprehension: {
+      title: 'Meaning Lab Quick Start',
+      body: 'Use short text + evidence prompts, then log one next move for intervention continuity.'
+    },
+    fluency: {
+      title: 'Fluency Sprint Quick Start',
+      body: 'Run a 1-minute read, record WPM + accuracy, then set one concrete goal for tomorrow.'
+    },
+    writing: {
+      title: 'Writing Studio Quick Start',
+      body: 'Keep writing routines short: plan, draft, revise, then capture one growth note.'
+    },
+    'number-sense': {
+      title: 'Number Sense Lab Quick Start',
+      body: 'Start with strategy-first prompts before standard algorithm fluency checks.'
+    },
+    operations: {
+      title: 'Strategy Studio Quick Start',
+      body: 'Use visual models and reasoning talk to surface misconceptions quickly.'
+    },
+    assessments: {
+      title: 'Assessments Hub Quick Start',
+      body: 'Choose your role, open priority lanes, then launch the right screener and intervention flow.'
+    },
+    'teacher-report': {
+      title: 'Impact Dashboard Quick Start',
+      body: 'Open Literacy + Numeracy Pulse, then generate the intervention timeline and IESP draft.'
+    }
+  };
 
   const ACTIVITY_STANDARD_TAGS = {
     'word-quest': ['RF.2.3', 'RF.3.3'],
@@ -118,13 +213,14 @@
     writing: ['W.3.2', 'W.3.4'],
     'plan-it': ['SL.3.1', 'W.3.8'],
     'number-sense': ['CCSS-MATH-3-NBT-A-1', 'CCSS-MATH-4-OA-A-3'],
-    operations: ['CCSS-MATH-3-OA-A-1', 'CCSS-MATH-4-NBT-B-4']
+    operations: ['CCSS-MATH-3-OA-A-1', 'CCSS-MATH-4-NBT-B-4'],
+    assessments: ['RF.1.2', 'RF.2.3', 'CCSS-MATH-3-NBT-A-1', 'SEL-MTSS']
   };
 
   const STORY_TRACK_ORDER = ['word-quest', 'fluency', 'comprehension', 'writing', 'plan-it'];
   const STORY_TRACK_ACTIVITIES = new Set(['cloze', 'comprehension', 'fluency', 'madlibs', 'writing', 'plan-it']);
   const QUICK_RESPONSE_ACTIVITIES = new Set(['cloze', 'comprehension', 'madlibs', 'writing', 'plan-it', 'number-sense', 'operations']);
-  const BREADCRUMB_ACTIVITIES = new Set(['cloze', 'comprehension', 'fluency', 'madlibs', 'writing', 'plan-it', 'number-sense', 'operations', 'teacher-report']);
+  const BREADCRUMB_ACTIVITIES = new Set(['cloze', 'comprehension', 'fluency', 'madlibs', 'writing', 'plan-it', 'number-sense', 'operations', 'assessments', 'teacher-report']);
   const ACCESSIBILITY_PANEL_ACTIVITIES = new Set(['home']);
 
   const ACCESSIBILITY_DEFAULTS = {
@@ -157,6 +253,16 @@
     } catch {
       return null;
     }
+  }
+
+  function ensureFavicon() {
+    if (!document.head) return;
+    if (document.querySelector('link[rel~="icon"]')) return;
+    const link = document.createElement('link');
+    link.rel = 'icon';
+    link.type = 'image/svg+xml';
+    link.href = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%234f46e5'/%3E%3Cstop offset='100%25' stop-color='%230ea5e9'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Cpath d='M16 44V20h13.5c6 0 9.5 3.5 9.5 8.1 0 3.9-2.5 6.8-6.5 7.7L43 44h-7.8l-8.6-7.3H23V44h-7zM23 31h6c2.1 0 3.4-1.2 3.4-2.9s-1.3-2.9-3.4-2.9h-6V31z' fill='white'/%3E%3C/svg%3E";
+    document.head.appendChild(link);
   }
 
   function normalizeLook(value) {
@@ -1397,27 +1503,228 @@
     }
   }
 
+  function resolveNavItem(item) {
+    if (!item || typeof item !== 'object') return null;
+    if (item.activityId) {
+      const activity = ACTIVITIES.find((entry) => entry.id === item.activityId);
+      if (!activity) return null;
+      const studentHidden = !!item.studentHidden || item.activityId === 'teacher-report' || item.activityId === 'assessments';
+      return {
+        id: item.activityId,
+        href: activity.href,
+        label: item.label || activity.navLabel,
+        studentHidden,
+        action: item.action || ''
+      };
+    }
+    const href = String(item.href || '').trim();
+    return {
+      id: item.id || href || item.label || '',
+      href: href || '#',
+      label: item.label || 'Link',
+      studentHidden: !!item.studentHidden,
+      action: item.action || ''
+    };
+  }
+
+  function navHrefMatchesCurrentPage(href = '', currentFile = getCurrentPageFile()) {
+    if (!href) return false;
+    try {
+      const parsed = new URL(href, window.location.origin);
+      const targetFile = (parsed.pathname.split('/').filter(Boolean).pop() || 'index.html').toLowerCase();
+      if (targetFile !== currentFile) return false;
+
+      const requiredParams = new URLSearchParams(parsed.search || '');
+      if (Array.from(requiredParams.keys()).length) {
+        const currentParams = new URLSearchParams(window.location.search || '');
+        for (const [key, value] of requiredParams.entries()) {
+          if ((currentParams.get(key) || '') !== value) return false;
+        }
+      }
+
+      if (parsed.hash) {
+        return parsed.hash.toLowerCase() === (window.location.hash || '').toLowerCase();
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function createNavGroupMenu(group, currentId = '', currentFile = getCurrentPageFile()) {
+    const resolvedItems = (group?.items || [])
+      .map(resolveNavItem)
+      .filter(Boolean);
+    if (!resolvedItems.length) return null;
+
+    const details = document.createElement('details');
+    details.className = 'header-activity-menu';
+    details.dataset.groupId = group.id || '';
+
+    const summary = document.createElement('summary');
+    summary.className = 'header-activity-summary';
+    summary.textContent = group.label || 'Menu';
+    details.appendChild(summary);
+
+    const panel = document.createElement('div');
+    panel.className = 'header-activity-panel';
+
+    let groupIsActive = false;
+    let hiddenCount = 0;
+    resolvedItems.forEach((item) => {
+      const isActive = item.id === currentId || navHrefMatchesCurrentPage(item.href, currentFile);
+      if (isActive) groupIsActive = true;
+      if (item.studentHidden) hiddenCount += 1;
+
+      const link = document.createElement('a');
+      link.href = item.href;
+      link.className = 'header-activity-link';
+      link.textContent = item.label;
+      if (item.studentHidden) {
+        link.setAttribute('data-student-hidden', 'true');
+      }
+      if (item.action) {
+        link.dataset.navAction = item.action;
+      }
+      if (isActive) {
+        link.classList.add('active');
+        link.setAttribute('aria-current', 'page');
+      }
+      panel.appendChild(link);
+    });
+
+    if (hiddenCount === resolvedItems.length) {
+      details.setAttribute('data-student-hidden', 'true');
+    }
+    if (groupIsActive) {
+      summary.classList.add('active');
+      summary.setAttribute('aria-current', 'page');
+    }
+
+    details.appendChild(panel);
+    return details;
+  }
+
+  function wirePrimaryNavMenus(nav, currentId = '') {
+    if (!nav) return;
+    const menus = Array.from(nav.querySelectorAll('.header-activity-menu'));
+    menus.forEach((menu) => {
+      if (menu.dataset.bound === 'true') return;
+      menu.dataset.bound = 'true';
+      menu.addEventListener('toggle', () => {
+        if (!menu.open) return;
+        menus.forEach((other) => {
+          if (other !== menu) other.removeAttribute('open');
+        });
+      });
+    });
+
+    if (nav.dataset.dismissBound !== 'true') {
+      nav.dataset.dismissBound = 'true';
+      document.addEventListener('click', (event) => {
+        if (!(event.target instanceof Node) || nav.contains(event.target)) return;
+        menus.forEach((menu) => menu.removeAttribute('open'));
+      });
+    }
+
+    if (nav.dataset.toolActionBound !== 'true') {
+      nav.dataset.toolActionBound = 'true';
+      nav.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        const actionLink = target.closest('[data-nav-action]');
+        if (!(actionLink instanceof HTMLAnchorElement)) return;
+        const action = (actionLink.dataset.navAction || '').trim();
+        if (!action || currentId !== 'word-quest') return;
+        event.preventDefault();
+        menus.forEach((menu) => menu.removeAttribute('open'));
+        window.dispatchEvent(new CustomEvent('cornerstone:tool-request', { detail: { action } }));
+      });
+    }
+  }
+
   function renderPrimaryNav() {
-    const navs = Array.from(document.querySelectorAll('nav.header-actions'));
+    const navs = Array.from(document.querySelectorAll('.header-actions'));
     if (!navs.length) return;
     const currentFile = getCurrentPageFile();
+    const currentActivity = getCurrentActivity();
+    const currentId = currentActivity?.id || '';
 
     navs.forEach((nav) => {
       nav.innerHTML = '';
-      ACTIVITIES.forEach((activity) => {
+      PRIMARY_GUIDED_LINKS.forEach((entry) => {
         const link = document.createElement('a');
         link.className = 'link-btn';
-        link.href = activity.href;
-        link.textContent = activity.navLabel;
-        if (activity.href.toLowerCase() === currentFile) {
+        link.href = entry.href;
+        link.textContent = entry.label;
+        if (entry.studentHidden) {
+          link.setAttribute('data-student-hidden', 'true');
+        }
+        if (entry.href.toLowerCase() === currentFile) {
           link.classList.add('active');
           link.setAttribute('aria-current', 'page');
         }
         nav.appendChild(link);
       });
+
+      NAV_MENU_GROUPS.forEach((group) => {
+        const menu = createNavGroupMenu(group, currentId, currentFile);
+        if (menu) nav.appendChild(menu);
+      });
+      wirePrimaryNavMenus(nav, currentId);
     });
 
     renderStudentModeExitControl();
+  }
+
+  function renderPageGuideTip() {
+    const activityId = getCurrentActivityId();
+    const tip = GUIDE_TIPS[activityId];
+    const existing = document.getElementById('page-guide-tip');
+    if (!tip) {
+      if (existing) existing.remove();
+      return;
+    }
+
+    const dismissKey = `${GUIDE_TIP_DISMISS_PREFIX}${activityId}`;
+    if (localStorage.getItem(dismissKey) === 'true') {
+      if (existing) existing.remove();
+      return;
+    }
+
+    const main = document.querySelector('main');
+    if (!main) return;
+    const guide = existing || document.createElement('aside');
+    guide.id = 'page-guide-tip';
+    guide.className = 'page-guide-tip';
+    guide.setAttribute('role', 'status');
+    guide.setAttribute('aria-live', 'polite');
+    guide.innerHTML = `
+      <div class="page-guide-tip-title">${tip.title}</div>
+      <div class="page-guide-tip-body">${tip.body}</div>
+      <div class="page-guide-tip-actions">
+        <button type="button" class="secondary-btn" data-tip-action="hide">Hide</button>
+        <button type="button" class="secondary-btn" data-tip-action="dismiss">Got it (don't show again)</button>
+      </div>
+    `;
+
+    if (!existing) {
+      main.insertBefore(guide, main.firstChild);
+    }
+
+    if (guide.dataset.bound !== 'true') {
+      guide.dataset.bound = 'true';
+      guide.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        const action = target.getAttribute('data-tip-action');
+        if (!action) return;
+        if (action === 'dismiss') {
+          localStorage.setItem(dismissKey, 'true');
+        }
+        guide.remove();
+      });
+    }
   }
 
   function buildLearnerOptions(selectEl) {
@@ -1477,10 +1784,12 @@
     applyFocusModeLayout();
   };
 
+  ensureFavicon();
   renderPrimaryNav();
   applyStudentModeState();
   renderLearnerSwitchers();
   renderBreadcrumbTrail();
+  renderPageGuideTip();
   renderAccessibilityPanel();
   renderStoryTrack();
   renderQuickResponseDock();

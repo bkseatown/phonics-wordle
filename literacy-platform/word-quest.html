@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CORNERSTONE MTSS — Word Quest</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="style.css" />
     <script src="platform.js" defer></script>
     <script src="words.js" defer></script>
@@ -21,38 +22,33 @@
         <h1>
           <a href="index.html">CORNERSTONE MTSS</a>
         </h1>
-        <div class="header-actions">
+        <nav class="header-actions" aria-label="Primary">
           <a id="home-btn" class="link-btn" href="index.html">Home</a>
-          <button id="teacher-btn" class="link-btn" type="button">Teacher</button>
-          <button id="new-word-btn" class="link-btn active" type="button" aria-current="page">Word Quest</button>
-          <a id="madlibs-btn" class="link-btn" href="madlibs.html">Mad Libs</a>
-          <a id="writing-btn" class="link-btn" href="writing.html">Writing</a>
-          <a id="reports-btn" class="link-btn" href="teacher-report.html">Reports</a>
-          <a id="planit-btn" class="link-btn" href="plan-it.html">Plan-It</a>
-        </div>
+        </nav>
       </div>
 
       <div class="controls" role="group" aria-label="Game setup">
         <div class="control-group">
           <label for="pattern-select">Focus</label>
           <select id="pattern-select" aria-label="Focus pattern">
+            <option value="shuffle" selected>Shuffle Focus (clue on)</option>
             <option value="all">All Words</option>
-            <option value="cvc">CVC (Short Vowels)</option>
-            <option value="digraph">Digraphs</option>
-            <option value="ccvc">Initial Blends</option>
-            <option value="cvcc">Final Blends</option>
-            <option value="trigraph">Trigraphs</option>
-            <option value="cvce">Magic E (CVCe)</option>
-            <option value="vowel_team">Vowel Teams</option>
-            <option value="r_controlled">R-Controlled</option>
-            <option value="diphthong">Diphthongs</option>
-            <option value="floss">FLOSS Rule</option>
-            <option value="welded">Welded Sounds</option>
-            <option value="schwa">Schwa</option>
-            <option value="prefix">Prefixes</option>
-            <option value="suffix">Suffixes</option>
-            <option value="compound">Compound Words</option>
-            <option value="multisyllable">Multisyllabic Words</option>
+            <option value="cvc">CVC (short vowels: cat, pin)</option>
+            <option value="digraph">Digraphs (sh, ch, th)</option>
+            <option value="ccvc">Initial blends (bl-, tr-, st-)</option>
+            <option value="cvcc">Final blends (-nd, -st, -mp)</option>
+            <option value="trigraph">Trigraphs (tch, dge)</option>
+            <option value="cvce">Magic E (a_e: cake)</option>
+            <option value="vowel_team">Vowel teams (ai, ee, oa)</option>
+            <option value="r_controlled">R-controlled (ar, er, ir)</option>
+            <option value="diphthong">Diphthongs (oi, ow)</option>
+            <option value="floss">FLOSS rule (ff, ll, ss)</option>
+            <option value="welded">Welded sounds (ang, ong)</option>
+            <option value="schwa">Schwa (a in about)</option>
+            <option value="prefix">Prefixes (un-, re-)</option>
+            <option value="suffix">Suffixes (-ing, -ed)</option>
+            <option value="compound">Compound words (sun+set)</option>
+            <option value="multisyllable">Multisyllabic (pic-nic)</option>
           </select>
         </div>
 
@@ -80,26 +76,43 @@
             <option value="6" selected>6</option>
           </select>
         </div>
+
+        <div class="control-group control-group-subtle">
+          <label for="case-toggle">Case</label>
+          <button id="case-toggle" type="button" class="case-toggle-btn" aria-label="Toggle letter case">abc</button>
+        </div>
+
+        <div class="control-group control-group-subtle">
+          <label for="new-word-btn">Round</label>
+          <button id="new-word-btn" type="button" class="case-toggle-btn new-round-btn" aria-label="Start new round">New Round</button>
+        </div>
       </div>
+      <div id="focus-round-chip" class="focus-round-chip" aria-live="polite"></div>
     </header>
 
     <main>
       <section class="quick-custom-word-panel" aria-label="Custom challenge word">
-        <label for="quick-custom-word-input"><strong>Custom challenge word</strong></label>
-        <div class="quick-custom-word-row">
-          <input
-            id="quick-custom-word-input"
-            type="text"
-            placeholder="Type a class-safe word (3-12 letters)"
-            autocapitalize="none"
-            autocomplete="off"
-            spellcheck="false"
-          />
-          <button id="quick-custom-word-start" type="button" class="hint-btn">Start Custom Word</button>
-          <button id="quick-custom-word-clear" type="button" class="hint-btn secondary">Back to Library</button>
-        </div>
-        <div id="quick-custom-word-status" class="quick-custom-word-status muted" aria-live="polite">
-          Library mode active. Pick a focus or enter a custom challenge word.
+        <button id="quick-custom-word-toggle" type="button" class="quick-custom-word-toggle" aria-expanded="false">
+          Custom challenge word (optional)
+        </button>
+        <div id="quick-custom-word-body" class="quick-custom-word-body hidden">
+          <div class="quick-custom-word-row">
+            <input
+              id="quick-custom-word-input"
+              type="text"
+              class="masked"
+              placeholder="Type a class-safe word (3-12 letters)"
+              autocapitalize="none"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button id="quick-custom-word-toggle-mask" type="button" class="hint-btn secondary" aria-label="Show or hide custom word">Show</button>
+            <button id="quick-custom-word-start" type="button" class="hint-btn">Start Custom Word</button>
+            <button id="quick-custom-word-clear" type="button" class="hint-btn secondary">Use Library</button>
+          </div>
+          <div id="quick-custom-word-status" class="quick-custom-word-status muted" aria-live="polite">
+            Mode: Library. Pick a focus or set a custom challenge word.
+          </div>
         </div>
       </section>
 
@@ -151,32 +164,9 @@
     <div id="teacher-modal" class="modal hidden teacher-modal" role="dialog" aria-modal="true" aria-label="Teacher settings">
       <div class="modal-content">
         <button class="close-btn close-teacher" type="button" aria-label="Close">✕</button>
-        <h2>Teacher</h2>
-
-        <div class="teacher-tools-grid">
-          <div class="teacher-row">
-            <label for="custom-word-input"><strong>Set a custom word</strong></label>
-            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-              <input
-                id="custom-word-input"
-                type="text"
-                class="masked"
-                placeholder="Type a word (letters only)"
-                autocapitalize="none"
-                autocomplete="off"
-                spellcheck="false"
-              />
-              <button id="toggle-mask" type="button" class="teacher-secondary-btn">Show</button>
-              <button id="set-word-btn" type="button" class="teacher-primary-btn">Start</button>
-            </div>
-            <div id="teacher-error" class="teacher-error" aria-live="polite"></div>
-            <div class="teacher-subtext">Tip: use this for targeted practice (IEP/RTI goals).</div>
-          </div>
-
-          <div class="toggle-row inline">
-            <button id="open-studio-btn" type="button" class="teacher-secondary-btn">Recording Studio</button>
-          </div>
-        </div>
+        <h2>Teacher Session Setup</h2>
+        <p class="teacher-intro-note">Quick class defaults live here. Deep audio and reports are in dedicated hubs.</p>
+        <div class="teacher-tools-grid"></div>
       </div>
     </div>
 
@@ -268,6 +258,7 @@
 	            <option value="en">English</option>
 	            <option value="es">Español</option>
 	            <option value="zh">中文</option>
+	            <option value="hi">हिन्दी</option>
 	            <option value="ms">Bahasa Melayu</option>
 	            <option value="vi">Tiếng Việt</option>
 	            <option value="tl">Tagalog</option>

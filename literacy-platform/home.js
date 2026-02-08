@@ -4,6 +4,9 @@
   const SETTINGS_KEY = 'decode_settings';
   const HOME_VISUAL_MODE_KEY = 'cornerstone_home_visual_mode_v1';
   const HOME_DETAILS_MODE_KEY = 'cornerstone_home_details_mode_v1';
+  const HOME_LANGUAGE_PREF_KEY = 'cornerstone_home_language_pref_v1';
+  const HOME_VOICE_DIALECT_PREF_KEY = 'cornerstone_home_voice_dialect_pref_v1';
+  const HOME_VOICE_PACK_PREF_KEY = 'cornerstone_home_voice_pack_pref_v1';
 
   const overlay = document.getElementById('modal-overlay');
   const modal = document.getElementById('placement-modal');
@@ -22,7 +25,33 @@
   const homeHeaderToggleBtn = document.getElementById('home-header-toggle');
   const homeRoleLaunchBtn = document.getElementById('home-role-launch');
   const homeRolePreviewEl = document.getElementById('home-role-preview');
+  const homeQuickLanguageSelect = document.getElementById('home-quick-language');
+  const homeQuickVoiceDialectSelect = document.getElementById('home-quick-voice-dialect');
+  const homeQuickVoicePackSelect = document.getElementById('home-quick-voice-pack');
+  const homeQuickAutoHearToggle = document.getElementById('home-quick-autohear');
+  const homeQuickLanguageNote = document.getElementById('home-quick-language-note');
+  const homeQuickVoiceNote = document.getElementById('home-quick-voice-note');
   const homeRolePickButtons = Array.from(document.querySelectorAll('.home-role-pick[data-role-target]'));
+  const homeEntryGroupButtons = Array.from(document.querySelectorAll('.home-entry-segment[data-entry-group]'));
+
+  const HOME_ENTRY_GROUP_KEY = 'cornerstone_home_entry_group_v1';
+  const HOME_ENTRY_GROUP_DEFAULT_ROLE = Object.freeze({
+    student: 'student',
+    parent: 'parent',
+    school: 'teacher'
+  });
+  const HOME_ROLE_ENTRY_GROUP = Object.freeze({
+    student: 'student',
+    parent: 'parent',
+    teacher: 'school',
+    admin: 'school',
+    dean: 'school',
+    'learning-support': 'school',
+    slp: 'school',
+    eal: 'school',
+    counselor: 'school',
+    psychologist: 'school'
+  });
 
   const gradeSelect = document.getElementById('placement-grade');
   const skillEls = {
@@ -44,6 +73,55 @@
   function normalizeHomeDetailsMode(value) {
     const raw = String(value || '').trim().toLowerCase();
     return raw === 'expanded' ? 'expanded' : 'collapsed';
+  }
+
+  function normalizeHomeEntryGroup(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (raw === 'parent') return 'parent';
+    if (raw === 'school') return 'school';
+    return 'student';
+  }
+
+  function readHomeEntryGroup() {
+    return normalizeHomeEntryGroup(localStorage.getItem(HOME_ENTRY_GROUP_KEY));
+  }
+
+  function getEntryGroupForRole(roleId) {
+    const normalizedRole = normalizeRoleId(roleId) || 'teacher';
+    return HOME_ROLE_ENTRY_GROUP[normalizedRole] || 'school';
+  }
+
+  function applyHomeEntryGroup(group, options = {}) {
+    const normalizedGroup = normalizeHomeEntryGroup(group);
+    const shouldPersist = !!options.persist;
+    const preserveCurrentRole = !!options.preserveCurrentRole;
+
+    homeEntryGroupButtons.forEach((button) => {
+      const buttonGroup = normalizeHomeEntryGroup(button.dataset.entryGroup || '');
+      const isActive = buttonGroup === normalizedGroup;
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+
+    const visibleRoleButtons = [];
+    homeRolePickButtons.forEach((button) => {
+      const buttonGroup = normalizeHomeEntryGroup(button.dataset.entryGroup || '');
+      const isVisible = buttonGroup === normalizedGroup;
+      button.classList.toggle('hidden', !isVisible);
+      if (isVisible) visibleRoleButtons.push(button);
+    });
+
+    const defaultRole = HOME_ENTRY_GROUP_DEFAULT_ROLE[normalizedGroup] || 'teacher';
+    const selectedRole = normalizeRoleId(homeRoleSelect?.value || '');
+    const selectedIsVisible = visibleRoleButtons.some((button) => normalizeRoleId(button.dataset.roleTarget || '') === selectedRole);
+    if (!preserveCurrentRole && homeRoleSelect && (!selectedRole || !selectedIsVisible)) {
+      homeRoleSelect.value = defaultRole;
+    }
+
+    if (shouldPersist) {
+      localStorage.setItem(HOME_ENTRY_GROUP_KEY, normalizedGroup);
+    }
+    return normalizedGroup;
   }
 
   function readHomeVisualMode() {
@@ -97,9 +175,197 @@
     return normalized;
   }
 
+  function normalizeStarterLanguage(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (normalized === 'es' || normalized === 'zh' || normalized === 'tl' || normalized === 'ms' || normalized === 'vi' || normalized === 'hi') {
+      return normalized;
+    }
+    return 'en';
+  }
+
+  function normalizeVoiceDialect(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    return normalized === 'en-gb' ? 'en-GB' : 'en-US';
+  }
+
+  function normalizeVoicePackId(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (!normalized) return 'default';
+    const cleaned = normalized.replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+    return cleaned || 'default';
+  }
+
+  function readDecodeSettings() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+      if (parsed && typeof parsed === 'object') return parsed;
+    } catch {}
+    return {};
+  }
+
+  function writeDecodeSettings(nextSettings) {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(nextSettings));
+    window.dispatchEvent(new CustomEvent('decode:settings-updated', { detail: { source: 'home' } }));
+  }
+
+  function updateQuickLanguageNote(langCode) {
+    if (!homeQuickLanguageNote) return;
+    const lang = normalizeStarterLanguage(langCode);
+    if (lang === 'en') {
+      homeQuickLanguageNote.textContent = 'English-only mode selected. Translation can still be turned on later.';
+      return;
+    }
+    const labelByLanguage = {
+      es: 'Spanish',
+      zh: 'Chinese',
+      hi: 'Hindi',
+      tl: 'Tagalog',
+      ms: 'Malay',
+      vi: 'Vietnamese'
+    };
+    const label = labelByLanguage[lang] || lang.toUpperCase();
+    homeQuickLanguageNote.textContent = `${label} is ready as the default reveal translation in Word Quest.`;
+  }
+
+  function updateQuickVoiceNote(dialect, packName = '') {
+    if (!homeQuickVoiceNote) return;
+    const dialectLabel = normalizeVoiceDialect(dialect) === 'en-GB' ? 'British English' : 'American English';
+    const packLabel = String(packName || '').trim();
+    if (packLabel && packLabel.toLowerCase() !== 'default voice pack') {
+      homeQuickVoiceNote.textContent = `${dialectLabel} + ${packLabel} will load as your default classroom voice.`;
+      return;
+    }
+    homeQuickVoiceNote.textContent = `${dialectLabel} narration is set as your default classroom voice.`;
+  }
+
+  async function loadQuickVoicePackOptions(selectedPackId = 'default') {
+    if (!homeQuickVoicePackSelect) return 'default';
+
+    const candidates = [
+      'audio/tts/packs/pack-registry.json',
+      'literacy-platform/audio/tts/packs/pack-registry.json'
+    ];
+    let packs = [];
+    for (const path of candidates) {
+      try {
+        const response = await fetch(path, { cache: 'no-store' });
+        if (!response.ok) continue;
+        const parsed = await response.json();
+        if (parsed && Array.isArray(parsed.packs)) {
+          packs = parsed.packs
+            .filter((pack) => pack && typeof pack === 'object')
+            .map((pack) => ({
+              id: normalizeVoicePackId(pack.id),
+              name: String(pack.name || pack.id || '').trim() || 'Voice Pack'
+            }))
+            .filter((pack) => pack.id && pack.id !== 'default');
+          break;
+        }
+      } catch {}
+    }
+
+    homeQuickVoicePackSelect.innerHTML = '';
+    const defaultOption = document.createElement('option');
+    defaultOption.value = 'default';
+    defaultOption.textContent = 'Default voice pack';
+    homeQuickVoicePackSelect.appendChild(defaultOption);
+
+    packs.forEach((pack) => {
+      const option = document.createElement('option');
+      option.value = pack.id;
+      option.textContent = pack.name;
+      homeQuickVoicePackSelect.appendChild(option);
+    });
+
+    const normalizedSelected = normalizeVoicePackId(selectedPackId);
+    const hasSelected = Array.from(homeQuickVoicePackSelect.options).some((opt) => opt.value === normalizedSelected);
+    homeQuickVoicePackSelect.value = hasSelected ? normalizedSelected : 'default';
+    return homeQuickVoicePackSelect.value;
+  }
+
+  function initQuickStarterControls() {
+    if (!homeQuickLanguageSelect && !homeQuickAutoHearToggle && !homeQuickVoiceDialectSelect && !homeQuickVoicePackSelect) return;
+    const settings = readDecodeSettings();
+    settings.translation = settings.translation && typeof settings.translation === 'object'
+      ? settings.translation
+      : { pinned: false, lang: 'en' };
+
+    const preferredFromStorage = normalizeStarterLanguage(localStorage.getItem(HOME_LANGUAGE_PREF_KEY));
+    const selectedLanguage = normalizeStarterLanguage(settings.translation.lang || preferredFromStorage);
+    settings.translation.lang = selectedLanguage;
+    settings.translation.pinned = selectedLanguage !== 'en';
+    settings.voiceDialect = normalizeVoiceDialect(settings.voiceDialect || localStorage.getItem(HOME_VOICE_DIALECT_PREF_KEY) || 'en-US');
+    settings.ttsPackId = normalizeVoicePackId(settings.ttsPackId || localStorage.getItem(HOME_VOICE_PACK_PREF_KEY) || 'default');
+
+    if (homeQuickLanguageSelect) {
+      homeQuickLanguageSelect.value = selectedLanguage;
+      homeQuickLanguageSelect.addEventListener('change', () => {
+        const nextLanguage = normalizeStarterLanguage(homeQuickLanguageSelect.value);
+        const latest = readDecodeSettings();
+        latest.translation = latest.translation && typeof latest.translation === 'object'
+          ? latest.translation
+          : { pinned: false, lang: 'en' };
+        latest.translation.lang = nextLanguage;
+        latest.translation.pinned = nextLanguage !== 'en';
+        localStorage.setItem(HOME_LANGUAGE_PREF_KEY, nextLanguage);
+        writeDecodeSettings(latest);
+        updateQuickLanguageNote(nextLanguage);
+      });
+    }
+
+    if (homeQuickAutoHearToggle) {
+      homeQuickAutoHearToggle.checked = settings.autoHear !== false;
+      homeQuickAutoHearToggle.addEventListener('change', () => {
+        const latest = readDecodeSettings();
+        latest.autoHear = !!homeQuickAutoHearToggle.checked;
+        writeDecodeSettings(latest);
+      });
+    }
+
+    if (homeQuickVoiceDialectSelect) {
+      homeQuickVoiceDialectSelect.value = normalizeVoiceDialect(settings.voiceDialect || 'en-US');
+      homeQuickVoiceDialectSelect.addEventListener('change', () => {
+        const nextDialect = normalizeVoiceDialect(homeQuickVoiceDialectSelect.value);
+        const latest = readDecodeSettings();
+        latest.voiceDialect = nextDialect;
+        localStorage.setItem(HOME_VOICE_DIALECT_PREF_KEY, nextDialect);
+        writeDecodeSettings(latest);
+        updateQuickVoiceNote(nextDialect, homeQuickVoicePackSelect?.selectedOptions?.[0]?.textContent || '');
+      });
+    }
+
+    if (homeQuickVoicePackSelect) {
+      loadQuickVoicePackOptions(settings.ttsPackId).then((resolvedPackId) => {
+        const selectedPackId = normalizeVoicePackId(resolvedPackId);
+        const latest = readDecodeSettings();
+        latest.ttsPackId = selectedPackId;
+        localStorage.setItem(HOME_VOICE_PACK_PREF_KEY, selectedPackId);
+        writeDecodeSettings(latest);
+        updateQuickVoiceNote(latest.voiceDialect || 'en-US', homeQuickVoicePackSelect?.selectedOptions?.[0]?.textContent || '');
+      });
+
+      homeQuickVoicePackSelect.addEventListener('change', () => {
+        const selectedPackId = normalizeVoicePackId(homeQuickVoicePackSelect.value);
+        const latest = readDecodeSettings();
+        latest.ttsPackId = selectedPackId;
+        localStorage.setItem(HOME_VOICE_PACK_PREF_KEY, selectedPackId);
+        writeDecodeSettings(latest);
+        updateQuickVoiceNote(latest.voiceDialect || 'en-US', homeQuickVoicePackSelect?.selectedOptions?.[0]?.textContent || '');
+      });
+    }
+
+    updateQuickLanguageNote(selectedLanguage);
+    localStorage.setItem(HOME_LANGUAGE_PREF_KEY, selectedLanguage);
+    localStorage.setItem(HOME_VOICE_DIALECT_PREF_KEY, settings.voiceDialect);
+    localStorage.setItem(HOME_VOICE_PACK_PREF_KEY, settings.ttsPackId);
+    updateQuickVoiceNote(settings.voiceDialect, homeQuickVoicePackSelect?.selectedOptions?.[0]?.textContent || '');
+    writeDecodeSettings(settings);
+  }
+
   applyHomeVisualMode(readHomeVisualMode(), { persist: false });
   // Keep homepage first impression low-scroll every load; workspace remains one-click away.
   applyHomeDetailsMode('collapsed', { persist: false });
+  initQuickStarterControls();
   homeVisualFunBtn?.addEventListener('click', () => {
     applyHomeVisualMode('fun', { persist: true });
   });
@@ -525,6 +791,7 @@
       operations: 'operations.html',
       'problem-solving': 'number-sense.html',
       'math-language': 'number-sense.html',
+      assessments: 'assessments.html',
       'teacher-report': 'teacher-report.html'
     };
     const file = fileByActivity[activityId] || 'index.html';
@@ -794,10 +1061,17 @@
 
   function syncRoleStarter(roleId, model) {
     const normalizedRole = normalizeRoleId(roleId) || 'teacher';
+    const selectedEntryGroup = applyHomeEntryGroup(getEntryGroupForRole(normalizedRole), {
+      persist: false,
+      preserveCurrentRole: true
+    });
+
     homeRolePickButtons.forEach((button) => {
       const targetRole = normalizeRoleId(button.dataset.roleTarget || '');
-      button.classList.toggle('active', targetRole === normalizedRole);
-      button.setAttribute('aria-pressed', targetRole === normalizedRole ? 'true' : 'false');
+      const buttonGroup = normalizeHomeEntryGroup(button.dataset.entryGroup || '');
+      const isActive = targetRole === normalizedRole && buttonGroup === selectedEntryGroup;
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
 
     const primaryAction = model?.actions?.[0] || null;
@@ -1663,6 +1937,7 @@
     renderRoleDashboard();
   }
 
+  applyHomeEntryGroup(readHomeEntryGroup(), { persist: false, preserveCurrentRole: false });
   renderProgress();
   renderLearners();
 
@@ -1699,12 +1974,22 @@
     setLearnerStatus('Learner added.');
   });
   homeRoleSelect?.addEventListener('change', () => {
+    const nextRole = normalizeRoleId(homeRoleSelect.value || '');
+    applyHomeEntryGroup(getEntryGroupForRole(nextRole), { persist: true, preserveCurrentRole: true });
     renderRoleDashboard();
+  });
+  homeEntryGroupButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const nextGroup = normalizeHomeEntryGroup(button.dataset.entryGroup || '');
+      applyHomeEntryGroup(nextGroup, { persist: true, preserveCurrentRole: false });
+      renderRoleDashboard();
+    });
   });
   homeRolePickButtons.forEach((button) => {
     button.addEventListener('click', () => {
       const roleId = normalizeRoleId(button.dataset.roleTarget || '');
       if (!roleId) return;
+      applyHomeEntryGroup(getEntryGroupForRole(roleId), { persist: true, preserveCurrentRole: true });
       if (homeRoleSelect) {
         homeRoleSelect.value = roleId;
       }
