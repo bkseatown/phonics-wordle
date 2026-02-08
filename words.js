@@ -162,28 +162,28 @@ const WORDS_DATA =
   "tax": {
     "pos": "noun",
     "en": {
-      "def": "Money you pay to the government that makes grown-ups look at their paychecks and sigh.",
-      "sentence": "The man opened the envelope, looked at the tax bill, and slowly put his head on the table."
+      "def": "Money people pay to help support schools, parks, roads, and other community services.",
+      "sentence": "Adults pay tax to help keep parks, buses, and libraries running."
     },
     "es": {
-      "def": "Dinero que pagas al gobierno que hace que los adultos miren sus cheques y suspiren.",
-      "sentence": "El hombre abrió el sobre, miró la factura y apoyó lentamente la cabeza en la mesa."
+      "def": "Dinero que las personas pagan para apoyar escuelas, parques, carreteras y otros servicios comunitarios.",
+      "sentence": "Los adultos pagan impuestos para ayudar a que funcionen los parques, autobuses y bibliotecas."
     },
     "zh": {
-      "def": "一种付给政府的钱，大人们看到工资单上的这笔扣款时总会叹气。",
-      "sentence": "男人打开信封，看了看账单，慢慢地把头趴在了桌子上。"
+      "def": "人们缴给政府的一笔钱，用来支持学校、公园、道路等社区服务。",
+      "sentence": "大人交税，帮助公园、公交和图书馆继续运作。"
     },
     "ms": {
-      "def": "Wang yang anda bayar kepada kerajaan yang membuatkan orang dewasa mengeluh apabila melihat gaji mereka.",
-      "sentence": "Lelaki itu membuka sampul surat, melihat bil tersebut, dan perlahan-lahan meletakkan kepalanya di atas meja."
+      "def": "Wang yang dibayar oleh orang ramai untuk menyokong sekolah, taman, jalan raya dan perkhidmatan komuniti.",
+      "sentence": "Orang dewasa membayar cukai untuk membantu taman, bas dan perpustakaan terus berfungsi."
     },
     "vi": {
-      "def": "Tiền bạn nộp cho chính phủ, thứ khiến người lớn nhìn vào phiếu lương và thở dài.",
-      "sentence": "Người đàn ông mở phong bì, nhìn vào hóa đơn, và từ từ gục đầu xuống bàn."
+      "def": "Khoản tiền mọi người đóng để hỗ trợ trường học, công viên, đường sá và các dịch vụ cộng đồng.",
+      "sentence": "Người lớn đóng thuế để giúp công viên, xe buýt và thư viện hoạt động tốt."
     },
     "tl": {
-      "def": "Pera na binabayad mo sa gobyerno na nagpapabuntong-hininga sa mga matatanda kapag nakita ang sweldo nila.",
-      "sentence": "Binuksan ng lalaki ang sobre, tinignan ang bill, at dahan-dahang inilagay ang kanyang ulo sa mesa."
+      "def": "Pera na binabayaran ng mga tao para suportahan ang paaralan, parke, kalsada, at iba pang serbisyong pangkomunidad.",
+      "sentence": "Nagbabayad ng buwis ang mga matatanda para manatiling maayos ang parke, bus, at aklatan."
     },
     "phonics": {
       "syllables": 1,
@@ -1163,28 +1163,28 @@ const WORDS_DATA =
   "globe": {
     "pos": "noun",
     "en": {
-      "def": "A ball that shows the whole world and spins too fast.",
-      "sentence": "The student spun the globe, tried to stop it with one finger, and accidentally pointed to the middle of the ocean."
+      "def": "A round model of Earth used to find countries and oceans.",
+      "sentence": "The student spun the globe and found Singapore near the equator."
     },
     "es": {
-      "def": "Una pelota que muestra el mundo entero y gira demasiado rápido.",
-      "sentence": "El estudiante hizo girar el globo, intentó detenerlo con un dedo y señaló accidentalmente la mitad del océano."
+      "def": "Un mapa redondo de la Tierra para ubicar países y océanos.",
+      "sentence": "La clase giró el globo y encontró Singapur cerca del ecuador."
     },
     "zh": {
-      "def": "一个展示整个世界并且转得太快的球。",
-      "sentence": "学生转动地球仪，试着用一根手指停住它，结果不小心指到了大海中央。"
+      "def": "一个圆形的地球模型，可以看到国家和海洋。",
+      "sentence": "同学们转动地球仪，在赤道附近找到了新加坡。"
     },
     "ms": {
-      "def": "Bola yang menunjukkan seluruh dunia dan berputar terlalu pantas.",
-      "sentence": "Pelajar itu memutarkan glob, cuba menghentikannya dengan satu jari, dan secara tidak sengaja menunjuk ke tengah lautan."
+      "def": "Model bulat Bumi untuk mencari negara dan lautan.",
+      "sentence": "Murid memutar glob dan menemui Singapura dekat khatulistiwa."
     },
     "vi": {
-      "def": "Một quả bóng hiển thị cả thế giới và xoay quá nhanh.",
-      "sentence": "Cậu học sinh xoay quả địa cầu, cố gắng dừng nó bằng một ngón tay, và vô tình chỉ vào giữa đại dương."
+      "def": "Mô hình Trái Đất hình tròn để tìm quốc gia và đại dương.",
+      "sentence": "Cả lớp xoay quả địa cầu và tìm thấy Singapore gần xích đạo."
     },
     "tl": {
-      "def": "Isang bola na nagpapakita ng buong mundo at umiikot nang sobrang bilis.",
-      "sentence": "Pinaikot ng estudyante ang globo, sinubukang pigilan gamit ang isang daliri, at aksidenteng naituro ang gitna ng karagatan."
+      "def": "Bilog na modelo ng mundo para hanapin ang mga bansa at karagatan.",
+      "sentence": "Pinaikot ng klase ang globo at nakita ang Singapore malapit sa ekwador."
     },
     "phonics": {
       "syllables": 1,
@@ -9883,28 +9883,28 @@ const WORDS_DATA =
   "sharp": {
     "pos": "adjective",
     "en": {
-      "def": "Pointy enough to pop a balloon just by looking at it.",
-      "sentence": "Be careful, that pencil is sharp enough to be a weapon."
+      "def": "Having a point or edge that makes neat, clear lines.",
+      "sentence": "The sharp pencil zoomed across the page and drew a rocket."
     },
     "es": {
-      "def": "Lo suficientemente puntiagudo para reventar un globo con solo mirarlo.",
-      "sentence": "Ten cuidado, ese lápiz está lo suficientemente afilado como para ser un arma."
+      "def": "Con punta o filo que hace lineas limpias y claras.",
+      "sentence": "El lapiz afilado corrio por la hoja y dibujo un cohete."
     },
     "zh": {
-      "def": "尖到看一眼就能把气球戳破。",
-      "sentence": "小心点，那支铅笔尖得可以当武器了。"
+      "def": "有尖端或边缘，能画出清楚整齐的线条。",
+      "sentence": "那支铅笔很尖，在纸上飞快地画出一枚火箭。"
     },
     "ms": {
-      "def": "Cukup tajam untuk meletupkan belon hanya dengan melihatnya.",
-      "sentence": "Berhati-hati, pensel itu cukup tajam untuk menjadi senjata."
+      "def": "Mempunyai hujung atau sisi tajam untuk membuat garisan yang kemas dan jelas.",
+      "sentence": "Pensel tajam itu meluncur laju di atas kertas lalu melukis roket."
     },
     "vi": {
-      "def": "Nhọn đến mức chỉ cần nhìn thôi cũng làm nổ bóng bay.",
-      "sentence": "Cẩn thận đấy, cái bút chì đó nhọn đến mức có thể làm vũ khí được."
+      "def": "Co dau hoac canh sac de tao duong net ro va gon.",
+      "sentence": "Cay but chi sac luot nhanh tren giay va ve mot ten lua."
     },
     "tl": {
-      "def": "Sobrang tulis na kaya niyang paputukin ang lobo sa tingin lang.",
-      "sentence": "Mag-ingat ka, sobrang tulis ng lapis na 'yan, pwede nang sandata."
+      "def": "May matulis na dulo o gilid na gumagawa ng malinaw at maayos na guhit.",
+      "sentence": "Mabilis na dumausdos ang matulis na lapis sa papel at gumuhit ng rocket."
     },
     "phonics": {
       "syllables": 1,
@@ -9926,28 +9926,28 @@ const WORDS_DATA =
   "dull": {
     "pos": "adjective",
     "en": {
-      "def": "Not sharp at all, like a spoon trying to cut steak.",
-      "sentence": "The knife was so dull I had to mash the tomato instead of cutting it."
+      "def": "Not sharp, so it makes soft or faint marks.",
+      "sentence": "My dull crayon made sleepy lines, so I grabbed a brighter one."
     },
     "es": {
-      "def": "Para nada afilado, como una cuchara intentando cortar un bistec.",
-      "sentence": "El cuchillo estaba tan desafilado que tuve que aplastar el tomate en lugar de cortarlo."
+      "def": "No esta afilado, asi que hace marcas suaves o tenues.",
+      "sentence": "Mi crayon sin punta hizo lineas dormilonas, asi que tome uno mas brillante."
     },
     "zh": {
-      "def": "一点也不锋利，就像试图切牛排的勺子。",
-      "sentence": "这把刀太钝了，我不得不把西红柿捣烂而不是切开。"
+      "def": "不锋利，所以画出来的线条会比较淡。",
+      "sentence": "我的蜡笔太钝，画出的线像在打瞌睡，我就换了一支更亮的。"
     },
     "ms": {
-      "def": "Tidak tajam sama sekali, seperti sudu yang cuba memotong stik.",
-      "sentence": "Pisau itu sangat tumpul sehingga saya terpaksa melewekkankan tomato itu dan bukannya memotongnya."
+      "def": "Tidak tajam, jadi garisan yang dihasilkan lembut atau pudar.",
+      "sentence": "Krayon saya yang tumpul membuat garisan mengantuk, jadi saya ambil yang lebih terang."
     },
     "vi": {
-      "def": "Không sắc chút nào, giống như dùng thìa để cắt bít tết.",
-      "sentence": "Con dao cùn đến nỗi tôi phải dầm nát quả cà chua thay vì cắt nó."
+      "def": "Khong sac nen net ve se mo hoac nhe.",
+      "sentence": "But sap cun cua em ve ra nhung duong buon ngu, nen em lay cay sang mau hon."
     },
     "tl": {
-      "def": "Hindi matalim, parang kutsarang pinanghihiwa ng steak.",
-      "sentence": "Sobrang purol ng kutsilyo kaya dinurog ko na lang ang kamatis imbes na hiwain."
+      "def": "Hindi matalim kaya malambot o mapusyaw ang marka.",
+      "sentence": "Yung mapurol kong krayola gumawa ng antuking guhit, kaya kumuha ako ng mas maliwanag."
     },
     "phonics": {
       "syllables": 1,
@@ -11197,28 +11197,28 @@ const WORDS_DATA =
   "butter": {
     "pos": "noun",
     "en": {
-      "def": "A slippery yellow block that fights with your knife.",
-      "sentence": "The butter was so cold it tore a giant hole in my toast."
+      "def": "A soft, creamy spread that can melt on warm food.",
+      "sentence": "The butter slid on warm toast like it was on a tiny ice rink."
     },
     "es": {
-      "def": "Un bloque amarillo resbaladizo que pelea con tu cuchillo.",
-      "sentence": "La mantequilla estaba tan fría que hizo un agujero gigante en mi tostada."
+      "def": "Una crema suave para untar que se derrite en comida caliente.",
+      "sentence": "La mantequilla se deslizo sobre la tostada caliente como si estuviera en una pista de hielo mini."
     },
     "zh": {
-      "def": "跟你的刀打架的滑溜溜黄色方块。",
-      "sentence": "黄油太硬了，把我的烤面包戳了一个大洞。"
+      "def": "一种柔软顺滑、会在热食上融化的涂抹酱。",
+      "sentence": "黄油在热吐司上滑来滑去，像在迷你溜冰场。"
     },
     "ms": {
-      "def": "Blok kuning licin yang bergaduh dengan pisau anda.",
-      "sentence": "Mentega itu sangat sejuk sehingga ia mengoyakkan lubang besar pada roti bakar saya."
+      "def": "Sapuan berkrim yang lembut dan boleh cair pada makanan panas.",
+      "sentence": "Mentega itu meluncur atas roti bakar panas seperti di gelanggang ais mini."
     },
     "vi": {
-      "def": "Khối màu vàng trơn tuột luôn chống đối con dao của bạn.",
-      "sentence": "Bơ lạnh đến nỗi nó làm rách một lỗ to tướng trên miếng bánh mì nướng của tôi."
+      "def": "Mot loai phet mem, beo min co the tan tren do an nong.",
+      "sentence": "Mieng bo truot tren banh mi nuong nong nhu dang o san bang ti hon."
     },
     "tl": {
-      "def": "Isang madulas na dilaw na bloke na nakikipag-away sa kutsilyo mo.",
-      "sentence": "Sobrang tigas ng mantikilya kaya nabutas nang malaki ang tostada ko."
+      "def": "Isang malambot at creamy na palaman na natutunaw sa mainit na pagkain.",
+      "sentence": "Dumausdos ang mantikilya sa mainit na tinapay na parang nasa munting ice rink."
     },
     "phonics": {
       "syllables": 2,
@@ -15960,28 +15960,28 @@ const WORDS_DATA =
   "blood": {
     "pos": "noun",
     "en": {
-      "def": "The red juice that is supposed to stay inside you.",
-      "sentence": "I saw a little bit of blood when I scraped my knee."
+      "def": "A red liquid in your body that carries oxygen where it is needed.",
+      "sentence": "In science class, we learned blood is like a delivery team in the body."
     },
     "es": {
-      "def": "El jugo rojo que se supone debe permanecer dentro de ti.",
-      "sentence": "Vi un poco de sangre cuando me raspé la rodilla."
+      "def": "Un liquido rojo del cuerpo que lleva oxigeno a donde se necesita.",
+      "sentence": "En ciencias aprendimos que la sangre es como un equipo de entregas dentro del cuerpo."
     },
     "zh": {
-      "def": "本来应该留在你体内的红色汁液。",
-      "sentence": "擦伤膝盖时，我看到了一点血。"
+      "def": "身体里的红色液体，会把氧气送到需要的地方。",
+      "sentence": "科学课上，我们学到血液就像身体里的快递团队。"
     },
     "ms": {
-      "def": "Jus merah yang sepatutnya kekal di dalam anda.",
-      "sentence": "Saya melihat sedikit darah apabila lutut saya luka."
+      "def": "Cecair merah dalam badan yang membawa oksigen ke tempat yang diperlukan.",
+      "sentence": "Dalam kelas sains, kami belajar darah seperti pasukan penghantaran dalam badan."
     },
     "vi": {
-      "def": "Loại nước màu đỏ lẽ ra phải nằm yên bên trong cơ thể bạn.",
-      "sentence": "Tôi thấy một chút máu khi bị trầy đầu gối."
+      "def": "Chat long mau do trong co the mang oxy den noi can thiet.",
+      "sentence": "Trong gio khoa hoc, chung em hoc mau giong nhu doi giao hang cua co the."
     },
     "tl": {
-      "def": "Ang pulang juice na dapat ay nasa loob lang ng katawan mo.",
-      "sentence": "Nakakita ako ng kaunting dugo noong nasugatan ang tuhod ko."
+      "def": "Pulang likido sa katawan na nagdadala ng oxygen sa mga kailangan nitong puntahan.",
+      "sentence": "Sa science class, natutuhan namin na ang dugo ay parang delivery team sa loob ng katawan."
     },
     "phonics": {
       "syllables": 1,
@@ -17856,28 +17856,28 @@ const WORDS_DATA =
   "through": {
     "pos": "preposition",
     "en": {
-      "def": "Going in one side and shooting out the other like a cannonball.",
-      "sentence": "The dog ran through the mud and then jumped on the white sofa."
+      "def": "From one side to the other side.",
+      "sentence": "We tiptoed through the hallway like secret library ninjas."
     },
     "es": {
-      "def": "Entrar por un lado y salir disparado por el otro como una bala de cañón.",
-      "sentence": "El perro corrió a través del barro y luego saltó sobre el sofá blanco."
+      "def": "De un lado al otro.",
+      "sentence": "Caminamos de puntitas por el pasillo como ninjas secretos de la biblioteca."
     },
     "zh": {
-      "def": "从一边进去，像炮弹一样从另一边射出来。",
-      "sentence": "狗跑过泥地，然后跳到了白色沙发上。"
+      "def": "从一边到另一边。",
+      "sentence": "我们踮着脚穿过走廊，像图书馆里的秘密忍者。"
     },
     "ms": {
-      "def": "Masuk sebelah dan menembak keluar sebelah lagi seperti bola meriam.",
-      "sentence": "Anjing itu berlari melalui lumpur dan kemudian melompat ke atas sofa putih."
+      "def": "Dari satu sisi ke sisi yang lain.",
+      "sentence": "Kami berjalan berjengket melalui koridor seperti ninja rahsia perpustakaan."
     },
     "vi": {
-      "def": "Đi vào từ một bên và bắn ra phía bên kia như đạn đại bác.",
-      "sentence": "Con chó chạy qua vũng bùn rồi nhảy chồm lên ghế sô pha trắng."
+      "def": "Tu mot ben sang ben kia.",
+      "sentence": "Chung em nhon chan di qua hanh lang nhu nhung ninja bi mat cua thu vien."
     },
     "tl": {
-      "def": "Pumasok sa kabila at lumabas sa dulo parang bala ng kanyon.",
-      "sentence": "Tumakbo ang aso sa putikan at tumalon sa puting sofa."
+      "def": "Mula sa isang side papunta sa kabila.",
+      "sentence": "Nagtiptoe kami sa hallway na parang mga sikretong ninja sa library."
     },
     "phonics": {
       "syllables": 1,
@@ -19982,28 +19982,28 @@ const WORDS_DATA =
   "history": {
     "pos": "noun",
     "en": {
-      "def": "A class about dead people who wore funny wigs.",
-      "sentence": "I fell asleep in history class and dreamed I was a gladiator."
+      "def": "The study of people, places, and events from long ago.",
+      "sentence": "In history class, we read old stories and imagined interviewing a time traveler."
     },
     "es": {
-      "def": "Una clase sobre personas muertas que usaban pelucas divertidas.",
-      "sentence": "Me quedé dormido en la clase de historia y soñé que era un gladiador."
+      "def": "El estudio de personas, lugares y hechos del pasado.",
+      "sentence": "En historia leimos relatos antiguos e imaginamos entrevistar a un viajero del tiempo."
     },
     "zh": {
-      "def": "一门关于戴着滑稽假发的死人的课。",
-      "sentence": "我在历史课上睡着了，梦见自己是个角斗士。"
+      "def": "研究很久以前的人、地方和事件的学科。",
+      "sentence": "历史课上，我们读古老故事，还想象采访一位时间旅行者。"
     },
     "ms": {
-      "def": "Kelas tentang orang mati yang memakai rambut palsu lucu.",
-      "sentence": "Saya tertidur dalam kelas sejarah dan bermimpi saya seorang gladiator."
+      "def": "Kajian tentang orang, tempat, dan peristiwa pada masa lalu.",
+      "sentence": "Dalam kelas sejarah, kami membaca kisah lama dan membayangkan menemu ramah pengembara masa."
     },
     "vi": {
-      "def": "Môn học về những người đã khuất đội tóc giả buồn cười.",
-      "sentence": "Tôi ngủ gật trong giờ lịch sử và mơ thấy mình là đấu sĩ."
+      "def": "Mon hoc ve con nguoi, dia diem va su kien cua ngay xua.",
+      "sentence": "Trong gio lich su, chung em doc chuyen xua va tuong tuong phong van mot nguoi du hanh thoi gian."
     },
     "tl": {
-      "def": "Klase tungkol sa mga patay na tao na nagsusuot ng nakakatawang wig.",
-      "sentence": "Nakatulog ako sa history class at nanaginip akong gladiator ako."
+      "def": "Pag-aaral ng mga tao, lugar, at pangyayari noong nakaraan.",
+      "sentence": "Sa history class, nagbasa kami ng lumang kuwento at inisip na iniinterbyu ang isang time traveler."
     },
     "phonics": {
       "syllables": 3,

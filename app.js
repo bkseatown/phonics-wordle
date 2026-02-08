@@ -49,8 +49,11 @@ let fitScreenActive = false;
 let fitScreenTightActive = false;
 let fitScreenRaf = null;
 let wordQuestScrollFallback = false;
+let teacherToolsInitialized = false;
 let isCustomWordRound = false;
 let customWordInLibrary = true;
+let activeRoundPattern = 'all';
+let activeRoundFallbackNote = '';
 let voiceHealthCheckInProgress = false;
 let voiceHealthCheckToken = 0;
 let pronunciationRecognition = null;
@@ -71,8 +74,8 @@ const PHONEME_VIDEO_LIBRARY_CANDIDATE_DIRS = [
     'public/assets/articulation/clips'
 ];
 let activeSoundVideoObjectUrl = '';
-const PACKED_TTS_DEFAULT_MANIFEST_PATH = 'audio/tts/tts-manifest.json';
-const PACKED_TTS_PACK_REGISTRY_PATH = 'audio/tts/packs/pack-registry.json';
+const PACKED_TTS_DEFAULT_MANIFEST_PATH = 'literacy-platform/audio/tts/tts-manifest.json';
+const PACKED_TTS_PACK_REGISTRY_PATH = 'literacy-platform/audio/tts/packs/pack-registry.json';
 const packedTtsManifestCacheByPath = new Map();
 const packedTtsManifestPromiseByPath = new Map();
 let packedTtsPackRegistryCache = null;
@@ -159,7 +162,15 @@ const DEFAULT_SETTINGS = {
 
 const UI_LOOK_CLASSES = ['look-k2', 'look-35', 'look-612'];
 const HOME_ROLE_STORAGE_KEY = 'cornerstone_home_role_v1';
+const HOME_LANGUAGE_PREFERENCE_KEY = 'cornerstone_home_language_pref_v1';
 const YOUNG_AUDIENCE_ROLE_PATHWAYS = new Set(['eal']);
+const SHUFFLE_FOCUS_AVOID_FOR_YOUNG = new Set(['schwa', 'prefix', 'suffix', 'compound', 'multisyllable']);
+const SHUFFLE_FOCUS_PRIORITY = ['cvc', 'digraph', 'ccvc', 'cvcc', 'trigraph', 'cvce', 'vowel_team', 'r_controlled', 'diphthong', 'floss', 'welded'];
+const FOCUS_TAG_EXCLUSIONS = Object.freeze({
+    schwa: new Set(['apple'])
+});
+const KEYBOARD_VOWELS = new Set(['a', 'e', 'i', 'o', 'u']);
+const WORD_SOURCE_LIBRARY_STATUS = 'Mode: Library. Pick a focus or set a custom challenge word.';
 const CUSTOM_WORD_BLOCK_PATTERNS = [
     /fuck/i,
     /shit/i,
@@ -176,7 +187,14 @@ const CUSTOM_WORD_BLOCK_PATTERNS = [
     /slut/i,
     /whore/i,
     /fetish/i,
-    /nsfw/i
+    /nsfw/i,
+    /\bnigg(?:a|er)\b/i,
+    /\bfag(?:got)?\b/i,
+    /\bretard(?:ed)?\b/i,
+    /\bchink\b/i,
+    /\bspic\b/i,
+    /\bkike\b/i,
+    /\bwetback\b/i
 ];
 let kidSafeWordEntriesCache = null;
 let kidSafeWordEntriesSourceSize = -1;
@@ -276,9 +294,38 @@ function setTeacherErrorMessage(message = '', isError = false) {
 function setQuickCustomWordStatus(message = '', isError = false, isSuccess = false) {
     const statusEl = document.getElementById('quick-custom-word-status');
     if (!statusEl) return;
+    const toggle = document.getElementById('quick-custom-word-toggle');
+    if (toggle) {
+        if (isSuccess) {
+            toggle.textContent = 'Custom challenge word (on)';
+        } else if (!isError) {
+            toggle.textContent = 'Custom challenge word (optional)';
+        }
+    }
+    if (isError) {
+        const body = document.getElementById('quick-custom-word-body');
+        if (body && toggle) {
+            body.classList.remove('hidden');
+            toggle.classList.add('open');
+            toggle.setAttribute('aria-expanded', 'true');
+        }
+    }
     statusEl.textContent = message || '';
     statusEl.classList.toggle('error', !!isError);
     statusEl.classList.toggle('success', !isError && !!isSuccess);
+}
+
+function refreshPatternSelectTooltip() {
+    const patternSelect = document.getElementById('pattern-select');
+    if (!patternSelect) return;
+    const selected = patternSelect.options[patternSelect.selectedIndex];
+    const label = selected ? String(selected.textContent || '').trim() : '';
+    patternSelect.title = label;
+    if (label) {
+        patternSelect.setAttribute('aria-label', `Focus pattern: ${label}`);
+    } else {
+        patternSelect.setAttribute('aria-label', 'Focus pattern');
+    }
 }
 
 function updateWordQuestAudioAvailabilityNotice() {
@@ -297,7 +344,7 @@ function updateWordQuestAudioAvailabilityNotice() {
     });
 
     if (blocked && sentencePreview) {
-        sentencePreview.textContent = 'Custom word mode: audio, sentence, and definition are unavailable for words outside the current library.';
+        sentencePreview.textContent = 'Custom challenge is active. Add this word to your library or teacher recordings for full support.';
         sentencePreview.classList.remove('hidden');
     } else if (sentencePreview) {
         sentencePreview.classList.add('hidden');
@@ -326,11 +373,7 @@ function applyCustomWordChallenge(rawValue, options = {}) {
     if (result.inLibrary) {
         setQuickCustomWordStatus(`Custom word "${wordLabel}" loaded with full library support.`, false, true);
     } else {
-        setQuickCustomWordStatus(
-            `Custom word "${wordLabel}" loaded. Audio, sentence, and definition are disabled because this word is not in the current library.`,
-            false,
-            true
-        );
+        setQuickCustomWordStatus(`Custom word "${wordLabel}" loaded. You can play now and add support clips later.`, false, true);
     }
 
     showBanner(`✅ Custom challenge word set: ${wordLabel}`);
@@ -911,6 +954,10 @@ async function resolvePackedTtsManifestInfo(packId = '') {
     const registry = await loadPackedTtsPackRegistry();
     const pack = registry?.packMap?.[selectedPackId];
     if (pack?.manifestPath) return pack;
+    if (appSettings.ttsPackId !== 'default') {
+        appSettings.ttsPackId = 'default';
+        saveSettings();
+    }
     return getDefaultTtsPackOption();
 }
 
@@ -998,6 +1045,7 @@ async function playAudioClipUrl(url, options = {}) {
 }
 
 async function tryPlayPackedTtsForCurrentWord({ text = '', languageCode = 'en', type = 'word' } = {}) {
+    if (!shouldAttemptPackedTtsLookup()) return false;
     const word = String(currentWord || '').trim().toLowerCase();
     if (!word || !text) return false;
     const manifest = await loadPackedTtsManifest();
@@ -1022,7 +1070,28 @@ async function tryPlayPackedTtsForCurrentWord({ text = '', languageCode = 'en', 
     return false;
 }
 
+async function hasPackedTtsClipForCurrentWord({ text = '', languageCode = 'en', type = 'word' } = {}) {
+    if (!shouldAttemptPackedTtsLookup()) return false;
+    const word = String(currentWord || '').trim().toLowerCase();
+    if (!word || !text) return false;
+    const manifest = await loadPackedTtsManifest();
+    if (!manifest?.entries) return false;
+
+    const resolvedType = resolveCurrentWordTtsType(text, languageCode, type);
+    const key = getPackedTtsManifestKey(word, languageCode, resolvedType);
+    if (!key) return false;
+    if (manifest.entries[key]) return true;
+
+    const activePackId = normalizeTtsPackId(manifest.__packId || 'default');
+    if (activePackId !== 'default') {
+        const fallbackManifest = await loadPackedTtsManifestFromPath(PACKED_TTS_DEFAULT_MANIFEST_PATH);
+        if (fallbackManifest?.entries?.[key]) return true;
+    }
+    return false;
+}
+
 async function tryPlayPackedPhoneme(soundKey = '', languageCode = 'en') {
+    if (!shouldAttemptPackedTtsLookup()) return false;
     const normalizedSound = normalizePhonemeSoundKey(soundKey);
     if (!normalizedSound) return false;
 
@@ -1052,6 +1121,7 @@ async function tryPlayPackedPassageClip({
     playbackRate = 1,
     onPlay = null
 } = {}) {
+    if (!shouldAttemptPackedTtsLookup()) return false;
     const key = getPackedPassageManifestKey(title, languageCode);
     if (!key) return false;
 
@@ -1382,6 +1452,10 @@ function getPreferredTtsPackId() {
     return normalizeTtsPackId(appSettings.ttsPackId || DEFAULT_SETTINGS.ttsPackId);
 }
 
+function shouldAttemptPackedTtsLookup() {
+    return true;
+}
+
 function applySettings() {
     document.body.classList.toggle('calm-mode', appSettings.calmMode);
     document.body.classList.toggle('large-text', appSettings.largeText);
@@ -1521,9 +1595,61 @@ function applyWordQuestUrlPreset() {
             CURRENT_MAX_GUESSES = normalizedGuessCount;
             saveSettings();
         }
+        refreshPatternSelectTooltip();
     } catch (e) {
         syncLengthOptionsToPattern(true);
+        refreshPatternSelectTooltip();
     }
+}
+
+function clearUrlSearchParam(paramName) {
+    if (!paramName || !window.history || typeof window.history.replaceState !== 'function') return;
+    try {
+        const url = new URL(window.location.href);
+        if (!url.searchParams.has(paramName)) return;
+        url.searchParams.delete(paramName);
+        const next = `${url.pathname}${url.search}${url.hash}`;
+        window.history.replaceState(null, document.title, next);
+    } catch {}
+}
+
+function openWordQuestToolAction(action = '') {
+    const normalized = String(action || '').trim().toLowerCase();
+    if (!normalized) return false;
+
+    const hideWelcome = () => {
+        if (welcomeModal && !welcomeModal.classList.contains('hidden')) {
+            welcomeModal.classList.add('hidden');
+        }
+    };
+
+    if (normalized === 'session-setup' || normalized === 'session') {
+        hideWelcome();
+        openTeacherMode();
+        return true;
+    }
+    if (normalized === 'recording-studio' || normalized === 'studio') {
+        hideWelcome();
+        openStudioSetup();
+        return true;
+    }
+    if (normalized === 'sound-lab' || normalized === 'soundlab') {
+        openPhonemeGuide();
+        return true;
+    }
+    return false;
+}
+
+function applyWordQuestToolParamIfPresent() {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const toolParam = (params.get('tool') || '').trim().toLowerCase();
+        if (!toolParam) return;
+        const opened = openWordQuestToolAction(toolParam);
+        if (opened) {
+            clearUrlSearchParam('tool');
+        }
+    } catch {}
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -1561,18 +1687,11 @@ document.addEventListener("DOMContentLoaded", () => {
     enableOverlayCloseForAllModals();
     initModalDismissals();
     initHowTo();
-    initClozeLink();
-    initComprehensionLink();
-    initFluencyLink();
     initAdventureMode();
-    ensureMoreToolsMenu();
-    initClassroomDock();
-    organizeHeaderActions();
     if (typeof initAssessmentFlow === 'function') {
         initAssessmentFlow();
     }
     initVoiceSourceControls(); // Voice source toggle
-    initTeacherTools();
     initSoundWallFilters();
     applySettings();
     
@@ -1646,6 +1765,13 @@ document.addEventListener("DOMContentLoaded", () => {
             }, true);
         }
     }
+
+    window.addEventListener('cornerstone:tool-request', (event) => {
+        const action = event?.detail?.action || '';
+        openWordQuestToolAction(action);
+    });
+
+    applyWordQuestToolParamIfPresent();
 });
 
 function enableOverlayCloseForAllModals() {
@@ -1847,45 +1973,91 @@ function applyWordQuestDesktopScale() {
 
     const quickCustomPanel = document.querySelector('.quick-custom-word-panel');
     const focusPanel = document.getElementById('focus-panel');
+    const pageGuideTip = document.getElementById('page-guide-tip');
     const quickPanelHeight = getVisibleElementHeight(quickCustomPanel);
     const focusPanelHeight = focusPanel && !focusPanel.classList.contains('hidden')
         ? getVisibleElementHeight(focusPanel)
         : 0;
-    const chromeAboveCanvas = quickPanelHeight + focusPanelHeight;
-    const reservedOutsideCanvas = 46 + chromeAboveCanvas;
-    const availableHeight = Math.max(420, viewportHeight - headerHeight - reservedOutsideCanvas);
-    // Estimated constant chrome inside the canvas (board padding, hint row, keyboard panel padding).
-    const staticChrome = isCoarsePointerLayout() ? 196 : 186;
-
-    let tileSize = (availableHeight - staticChrome) / 8.35;
-    tileSize = Math.max(46, Math.min(74, tileSize));
-    if (viewportHeight < 860) tileSize = Math.min(tileSize, 58);
-    if (viewportHeight < 780) tileSize = Math.min(tileSize, 52);
-
-    let keySize = tileSize * 0.72;
-    keySize = Math.max(34, Math.min(53, keySize));
-
-    let wideKeySize = keySize * 1.62;
-    wideKeySize = Math.max(62, Math.min(94, wideKeySize));
-
-    const keyboardMax = Math.round((keySize * 10) + 86);
-    const canvasMax = Math.round(Math.max(760, Math.min(1080, keyboardMax + 282)));
+    const guideTipHeight = viewportHeight < 880 ? getVisibleElementHeight(pageGuideTip) : 0;
+    const chromeAboveCanvas = quickPanelHeight + focusPanelHeight + guideTipHeight;
+    const reservedOutsideCanvas = 38 + chromeAboveCanvas;
+    const availableHeight = Math.max(340, viewportHeight - headerHeight - reservedOutsideCanvas);
     const coarsePointer = isCoarsePointerLayout();
-    let bottomGap = coarsePointer ? 36 : 28;
-    if (viewportHeight < 980) bottomGap -= 6;
-    if (viewportHeight < 920) bottomGap -= 6;
-    if (viewportHeight < 860) bottomGap -= 4;
-    if (coarsePointer) {
-        bottomGap += 4;
-    }
-    bottomGap = Math.max(14, Math.min(56, bottomGap));
+    // Estimated constant chrome inside the canvas (board padding, hint row, keyboard panel padding).
+    // Keep this conservative so non-fullscreen desktop/iPad windows avoid clipping.
+    const staticChrome = coarsePointer ? 286 : 258;
 
-    body.style.setProperty('--wq-tile-size-desktop', `${tileSize.toFixed(1)}px`);
-    body.style.setProperty('--wq-key-size-desktop', `${keySize.toFixed(1)}px`);
-    body.style.setProperty('--wq-key-wide-size-desktop', `${wideKeySize.toFixed(1)}px`);
-    body.style.setProperty('--wq-keyboard-max-desktop', `${keyboardMax}px`);
-    body.style.setProperty('--wq-canvas-max-desktop', `${canvasMax}px`);
-    body.style.setProperty('--wq-desktop-bottom-gap', `${bottomGap}px`);
+    let tileSize = (availableHeight - staticChrome) / 9.08;
+    tileSize = Math.max(34, Math.min(58, tileSize));
+    if (viewportHeight < 980) tileSize = Math.min(tileSize, 55);
+    if (viewportHeight < 910) tileSize = Math.min(tileSize, 51);
+    if (viewportHeight < 840) tileSize = Math.min(tileSize, 46);
+    if (viewportHeight < 790) tileSize = Math.min(tileSize, 42);
+
+    let keySize = tileSize * (coarsePointer ? 0.98 : 0.93);
+    keySize = Math.max(coarsePointer ? 32 : 30, Math.min(48, keySize));
+
+    let wideKeySize = keySize * 1.72;
+    wideKeySize = Math.max(58, Math.min(88, wideKeySize));
+
+    let keyboardMax = Math.round((keySize * 10) + (coarsePointer ? 86 : 78));
+    let canvasMax = Math.round(Math.max(660, Math.min(950, keyboardMax + 224)));
+    let bottomGap = coarsePointer ? 14 : 10;
+    if (viewportHeight < 930) bottomGap = Math.max(8, bottomGap - 3);
+    if (viewportHeight < 860) bottomGap = Math.max(8, bottomGap - 2);
+    if (viewportHeight < 800) bottomGap = Math.max(5, bottomGap - 2);
+    bottomGap = Math.max(5, Math.min(18, bottomGap));
+
+    const applyDesktopScaleVars = () => {
+        body.style.setProperty('--wq-tile-size-desktop', `${tileSize.toFixed(1)}px`);
+        body.style.setProperty('--wq-key-size-desktop', `${keySize.toFixed(1)}px`);
+        body.style.setProperty('--wq-key-wide-size-desktop', `${wideKeySize.toFixed(1)}px`);
+        body.style.setProperty('--wq-keyboard-max-desktop', `${keyboardMax}px`);
+        body.style.setProperty('--wq-canvas-max-desktop', `${canvasMax}px`);
+        body.style.setProperty('--wq-desktop-bottom-gap', `${bottomGap}px`);
+    };
+
+    applyDesktopScaleVars();
+
+    // Second pass: if canvas still overflows visible height, shrink iteratively before falling back to page scroll.
+    const canvas = document.getElementById('game-canvas');
+    const keyboardEl = document.getElementById('keyboard');
+    if (canvas && keyboardEl) {
+        const availableCanvasHeight = Math.max(320, viewportHeight - headerHeight - reservedOutsideCanvas - 8);
+        const measureLayoutOverflow = () => {
+            const viewportBottom = window.visualViewport
+                ? (window.visualViewport.offsetTop + window.visualViewport.height)
+                : (window.innerHeight || document.documentElement.clientHeight || 0);
+            const safeBottom = Math.max(0, viewportBottom - (coarsePointer ? 10 : 8));
+            const canvasRect = canvas.getBoundingClientRect();
+            const keyboardRect = keyboardEl.getBoundingClientRect();
+            return Math.max(
+                0,
+                canvasRect.bottom - safeBottom,
+                keyboardRect.bottom - safeBottom,
+                canvas.scrollHeight - canvas.clientHeight - 4
+            );
+        };
+
+        let requiredCanvasHeight = Math.ceil(canvas.scrollHeight || 0);
+        let layoutOverflow = measureLayoutOverflow();
+        let attempts = 0;
+
+        while ((requiredCanvasHeight > availableCanvasHeight + 2 || layoutOverflow > 2) && attempts < 8) {
+            const combinedDemand = Math.max(requiredCanvasHeight, availableCanvasHeight + layoutOverflow);
+            const fitRatio = Math.max(0.74, Math.min(0.95, availableCanvasHeight / Math.max(1, combinedDemand)));
+            tileSize = Math.max(30, Math.min(58, tileSize * fitRatio));
+            keySize = Math.max(coarsePointer ? 30 : 28, Math.min(46, keySize * fitRatio));
+            wideKeySize = Math.max(52, Math.min(84, wideKeySize * fitRatio));
+            keyboardMax = Math.round((keySize * 10) + (coarsePointer ? 74 : 68));
+            canvasMax = Math.round(Math.max(620, Math.min(920, keyboardMax + 198)));
+            bottomGap = Math.max(4, Math.min(14, bottomGap - 1));
+            applyDesktopScaleVars();
+            requiredCanvasHeight = Math.ceil(canvas.scrollHeight || 0);
+            layoutOverflow = measureLayoutOverflow();
+            attempts += 1;
+        }
+    }
 }
 
 function updateWordQuestScrollFallback() {
@@ -1917,7 +2089,7 @@ function updateWordQuestScrollFallback() {
         canvas.scrollHeight - canvas.clientHeight - 8
     );
     // Keep no-scroll layout as the default; only fallback when clipping is clearly unavoidable.
-    const fallbackThreshold = coarsePointer ? 32 : 22;
+    const fallbackThreshold = coarsePointer ? 52 : 40;
     const shouldFallback = overflowPx > fallbackThreshold;
 
     if (wordQuestScrollFallback !== shouldFallback) {
@@ -2657,8 +2829,11 @@ function scoreVoiceForTarget(voice, targetLang = 'en') {
 function pickBestVoiceForLang(voices, targetLang, options = {}) {
     if (!voices || !voices.length || !targetLang) return null;
     const normalized = targetLang.toLowerCase();
-    const baseLang = normalized.split('-')[0];
-    const candidates = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith(baseLang));
+    const normalizedFamily = normalizePackedTtsLanguage(normalized);
+    const candidates = voices.filter((voice) => {
+        if (!voice?.lang) return false;
+        return normalizePackedTtsLanguage(voice.lang) === normalizedFamily;
+    });
     if (!candidates.length) return null;
 
     const exact = candidates.filter(v => v.lang && v.lang.toLowerCase() === normalized);
@@ -2688,17 +2863,34 @@ function getTranslationVoiceTarget(languageCode) {
         'es': 'es',
         'zh': 'zh',
         'vi': 'vi',
-        'tl': 'tl',
+        'tl': 'fil',
+        'ms': 'ms',
         'pt': 'pt',
         'hi': 'hi'
     };
     return langMappings[languageCode] || languageCode;
 }
 
-async function hasHighQualityVoiceForLanguage(languageCode) {
+function voiceMatchesLanguage(voice, targetLang = 'en') {
+    if (!voice?.lang) return false;
+    return normalizePackedTtsLanguage(voice.lang) === normalizePackedTtsLanguage(targetLang);
+}
+
+async function hasVoiceForLanguage(languageCode, options = {}) {
     const voices = await getVoicesAsync();
     const targetLang = getTranslationVoiceTarget(languageCode);
-    return !!pickBestVoiceForLang(voices, targetLang, { requireHighQuality: true });
+    if (options.requireHighQuality) {
+        return !!pickBestVoiceForLang(voices, targetLang, { requireHighQuality: true });
+    }
+    return !!(
+        pickBestVoiceForLang(voices, targetLang, { requireHighQuality: true })
+        || pickBestVoiceForLang(voices, targetLang, { excludeLowQuality: true })
+        || pickBestVoiceForLang(voices, targetLang)
+    );
+}
+
+async function hasHighQualityVoiceForLanguage(languageCode) {
+    return hasVoiceForLanguage(languageCode, { requireHighQuality: true });
 }
 
 function ensureTranslationAudioNote() {
@@ -2746,23 +2938,33 @@ function setTranslationAudioNote(message, withTooltip = false) {
     }
 }
 
-function notifyMissingHighQualityVoice() {
+function notifyMissingTranslationVoice() {
     setTranslationAudioNote('Audio unavailable for this language.', true);
     if (!localStorage.getItem('hq_voice_notice_shown')) {
-        showToast('Install enhanced voices for better audio quality.');
+        showToast('Install a matching voice pack for this language.');
         localStorage.setItem('hq_voice_notice_shown', 'true');
     }
 }
 
+function getBestTranslationVoice(voices, targetLang) {
+    if (!Array.isArray(voices) || !voices.length) return null;
+    return (
+        pickBestVoiceForLang(voices, targetLang, { requireHighQuality: true })
+        || pickBestVoiceForLang(voices, targetLang, { excludeLowQuality: true })
+        || pickBestVoiceForLang(voices, targetLang)
+        || null
+    );
+}
+
 /* Play text in a specific language for translations */
-async function playTextInLanguage(text, languageCode) {
+async function playTextInLanguage(text, languageCode, type = 'sentence') {
     if (!text) return;
     cancelPendingSpeech(true);
 
     const packedPlayed = await tryPlayPackedTtsForCurrentWord({
         text,
         languageCode,
-        type: 'sentence'
+        type
     });
     if (packedPlayed) {
         setTranslationAudioNote('');
@@ -2773,19 +2975,25 @@ async function playTextInLanguage(text, languageCode) {
     const voices = await getVoicesForSpeech();
     const targetLang = getTranslationVoiceTarget(languageCode);
     
-    // Find best voice for the language
-    const preferredVoice = pickBestVoiceForLang(voices, targetLang, { requireHighQuality: true });
+    const preferredVoice = getBestTranslationVoice(voices, targetLang);
+    const usingHighQualityVoice = !!(preferredVoice && isHighQualityVoice(preferredVoice));
     
-    if (preferredVoice) {
+    if (preferredVoice && voiceMatchesLanguage(preferredVoice, targetLang)) {
         msg.voice = preferredVoice;
         msg.lang = preferredVoice.lang;
-        setTranslationAudioNote('');
+        if (usingHighQualityVoice) {
+            setTranslationAudioNote('');
+        } else {
+            setTranslationAudioNote('Using an available device voice for this language.');
+        }
     } else {
-        notifyMissingHighQualityVoice();
+        notifyMissingTranslationVoice();
         return;
     }
     
-    msg.rate = Math.max(0.65, getSpeechRate('sentence') - 0.1);
+    const packedType = normalizePackedTtsType(type);
+    const speechType = packedType === 'word' ? 'word' : 'sentence';
+    msg.rate = Math.max(0.65, getSpeechRate(speechType) - 0.1);
     msg.pitch = 1.0;
     
     speakUtterance(msg);
@@ -2794,35 +3002,97 @@ async function playTextInLanguage(text, languageCode) {
 function getTranslationData(word, langCode, options = {}) {
     if (!word || !langCode || langCode === 'en') return null;
     const lower = word.toLowerCase();
+    if (!window.WORD_ENTRIES?.[lower]) {
+        return null;
+    }
     const normalizedLang = normalizePackedTtsLanguage(langCode);
     const audienceMode = normalizeAudienceMode(options.audienceMode || getResolvedAudienceMode());
+    const englishCopy = getWordCopyForAudience(lower, 'en', audienceMode);
+
+    const sanitizeAgainstEnglish = ({ wordText = '', definition = '', sentence = '' } = {}) => {
+        const englishDefinition = normalizeTextForCompare(englishCopy.definition || '');
+        const englishSentence = normalizeTextForCompare(englishCopy.sentence || '');
+        const englishWord = normalizeTextForCompare(lower);
+        const cleanWord = normalizeTextForCompare(wordText);
+        const cleanDefinition = normalizeTextForCompare(definition);
+        const cleanSentence = normalizeTextForCompare(sentence);
+
+        return {
+            wordText: cleanWord && cleanWord !== englishWord ? cleanAudienceText(wordText) : '',
+            definition: cleanDefinition && cleanDefinition !== englishDefinition ? definition : '',
+            sentence: cleanSentence && cleanSentence !== englishSentence ? sentence : ''
+        };
+    };
+    const sanitizeTranslationCopy = ({ wordText = '', definition = '', sentence = '' } = {}) => ({
+        word: cleanAudienceText(wordText),
+        definition: definition
+            ? sanitizeRevealText(definition, {
+                word: lower,
+                field: 'definition',
+                languageCode: normalizedLang,
+                allowFallback: false,
+                maxWords: 20
+            })
+            : '',
+        sentence: sentence
+            ? sanitizeRevealText(sentence, {
+                word: lower,
+                field: 'sentence',
+                languageCode: normalizedLang,
+                allowFallback: false,
+                maxWords: 24
+            })
+            : ''
+    });
 
     const audienceCopy = getWordCopyForAudience(lower, normalizedLang, audienceMode);
     if (audienceCopy.definition || audienceCopy.sentence) {
-        return {
-            definition: audienceCopy.definition || '',
-            sentence: audienceCopy.sentence || ''
-        };
+        const cleaned = sanitizeAgainstEnglish({
+            wordText: audienceCopy.word || '',
+            definition: audienceCopy.definition,
+            sentence: audienceCopy.sentence
+        });
+        const sanitized = sanitizeTranslationCopy(cleaned);
+        if (sanitized.definition || sanitized.sentence) {
+            return sanitized;
+        }
     }
 
     if (window.TRANSLATIONS && typeof window.TRANSLATIONS.getTranslation === 'function') {
         const fallback = window.TRANSLATIONS.getTranslation(lower, normalizedLang);
-        if (!fallback) return null;
-        if (audienceMode !== 'young-eal') return fallback;
-        return {
-            definition: simplifyRevealDefinition(fallback.definition || '', lower, normalizedLang),
-            sentence: simplifyRevealSentence(fallback.sentence || '', lower, normalizedLang)
-        };
+        if (fallback) {
+            const cleaned = sanitizeAgainstEnglish(fallback);
+            const sanitized = sanitizeTranslationCopy(cleaned);
+            if (!sanitized.definition && !sanitized.sentence) return null;
+            return sanitized;
+        }
     }
     return null;
 }
 
+function getPreferredTranslationLanguage() {
+    const fromSettings = normalizePackedTtsLanguage(appSettings?.translation?.lang || 'en');
+    const fromHome = normalizePackedTtsLanguage(localStorage.getItem(HOME_LANGUAGE_PREFERENCE_KEY) || '');
+    if (fromSettings && fromSettings !== 'en') return fromSettings;
+    if (fromHome && fromHome !== 'en') return fromHome;
+    return 'en';
+}
+
+function getYoungAudienceDefaultTranslationLanguage() {
+    const preferred = getPreferredTranslationLanguage();
+    if (preferred && preferred !== 'en') return preferred;
+    return 'es';
+}
+
 /* --- CONTROLS & EVENTS --- */
 function initControls() {
-    document.getElementById("new-word-btn").onclick = () => {
-        document.getElementById("new-word-btn").blur(); 
-        startNewGame();
-    };
+    const newWordBtn = document.getElementById("new-word-btn");
+    if (newWordBtn) {
+        newWordBtn.onclick = () => {
+            newWordBtn.blur();
+            startNewGame();
+        };
+    }
     const caseToggle = document.getElementById("case-toggle");
     if (caseToggle) {
         caseToggle.onclick = (e) => {
@@ -2836,6 +3106,7 @@ function initControls() {
         patternSelect.onchange = () => {
             patternSelect.blur();
             syncLengthOptionsToPattern(true);
+            refreshPatternSelectTooltip();
             startNewGame();
         };
     }
@@ -2861,17 +3132,38 @@ function initControls() {
         };
     }
 
-    document.getElementById("teacher-btn").onclick = openTeacherMode;
-    document.getElementById("set-word-btn").onclick = handleTeacherSubmit;
-    document.getElementById("open-studio-btn").onclick = openStudioSetup;
+    const teacherBtn = document.getElementById("teacher-btn");
+    if (teacherBtn) teacherBtn.onclick = openTeacherMode;
+    const openStudioBtn = document.getElementById("open-studio-btn");
+    if (openStudioBtn) openStudioBtn.onclick = openStudioSetup;
+    const quickCustomWordToggleBtn = document.getElementById('quick-custom-word-toggle');
+    const quickCustomWordBody = document.getElementById('quick-custom-word-body');
     const quickCustomWordInput = document.getElementById('quick-custom-word-input');
     const quickCustomWordStartBtn = document.getElementById('quick-custom-word-start');
     const quickCustomWordClearBtn = document.getElementById('quick-custom-word-clear');
-    const toggleMaskBtn = document.getElementById("toggle-mask");
-    const customWordInput = document.getElementById("custom-word-input");
+    const toggleMaskBtn = document.getElementById('quick-custom-word-toggle-mask');
+    const customWordInput = quickCustomWordInput;
     const supportsTextSecurity = typeof CSS !== 'undefined' && CSS.supports && (
         CSS.supports('-webkit-text-security: disc') || CSS.supports('text-security: disc')
     );
+
+    const setCustomPanelExpanded = (expanded) => {
+        if (!quickCustomWordBody || !quickCustomWordToggleBtn) return;
+        quickCustomWordBody.classList.toggle('hidden', !expanded);
+        quickCustomWordToggleBtn.classList.toggle('open', expanded);
+        quickCustomWordToggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    };
+
+    if (quickCustomWordToggleBtn && quickCustomWordBody) {
+        setCustomPanelExpanded(false);
+        quickCustomWordToggleBtn.onclick = () => {
+            const shouldExpand = quickCustomWordBody.classList.contains('hidden');
+            setCustomPanelExpanded(shouldExpand);
+            if (shouldExpand) {
+                setTimeout(() => quickCustomWordInput?.focus(), 0);
+            }
+        };
+    }
 
     if (customWordInput) {
         if (supportsTextSecurity) {
@@ -2887,7 +3179,7 @@ function initControls() {
 
     if (toggleMaskBtn) {
         toggleMaskBtn.onclick = () => {
-            const inp = document.getElementById("custom-word-input");
+            const inp = quickCustomWordInput;
             if (!inp) return;
 
             const canMask = typeof CSS !== 'undefined' && CSS.supports && (
@@ -2912,7 +3204,11 @@ function initControls() {
     if (quickCustomWordStartBtn) {
         quickCustomWordStartBtn.onclick = () => {
             const value = quickCustomWordInput ? quickCustomWordInput.value : '';
-            applyCustomWordChallenge(value, { source: 'quick' });
+            const ok = applyCustomWordChallenge(value, { source: 'quick' });
+            if (ok) {
+                if (quickCustomWordInput) quickCustomWordInput.value = '';
+                setCustomPanelExpanded(false);
+            }
             if (quickCustomWordInput) quickCustomWordInput.blur();
         };
     }
@@ -2921,7 +3217,11 @@ function initControls() {
         quickCustomWordInput.addEventListener('keydown', (event) => {
             if (event.key !== 'Enter') return;
             event.preventDefault();
-            applyCustomWordChallenge(quickCustomWordInput.value, { source: 'quick' });
+            const ok = applyCustomWordChallenge(quickCustomWordInput.value, { source: 'quick' });
+            if (ok) {
+                quickCustomWordInput.value = '';
+                setCustomPanelExpanded(false);
+            }
         });
     }
 
@@ -2930,8 +3230,9 @@ function initControls() {
             if (quickCustomWordInput) quickCustomWordInput.value = '';
             isCustomWordRound = false;
             customWordInLibrary = true;
-            setQuickCustomWordStatus('Library mode active. Pick a focus or enter a custom challenge word.', false, false);
+            setQuickCustomWordStatus(WORD_SOURCE_LIBRARY_STATUS, false, false);
             startNewGame();
+            setCustomPanelExpanded(false);
         };
     }
 
@@ -3027,7 +3328,8 @@ function initControls() {
         };
     }
 
-    setQuickCustomWordStatus('Library mode active. Pick a focus or enter a custom challenge word.', false, false);
+    refreshPatternSelectTooltip();
+    setQuickCustomWordStatus(WORD_SOURCE_LIBRARY_STATUS, false, false);
     updateWordQuestAudioAvailabilityNotice();
     
     document.getElementById("speak-btn").onclick = () => {
@@ -3053,8 +3355,6 @@ function initControls() {
 
             if (e.key === "Escape") {
                 closeModal();
-            } else if (e.key === "Enter" && !teacherModal.classList.contains("hidden")) {
-                handleTeacherSubmit();
             }
             return; 
         }
@@ -3095,12 +3395,12 @@ function initControls() {
         }
     });
 
-    const tInput = document.getElementById("custom-word-input");
-    tInput.addEventListener("keydown", (e) => {
-        e.stopImmediatePropagation(); 
-        if (e.key === "Enter") handleTeacherSubmit();
-        if (e.key === "Escape") closeModal();
-    });
+    if (quickCustomWordInput) {
+        quickCustomWordInput.addEventListener("keydown", (e) => {
+            e.stopImmediatePropagation();
+            if (e.key === "Escape") closeModal();
+        });
+    }
 }
 
 function initWarmupButtons() {
@@ -3127,186 +3427,106 @@ function initWarmupButtons() {
 }
 
 function initTeacherTools() {
-    compactTeacherLayout();
-    ensureVoicePreferencesControls();
-    ensureVoiceDiagnosticsPanel();
-    initVoiceLoader();
-    ensureVoiceQualityHint();
-    updateVoiceInstallPrompt();
-    updateEnhancedVoicePrompt();
-    ensureAutoHearToggle();
-    ensureRevealRecordingToolsToggle();
-    ensureBonusControls();
-    ensureFunHudControls();
-    ensureGameModesRow();
-    ensureAssessmentControls();
-    ensureClassroomDockControl();
-    ensurePracticePackRow();
-    ensureSettingsTransferRow();
-    ensureTeacherTabs();
-    ensureUiLookRow();
-    populateTtsPackSelect();
-    const diagnosticsRefreshBtn = document.getElementById('voice-diagnostics-refresh');
-    if (diagnosticsRefreshBtn && !diagnosticsRefreshBtn.dataset.bound) {
-        diagnosticsRefreshBtn.dataset.bound = 'true';
-        diagnosticsRefreshBtn.addEventListener('click', () => {
-            refreshVoiceDiagnostics('manual refresh');
-        });
-    }
-    const diagnosticsSampleBtn = document.getElementById('voice-diagnostics-sample');
-    if (diagnosticsSampleBtn && !diagnosticsSampleBtn.dataset.bound) {
-        diagnosticsSampleBtn.dataset.bound = 'true';
-        diagnosticsSampleBtn.addEventListener('click', () => {
-            speakText('Great decoding! You spotted the clue, laughed at the joke, and read it with expression.', 'sentence');
-        });
-    }
-    const voiceHealthCheckBtn = document.getElementById('voice-health-check-btn');
-    if (voiceHealthCheckBtn && !voiceHealthCheckBtn.dataset.bound) {
-        voiceHealthCheckBtn.dataset.bound = 'true';
-        voiceHealthCheckBtn.addEventListener('click', () => {
-            runVoiceHealthCheck();
-        });
-    }
-    const calmToggle = document.getElementById('toggle-calm-mode');
-    if (calmToggle) {
-        calmToggle.onchange = () => {
-            appSettings.calmMode = calmToggle.checked;
-            saveSettings();
-            applySettings();
-        };
-    }
+    const grid = document.querySelector('#teacher-modal .teacher-tools-grid');
+    if (!grid) return;
+    grid.innerHTML = `
+        <div class="teacher-row teacher-launchpad-row">
+            <div>
+                <strong>Session setup</strong>
+                <div class="teacher-subtext">Set class defaults once, then launch tools.</div>
+            </div>
+            <div class="teacher-launchpad-controls">
+                <label for="teacher-translation-default">Reveal language</label>
+                <select id="teacher-translation-default">
+                    <option value="en">English</option>
+                    <option value="es">Spanish</option>
+                    <option value="zh">Chinese (Simplified)</option>
+                    <option value="hi">Hindi</option>
+                    <option value="tl">Tagalog</option>
+                    <option value="ms">Malay</option>
+                    <option value="vi">Vietnamese</option>
+                </select>
 
-    const largeTextToggle = document.getElementById('toggle-large-text');
-    if (largeTextToggle) {
-        largeTextToggle.onchange = () => {
-            appSettings.largeText = largeTextToggle.checked;
-            saveSettings();
-            applySettings();
-        };
-    }
+                <label for="teacher-audience-mode">Language style</label>
+                <select id="teacher-audience-mode">
+                    <option value="auto">Auto</option>
+                    <option value="young-eal">Young / EAL-friendly</option>
+                    <option value="general">General</option>
+                </select>
 
-    const ipaToggle = document.getElementById('toggle-show-ipa');
-    if (ipaToggle) {
-        ipaToggle.onchange = () => {
-            appSettings.showIPA = ipaToggle.checked;
-            saveSettings();
-            applySettings();
-        };
-    }
+                <label for="teacher-reveal-frequency">Jokes, riddles, facts</label>
+                <select id="teacher-reveal-frequency">
+                    <option value="off">Off</option>
+                    <option value="rare">Rare</option>
+                    <option value="sometimes">Sometimes</option>
+                    <option value="often">Often</option>
+                    <option value="always">Always</option>
+                </select>
 
-    const examplesToggle = document.getElementById('toggle-show-examples');
-    if (examplesToggle) {
-        examplesToggle.onchange = () => {
-            appSettings.showExamples = examplesToggle.checked;
-            saveSettings();
-            applySettings();
-        };
-    }
+                <label class="toggle-row inline">
+                    <input type="checkbox" id="toggle-auto-hear-session" />
+                    Auto-read reveal card
+                </label>
+                <label class="toggle-row inline">
+                    <input type="checkbox" id="toggle-fun-mode-session" />
+                    Fun mode (coins/hearts)
+                </label>
+            </div>
+        </div>
 
-    const cuesToggle = document.getElementById('toggle-mouth-cues');
-    if (cuesToggle) {
-        cuesToggle.onchange = () => {
-            appSettings.showMouthCues = cuesToggle.checked;
-            saveSettings();
-            applySettings();
-        };
-    }
+        <div class="teacher-row teacher-action-buttons">
+            <button type="button" id="open-studio-btn" class="teacher-secondary-btn">Recording Studio</button>
+            <button type="button" id="open-sound-lab-btn" class="teacher-secondary-btn">Sound Lab</button>
+            <button type="button" id="open-assessment-hub-btn" class="teacher-secondary-btn">Assessments Hub</button>
+            <button type="button" id="open-classroom-dock" class="teacher-secondary-btn">Classroom Dock</button>
+        </div>
 
-    const speechRateInput = document.getElementById('speech-rate');
-    if (speechRateInput) {
-        speechRateInput.oninput = () => {
-            const value = parseFloat(speechRateInput.value);
-            appSettings.speechRate = Number.isFinite(value) ? value : DEFAULT_SETTINGS.speechRate;
-            const display = document.getElementById('speech-rate-value');
-            if (display) display.textContent = `${appSettings.speechRate.toFixed(2)}x`;
-            saveSettings();
-            renderVoiceDiagnosticsPanel();
-        };
-    }
+        <div class="teacher-subtext">
+            Voice packs are managed from Home → Language + Audio Setup.
+        </div>
+        <div id="teacher-error" class="teacher-error" aria-live="polite"></div>
+    `;
 
-    const narrationStyleSelect = document.getElementById('narration-style-select');
-    if (narrationStyleSelect) {
-        narrationStyleSelect.onchange = () => {
-            appSettings.narrationStyle = normalizeNarrationStyle(narrationStyleSelect.value);
-            saveSettings();
-            renderVoiceDiagnosticsPanel();
-        };
-    }
+    grid.querySelector('#open-studio-btn')?.addEventListener('click', openStudioSetup);
+    grid.querySelector('#open-sound-lab-btn')?.addEventListener('click', () => openPhonemeGuide());
+    grid.querySelector('#open-assessment-hub-btn')?.addEventListener('click', () => {
+        window.location.href = 'assessments.html';
+    });
+    grid.querySelector('#open-classroom-dock')?.addEventListener('click', () => {
+        toggleClassroomDock(true);
+    });
 
-    const speechQualitySelect = document.getElementById('speech-quality-select');
-    if (speechQualitySelect) {
-        speechQualitySelect.onchange = () => {
-            appSettings.speechQualityMode = normalizeSpeechQualityMode(speechQualitySelect.value);
-            sessionEnglishVoice = { dialect: '', voiceUri: '' };
-            saveSettings();
-            refreshVoiceDiagnostics('voice quality changed');
-            updateVoiceInstallPrompt();
-            updateEnhancedVoicePrompt();
-        };
-    }
-
-    const ttsPackSelect = document.getElementById('tts-pack-select');
-    if (ttsPackSelect) {
-        ttsPackSelect.onchange = () => {
-            appSettings.ttsPackId = normalizeTtsPackId(ttsPackSelect.value);
-            clearPackedTtsCaches();
-            saveSettings();
-            populateTtsPackSelect();
-            showToast('Voice pack updated.');
-        };
-    }
-
-    const ttsPackRefreshBtn = document.getElementById('tts-pack-refresh-btn');
-    if (ttsPackRefreshBtn && !ttsPackRefreshBtn.dataset.bound) {
-        ttsPackRefreshBtn.dataset.bound = 'true';
-        ttsPackRefreshBtn.onclick = () => {
-            clearPackedTtsCaches();
-            populateTtsPackSelect({ forceRefresh: true });
-            showToast('Voice pack list refreshed.');
-        };
-    }
-
-    const ttsPackSampleBtn = document.getElementById('tts-pack-sample-btn');
-    if (ttsPackSampleBtn && !ttsPackSampleBtn.dataset.bound) {
-        ttsPackSampleBtn.dataset.bound = 'true';
-        ttsPackSampleBtn.onclick = () => {
-            playTtsPackSampleClip();
-        };
-    }
-
-    const translationSelect = document.getElementById('translation-default-select');
+    const translationSelect = document.getElementById('teacher-translation-default');
     if (translationSelect) {
+        translationSelect.value = normalizePackedTtsLanguage(appSettings.translation?.lang || 'en');
         translationSelect.onchange = () => {
             appSettings.translation.lang = translationSelect.value;
+            if (translationSelect.value === 'en') {
+                appSettings.translation.pinned = false;
+            }
             saveSettings();
         };
     }
 
-    const translationLock = document.getElementById('translation-lock-toggle');
-    if (translationLock) {
-        translationLock.onchange = () => {
-            appSettings.translation.pinned = translationLock.checked;
-            saveSettings();
-        };
-    }
-
-    const bonusSelect = document.getElementById('bonus-frequency');
+    const bonusSelect = document.getElementById('teacher-reveal-frequency');
     if (bonusSelect) {
+        bonusSelect.value = appSettings.bonus?.frequency || DEFAULT_SETTINGS.bonus.frequency;
         bonusSelect.onchange = () => {
             appSettings.bonus.frequency = bonusSelect.value;
             saveSettings();
         };
     }
 
-    const audienceSelect = document.getElementById('audience-mode-select');
+    const audienceSelect = document.getElementById('teacher-audience-mode');
     if (audienceSelect) {
+        audienceSelect.value = normalizeAudienceMode(appSettings.audienceMode || DEFAULT_SETTINGS.audienceMode);
         audienceSelect.onchange = () => {
             appSettings.audienceMode = normalizeAudienceMode(audienceSelect.value);
             saveSettings();
         };
     }
 
-    const autoHearToggle = document.getElementById('toggle-auto-hear');
+    const autoHearToggle = document.getElementById('toggle-auto-hear-session');
     if (autoHearToggle) {
         autoHearToggle.checked = appSettings.autoHear !== false;
         autoHearToggle.onchange = () => {
@@ -3314,8 +3534,79 @@ function initTeacherTools() {
             saveSettings();
         };
     }
+    const funModeToggle = document.getElementById('toggle-fun-mode-session');
+    if (funModeToggle) {
+        funModeToggle.checked = !!appSettings.funHud?.enabled;
+        funModeToggle.onchange = () => {
+            appSettings.funHud.enabled = !!funModeToggle.checked;
+            saveSettings();
+            updateFunHudVisibility();
+        };
+    }
+}
 
-    refreshVoiceDiagnostics('teacher tools init');
+function ensureTeacherLaunchpad() {
+    const grid = document.querySelector('#teacher-modal .teacher-tools-grid');
+    if (!grid || document.getElementById('teacher-launchpad-row')) return;
+
+    const row = document.createElement('div');
+    row.className = 'teacher-row teacher-launchpad-row';
+    row.id = 'teacher-launchpad-row';
+    row.innerHTML = `
+        <div>
+            <strong>Session defaults</strong>
+            <div class="teacher-subtext">Set language, audio behavior, and fun level once before class.</div>
+        </div>
+        <div class="teacher-launchpad-controls">
+            <label for="teacher-translation-default">Reveal language</label>
+            <select id="teacher-translation-default">
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+                <option value="zh">Chinese (Simplified)</option>
+                <option value="hi">Hindi</option>
+                <option value="tl">Tagalog</option>
+                <option value="ms">Malay</option>
+                <option value="vi">Vietnamese</option>
+            </select>
+            <label for="teacher-audience-mode">Language style</label>
+            <select id="teacher-audience-mode">
+                <option value="auto">Auto</option>
+                <option value="young-eal">Young / EAL-friendly</option>
+                <option value="general">General</option>
+            </select>
+            <label for="teacher-reveal-frequency">Jokes/facts/riddles</label>
+            <select id="teacher-reveal-frequency">
+                <option value="off">Off</option>
+                <option value="rare">Rare</option>
+                <option value="sometimes">Sometimes</option>
+                <option value="often">Often</option>
+                <option value="always">Always</option>
+            </select>
+            <label class="toggle-row inline"><input type="checkbox" id="toggle-auto-hear-session" /> Auto-read reveal card</label>
+            <label class="toggle-row inline"><input type="checkbox" id="toggle-fun-mode-session" /> Fun mode (coins/hearts)</label>
+        </div>
+    `;
+    grid.prepend(row);
+}
+
+function ensureVoiceHubRow() {
+    const grid = document.querySelector('#teacher-modal .teacher-tools-grid');
+    if (!grid) return;
+    if (document.getElementById('open-voice-hub-btn')) return;
+
+    const row = document.createElement('div');
+    row.className = 'teacher-row';
+    row.innerHTML = `
+        <div>
+            <strong>Voice & Audio Packs</strong>
+            <div class="teacher-subtext">Managed in a dedicated workspace so gameplay settings stay simple.</div>
+        </div>
+        <button type="button" id="open-voice-hub-btn" class="teacher-secondary-btn">Open Audio Workspace</button>
+    `;
+    grid.appendChild(row);
+    row.querySelector('#open-voice-hub-btn')?.addEventListener('click', () => {
+        window.location.href = 'teacher-report.html#report-recording-library';
+    });
 }
 
 function ensureUiLookRow() {
@@ -3482,70 +3773,11 @@ async function importPlatformSettingsFromFile(file) {
 }
 
 function ensureTeacherTabs() {
-    const modal = document.getElementById('teacher-modal');
-    if (!modal || modal.dataset.tabsInit === 'true') return;
-    const content = modal.querySelector('.modal-content') || modal;
-    if (!content) return;
-    const header = content.querySelector('h2');
-    const closeBtn = content.querySelector('.close-teacher');
-
-    const tabs = document.createElement('div');
-    tabs.className = 'teacher-tabs';
-    tabs.innerHTML = `
-        <button type="button" class="teacher-tab-btn active" data-tab="audio" aria-selected="true">Audio</button>
-        <button type="button" class="teacher-tab-btn" data-tab="assessments" aria-selected="false">Assessments</button>
-    `;
-
-    const audioPanel = document.createElement('div');
-    audioPanel.className = 'teacher-tab-panel active';
-    audioPanel.dataset.tab = 'audio';
-
-    const assessmentPanel = document.createElement('div');
-    assessmentPanel.className = 'teacher-tab-panel';
-    assessmentPanel.dataset.tab = 'assessments';
-
-    if (header) {
-        header.insertAdjacentElement('afterend', tabs);
-    } else {
-        content.prepend(tabs);
-    }
-    tabs.insertAdjacentElement('afterend', audioPanel);
-    audioPanel.insertAdjacentElement('afterend', assessmentPanel);
-
-    const movable = Array.from(content.children).filter(child => (
-        child !== tabs &&
-        child !== audioPanel &&
-        child !== assessmentPanel &&
-        child !== header &&
-        child !== closeBtn
-    ));
-    movable.forEach(child => audioPanel.appendChild(child));
-
-    const assessmentRow = audioPanel.querySelector('#open-assessment-btn')?.closest('.toggle-row');
-    const practiceRow = audioPanel.querySelector('#practice-pack-row');
-    const transferRow = audioPanel.querySelector('#settings-transfer-row');
-    if (assessmentRow) assessmentPanel.appendChild(assessmentRow);
-    if (practiceRow) assessmentPanel.appendChild(practiceRow);
-    if (transferRow) assessmentPanel.appendChild(transferRow);
-
-    tabs.querySelectorAll('.teacher-tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => setTeacherTab(btn.dataset.tab || 'audio'));
-    });
-
-    modal.dataset.tabsInit = 'true';
+    return;
 }
 
 function setTeacherTab(tab = 'audio') {
-    const modal = document.getElementById('teacher-modal');
-    if (!modal) return;
-    modal.querySelectorAll('.teacher-tab-panel').forEach(panel => {
-        panel.classList.toggle('active', panel.dataset.tab === tab);
-    });
-    modal.querySelectorAll('.teacher-tab-btn').forEach(btn => {
-        const isActive = btn.dataset.tab === tab;
-        btn.classList.toggle('active', isActive);
-        btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
-    });
+    return;
 }
 
 function compactTeacherLayout() {
@@ -3570,17 +3802,21 @@ function compactTeacherLayout() {
 function ensureAssessmentControls() {
     const grid = document.querySelector('#teacher-modal .teacher-tools-grid');
     if (!grid) return;
-    if (document.getElementById('open-assessment-btn')) return;
+    if (document.getElementById('open-assessment-hub-btn')) return;
 
     const row = document.createElement('div');
-    row.className = 'toggle-row inline';
+    row.className = 'teacher-row';
     row.innerHTML = `
-        <button type="button" id="open-assessment-btn" class="teacher-secondary-btn">Words Their Way Assessment</button>
-        <button type="button" id="open-core-phonics-btn" class="teacher-secondary-btn">Core Phonics Practice</button>
+        <div>
+            <strong>Assessments</strong>
+            <div class="teacher-subtext">Open literacy, numeracy, SEL/behavior, SLP, and executive-function pathways by role.</div>
+        </div>
+        <button type="button" id="open-assessment-hub-btn" class="teacher-secondary-btn">Open Assessments Hub</button>
     `;
     grid.appendChild(row);
-    row.querySelector('#open-assessment-btn')?.addEventListener('click', openAssessmentModal);
-    row.querySelector('#open-core-phonics-btn')?.addEventListener('click', openCorePhonicsModal);
+    row.querySelector('#open-assessment-hub-btn')?.addEventListener('click', () => {
+        window.location.href = 'assessments.html';
+    });
 }
 
 function ensureVoiceQualityHint() {
@@ -4058,7 +4294,7 @@ async function populateTtsPackSelect({ forceRefresh = false } = {}) {
         const languageSummary = describeTtsPackLanguages(activePack);
         const languageText = languageSummary ? ` (${languageSummary})` : '';
         if (activePack.id === 'default') {
-            setTtsPackStatus('Using default voice pack from audio/tts.', 'info');
+            setTtsPackStatus('Using default voice pack from literacy-platform/audio/tts.', 'info');
         } else {
             setTtsPackStatus(`Using pack: ${activePack.name}${languageText}.`, 'info');
         }
@@ -4735,7 +4971,6 @@ function startNewGame(customWord = null) {
     CURRENT_MAX_GUESSES = normalizeGuessCount(appSettings.guessCount ?? DEFAULT_SETTINGS.guessCount);
     board.innerHTML = "";
     clearKeyboardColors();
-    updateFocusPanel();
     clearPracticeGroup('word:');
     clearPracticeGroup('sentence:');
     
@@ -4743,6 +4978,7 @@ function startNewGame(customWord = null) {
         currentWord = customWord.toLowerCase();
         CURRENT_WORD_LENGTH = currentWord.length;
         isCustomWordRound = true;
+        activeRoundPattern = 'all';
         customWordInLibrary = !!window.WORD_ENTRIES?.[currentWord];
         currentEntry = window.WORD_ENTRIES[currentWord] || {
             def: "",
@@ -4756,8 +4992,9 @@ function startNewGame(customWord = null) {
         CURRENT_WORD_LENGTH = currentWord.length;
         isCustomWordRound = false;
         customWordInLibrary = true;
-        setQuickCustomWordStatus('Library mode active. Pick a focus or enter a custom challenge word.', false, false);
+        setQuickCustomWordStatus(WORD_SOURCE_LIBRARY_STATUS, false, false);
     }
+    updateFocusPanel();
 
     isFirstLoad = false;
     board.style.setProperty("--word-length", CURRENT_WORD_LENGTH);
@@ -4796,7 +5033,7 @@ function getWordFromDictionary() {
     // Safety check: ensure word database is loaded
     if (!window.WORD_ENTRIES) {
         console.error("Word database not loaded yet");
-        return { word: "apple", entry: { def: "Loading...", sentence: "Please wait.", syllables: "ap-ple" } };
+        return { word: "plant", entry: { def: "Loading...", sentence: "Please wait.", syllables: "plant", tags: [] } };
     }
     
     let targetLen = null;
@@ -4809,21 +5046,92 @@ function getWordFromDictionary() {
         targetLen = Number.isFinite(parsed) ? parsed : null;
     }
 
-    const pool = Object.keys(window.WORD_ENTRIES).filter(w => {
-        const e = window.WORD_ENTRIES[w];
-        const lenMatch = !targetLen || w.length === targetLen;
-        const patMatch = pattern === 'all' || (e.tags && e.tags.includes(pattern));
-        return lenMatch && patMatch;
-    });
+    const allWords = Object.keys(window.WORD_ENTRIES);
+    const getFocusTitle = (focusKey = 'all') => {
+        if (!focusKey || focusKey === 'all') return 'Any Focus';
+        return window.FOCUS_INFO?.[focusKey]?.title || focusKey;
+    };
+    const getPool = ({ focus = 'all', length = targetLen } = {}) => {
+        const blockedWords = focus === 'all' ? null : FOCUS_TAG_EXCLUSIONS[focus];
+        return allWords.filter((word) => {
+            const entry = window.WORD_ENTRIES[word] || {};
+            const lenMatch = !length || word.length === length;
+            const focusMatch = focus === 'all' || (Array.isArray(entry.tags) && entry.tags.includes(focus));
+            if (!lenMatch || !focusMatch) return false;
+            if (focus === 'schwa') {
+                const syllableCount = Number(entry?.phonics?.syllables || 0);
+                if (syllableCount > 0 && syllableCount < 2) return false;
+                if (!syllableCount && String(word || '').length < 5) return false;
+            }
+            if (blockedWords && blockedWords.has(String(word || '').toLowerCase())) return false;
+            return true;
+        });
+    };
 
-    if (pool.length === 0) return { word: "apple", entry: window.WORD_ENTRIES["apple"] };
-    const final = pool[Math.floor(Math.random() * pool.length)];
-    return { word: final, entry: window.WORD_ENTRIES[final] };
+    const selectableFocuses = Array.from(new Set(allWords.flatMap((word) => {
+        const tags = window.WORD_ENTRIES[word]?.tags;
+        return Array.isArray(tags) ? tags : [];
+    }))).filter((tag) => tag && tag !== 'all' && tag !== 'shuffle');
+
+    let effectivePattern = pattern;
+    activeRoundFallbackNote = '';
+    if (pattern === 'shuffle') {
+        const focusCandidates = selectableFocuses.filter((tag) => getPool({ focus: tag }).length > 0);
+        let shuffleCandidates = focusCandidates.slice();
+        if (getResolvedAudienceMode() === 'young-eal') {
+            shuffleCandidates = shuffleCandidates.filter((tag) => !SHUFFLE_FOCUS_AVOID_FOR_YOUNG.has(tag));
+            if (!shuffleCandidates.length) {
+                shuffleCandidates = focusCandidates.slice();
+            }
+        }
+        const orderedCandidates = [
+            ...SHUFFLE_FOCUS_PRIORITY.filter((tag) => shuffleCandidates.includes(tag)),
+            ...shuffleCandidates.filter((tag) => !SHUFFLE_FOCUS_PRIORITY.includes(tag))
+        ];
+        if (orderedCandidates.length) {
+            const lengthMatched = orderedCandidates.filter((tag) => getPool({ focus: tag, length: targetLen }).length > 0);
+            const source = lengthMatched.length ? lengthMatched : orderedCandidates;
+            effectivePattern = source[Math.floor(Math.random() * source.length)];
+        } else {
+            effectivePattern = 'all';
+        }
+    }
+
+    let pool = getPool({ focus: effectivePattern, length: targetLen });
+    if (!pool.length && effectivePattern !== 'all') {
+        pool = getPool({ focus: effectivePattern, length: null });
+        if (pool.length && Number.isFinite(targetLen)) {
+            activeRoundFallbackNote = `No ${getFocusTitle(effectivePattern)} words at length ${targetLen}; this round uses any length.`;
+        }
+    }
+    if (!pool.length) {
+        if (effectivePattern !== 'all') {
+            activeRoundFallbackNote = `No ${getFocusTitle(effectivePattern)} words available right now; this round uses Any Focus.`;
+        }
+        effectivePattern = 'all';
+        pool = getPool({ focus: 'all', length: targetLen });
+    }
+    if (!pool.length) {
+        pool = getPool({ focus: 'all', length: null });
+    }
+
+    activeRoundPattern = effectivePattern;
+    const final = pool[Math.floor(Math.random() * pool.length)] || allWords[0] || 'plant';
+    const finalEntry = window.WORD_ENTRIES[final] || { def: '', sentence: '', syllables: final, tags: [] };
+    return { word: final, entry: finalEntry };
 }
 
 function updateFocusPanel() {
     const sel = document.getElementById("pattern-select");
-    const pat = sel ? sel.value : "all";
+    const selectedPattern = sel ? sel.value : "all";
+    const selectedInfo = window.FOCUS_INFO?.[selectedPattern] || window.FOCUS_INFO?.all || {};
+    let pat = selectedPattern === 'shuffle'
+        ? (activeRoundPattern && activeRoundPattern !== 'all' ? activeRoundPattern : 'all')
+        : selectedPattern;
+    const usesFallback = selectedPattern !== 'shuffle' && selectedPattern !== 'all' && activeRoundPattern && activeRoundPattern !== selectedPattern;
+    if (usesFallback) {
+        pat = activeRoundPattern;
+    }
 
     // Safety check: ensure FOCUS_INFO is loaded
     if (!window.FOCUS_INFO) {
@@ -4836,14 +5144,38 @@ function updateFocusPanel() {
         desc: "General Review",
         examples: ""
     };
+    const displayTitle = selectedPattern === 'shuffle'
+        ? `Shuffle focus: ${info.title || 'Mixed Review'}`
+        : usesFallback
+            ? `Requested: ${selectedInfo.title || selectedPattern} (using ${info.title || 'Any Focus'})`
+            : (info.title || '');
+    const displayDesc = selectedPattern === 'shuffle'
+        ? `Random clue for this round. ${info.desc || ''}`.trim()
+        : usesFallback
+            ? (activeRoundFallbackNote || info.desc || '')
+            : (info.desc || "");
+
+    const focusRoundChip = document.getElementById('focus-round-chip');
+    if (focusRoundChip) {
+        if (selectedPattern === 'all') {
+            focusRoundChip.textContent = 'Round clue: Any focus';
+        } else if (selectedPattern === 'shuffle') {
+            focusRoundChip.textContent = `Round clue: ${info.title || 'Mixed review'}`;
+        } else if (usesFallback) {
+            const note = activeRoundFallbackNote ? ` · ${activeRoundFallbackNote}` : '';
+            focusRoundChip.textContent = `Round clue: ${info.title || 'Any focus'}${note}`;
+        } else {
+            focusRoundChip.textContent = `Round clue: ${info.title || selectedPattern}`;
+        }
+    }
 
     // Support both older + newer DOM ids
     const titleEl = document.getElementById("focus-title") || document.getElementById("simple-focus-title");
     const descEl = document.getElementById("focus-desc") || document.getElementById("simple-focus-desc");
     const examplesEl = document.getElementById("focus-examples") || document.getElementById("simple-focus-examples");
 
-    if (titleEl) titleEl.textContent = info.title || "";
-    if (descEl) descEl.textContent = info.desc || "";
+    if (titleEl) titleEl.textContent = displayTitle;
+    if (descEl) descEl.textContent = displayDesc;
 
     if (examplesEl) {
         if (info.examples) {
@@ -5033,7 +5365,10 @@ function initKeyboard() {
         rowDiv.className = "keyboard-row";
         r.split("").forEach(char => {
             const k = document.createElement("button");
-            k.className = `key ${"aeiou".includes(char) ? 'vowel' : ''}`;
+            k.className = "key";
+            if (KEYBOARD_VOWELS.has(char)) {
+                k.classList.add("vowel");
+            }
             k.textContent = isUpperCase ? char.toUpperCase() : char;
             k.dataset.key = char;
             k.onclick = (e) => {
@@ -5097,7 +5432,8 @@ function updateGrid() {
         if (!t) continue;
         const char = currentGuess[i];
         t.textContent = isUpperCase ? char.toUpperCase() : char;
-        t.className = "tile active row-active";
+        const isVowel = KEYBOARD_VOWELS.has(String(char || '').toLowerCase());
+        t.className = `tile active row-active${isVowel ? ' vowel' : ''}`;
     }
 }
 
@@ -5232,15 +5568,26 @@ function updateModalSyllables(word, rawSyllables) {
     if (!syllableEl) return;
 
     const cleanedWord = (word || "").replace(/[^a-z]/gi, "").toLowerCase();
-    const cleanedSyllables = (rawSyllables || "").replace(/[^a-z]/gi, "").toLowerCase();
+    const normalizedRaw = String(rawSyllables || '').trim();
+    const cleanedSyllables = normalizedRaw.replace(/[^a-z]/gi, "").toLowerCase();
 
-    if (!rawSyllables || cleanedSyllables === cleanedWord) {
+    if (!normalizedRaw || cleanedSyllables === cleanedWord) {
         syllableEl.textContent = "";
         syllableEl.classList.add("hidden");
         return;
     }
 
-    syllableEl.textContent = rawSyllables;
+    const segments = normalizedRaw
+        .split(/[·•\-/\s]+/)
+        .map((segment) => segment.trim())
+        .filter(Boolean);
+    if (segments.length <= 1) {
+        syllableEl.textContent = "";
+        syllableEl.classList.add("hidden");
+        return;
+    }
+
+    syllableEl.innerHTML = `<span class="syllable-label">Syllables:</span> ${segments.join(' • ')}`;
     syllableEl.classList.remove("hidden");
 }
 
@@ -5264,7 +5611,7 @@ function autoPlayReveal(definitionText, sentenceText) {
         delay += estimateSpeechDuration(wordText, speechRateWord);
     }
     if (definitionText) {
-        setTimeout(() => speakText(definitionText, 'sentence'), delay);
+        setTimeout(() => speakText(definitionText, 'definition'), delay);
         delay += estimateSpeechDuration(definitionText, speechRateSentence);
     }
     if (sentenceText) {
@@ -5286,7 +5633,7 @@ function prepareTranslationSection() {
     const toggle = document.createElement("button");
     toggle.type = "button";
     toggle.className = "translation-toggle";
-    toggle.textContent = "🌐 Translate";
+    toggle.textContent = "🌐 Language + Translation";
 
     section.prepend(toggle);
 
@@ -5304,6 +5651,13 @@ function prepareTranslationSection() {
     toggle.addEventListener("click", () => {
         section.classList.toggle("is-open");
     });
+
+    const preferredTranslation = getPreferredTranslationLanguage();
+    const shouldAutoOpen = getResolvedAudienceMode() === 'young-eal'
+        || (!!preferredTranslation && preferredTranslation !== 'en');
+    if (shouldAutoOpen) {
+        section.classList.add('is-open');
+    }
 
     return section;
 }
@@ -5331,6 +5685,14 @@ function ensureTranslationElements(modalContent) {
         translationDisplay.appendChild(translatedDef);
     }
 
+    let translatedWord = document.getElementById('translated-word');
+    if (!translatedWord) {
+        translatedWord = document.createElement('div');
+        translatedWord.id = 'translated-word';
+        translatedWord.className = 'translated-word hidden';
+        translationDisplay.appendChild(translatedWord);
+    }
+
     let translatedSentence = document.getElementById('translated-sentence');
     if (!translatedSentence) {
         translatedSentence = document.createElement('div');
@@ -5344,6 +5706,15 @@ function ensureTranslationElements(modalContent) {
         audioRow.className = 'translation-audio-row';
         translationDisplay.appendChild(audioRow);
     }
+
+    let playTranslatedWord = document.getElementById('play-translated-word');
+    if (!playTranslatedWord) {
+        playTranslatedWord = document.createElement('button');
+        playTranslatedWord.id = 'play-translated-word';
+        playTranslatedWord.type = 'button';
+        playTranslatedWord.textContent = 'Hear Word';
+    }
+    if (audioRow && !audioRow.contains(playTranslatedWord)) audioRow.appendChild(playTranslatedWord);
 
     let playTranslatedDef = document.getElementById('play-translated-def');
     if (!playTranslatedDef) {
@@ -5369,7 +5740,16 @@ function ensureTranslationElements(modalContent) {
         modalContent.appendChild(translationDisplay);
     }
 
-    return { translationDisplay, translatedDef, translatedSentence, playTranslatedDef, playTranslatedSentence, translationSelector };
+    return {
+        translationDisplay,
+        translatedWord,
+        translatedDef,
+        translatedSentence,
+        playTranslatedWord,
+        playTranslatedDef,
+        playTranslatedSentence,
+        translationSelector
+    };
 }
 
 function setupModalAudioControls(definitionText, sentenceText) {
@@ -5437,7 +5817,7 @@ function setupModalAudioControls(definitionText, sentenceText) {
     defBtn.textContent = 'Hear Definition';
     defBtn.disabled = !definitionText;
     defBtn.onclick = () => {
-        if (definitionText) speakText(definitionText, 'sentence');
+        if (definitionText) speakText(definitionText, 'definition');
     };
     if (!audioControls.contains(defBtn)) audioControls.appendChild(defBtn);
 
@@ -5603,27 +5983,37 @@ function showEndModal(win) {
 
     const hasLibrarySupport = !isCurrentWordAudioBlocked();
     if (!hasLibrarySupport) {
-        def = '';
-        sentence = '';
+        def = simplifyRevealDefinition(def || '', currentWord, 'en');
+        sentence = simplifyRevealSentence(sentence || `Can you use "${currentWord}" in a class-safe sentence?`, currentWord, 'en');
     }
+    def = sanitizeRevealText(def, {
+        word: currentWord,
+        field: 'definition',
+        languageCode: 'en',
+        allowFallback: true,
+        maxWords: 20
+    });
+    sentence = sanitizeRevealText(sentence, {
+        word: currentWord,
+        field: 'sentence',
+        languageCode: 'en',
+        allowFallback: true,
+        maxWords: 24
+    });
 
     const modalDefEl = document.getElementById("modal-def");
     const modalSentenceEl = document.getElementById("modal-sentence");
     if (modalDefEl) {
-        modalDefEl.textContent = hasLibrarySupport
-            ? def
-            : 'Custom challenge word: definition unavailable (not in current library).';
+        modalDefEl.textContent = def || 'Let’s practice this word together.';
     }
     if (modalSentenceEl) {
-        modalSentenceEl.textContent = hasLibrarySupport && sentence
-            ? `"${sentence}"`
-            : 'Sentence unavailable for this custom challenge word.';
+        modalSentenceEl.textContent = sentence ? `"${sentence}"` : '';
     }
 
     const speakBtn = document.getElementById("speak-btn");
     if (speakBtn) {
-        speakBtn.disabled = !hasLibrarySupport;
-        speakBtn.textContent = hasLibrarySupport ? 'Hear Word' : 'Audio unavailable';
+        speakBtn.disabled = false;
+        speakBtn.textContent = 'Hear Word';
     }
 
     setupModalAudioControls(def, sentence);
@@ -5650,8 +6040,10 @@ function showEndModal(win) {
     const modalContent = gameModal.querySelector('.modal-content') || gameModal;
     const translationElements = ensureTranslationElements(modalContent);
     const translationDisplay = translationElements.translationDisplay;
+    const translatedWord = translationElements.translatedWord;
     const translatedDef = translationElements.translatedDef;
     const translatedSentence = translationElements.translatedSentence;
+    const playTranslatedWord = translationElements.playTranslatedWord;
     const playTranslatedDef = translationElements.playTranslatedDef;
     const playTranslatedSentence = translationElements.playTranslatedSentence;
     
@@ -5675,33 +6067,64 @@ function showEndModal(win) {
         const translation = getTranslationData(currentWord, selectedLang, {
             audienceMode: resolvedAudienceMode
         });
-        if (translation && (translation.definition || translation.sentence)) {
-            translatedDef.textContent = translation.definition || '';
-            translatedSentence.textContent = translation.sentence ? `"${translation.sentence}"` : '';
+        if (translation && (translation.definition || translation.sentence || translation.word)) {
+            const safeWord = cleanAudienceText(translation.word || '');
+            const safeDefinition = translation.definition || '';
+            const safeSentence = translation.sentence || '';
+            if (translatedWord) {
+                translatedWord.textContent = safeWord ? `Word: ${safeWord}` : '';
+                translatedWord.classList.toggle('hidden', !safeWord);
+            }
+            translatedDef.textContent = safeDefinition;
+            translatedSentence.textContent = safeSentence ? `"${safeSentence}"` : '';
 
+            if (playTranslatedWord) {
+                playTranslatedWord.onclick = safeWord ? () => playTextInLanguage(safeWord, selectedLang, 'word') : null;
+            }
             if (playTranslatedDef) {
-                playTranslatedDef.onclick = () => playTextInLanguage(translation.definition, selectedLang);
+                playTranslatedDef.onclick = safeDefinition ? () => playTextInLanguage(safeDefinition, selectedLang, 'def') : null;
             }
             if (playTranslatedSentence) {
-                playTranslatedSentence.onclick = () => playTextInLanguage(translation.sentence, selectedLang);
+                playTranslatedSentence.onclick = safeSentence ? () => playTextInLanguage(safeSentence, selectedLang, 'sentence') : null;
             }
 
             translationDisplay.classList.remove("hidden");
+            const [hasVoice, packedWordReady, packedDefReady, packedSentenceReady] = await Promise.all([
+                hasVoiceForLanguage(selectedLang),
+                safeWord ? hasPackedTtsClipForCurrentWord({ text: safeWord, languageCode: selectedLang, type: 'word' }) : Promise.resolve(false),
+                safeDefinition ? hasPackedTtsClipForCurrentWord({ text: safeDefinition, languageCode: selectedLang, type: 'def' }) : Promise.resolve(false),
+                safeSentence ? hasPackedTtsClipForCurrentWord({ text: safeSentence, languageCode: selectedLang, type: 'sentence' }) : Promise.resolve(false)
+            ]);
+
+            const canPlayWord = !!safeWord && (packedWordReady || hasVoice);
+            const canPlayDefinition = !!safeDefinition && (packedDefReady || hasVoice);
+            const canPlaySentence = !!safeSentence && (packedSentenceReady || hasVoice);
+
+            if (playTranslatedWord) playTranslatedWord.disabled = !canPlayWord;
+            if (playTranslatedDef) playTranslatedDef.disabled = !canPlayDefinition;
+            if (playTranslatedSentence) playTranslatedSentence.disabled = !canPlaySentence;
+
+            const hasAnyPlayable = canPlayWord || canPlayDefinition || canPlaySentence;
+            if (!hasAnyPlayable && (safeWord || safeDefinition || safeSentence)) {
+                setTranslationAudioNote('Audio unavailable for this language.', true);
+            } else {
+                setTranslationAudioNote('');
+            }
         } else {
-            translatedDef.textContent = "Translation not available yet.";
+            if (translatedWord) {
+                translatedWord.textContent = '';
+                translatedWord.classList.add('hidden');
+            }
+            translatedDef.textContent = "Translation coming soon for this word.";
             translatedSentence.textContent = "";
+            if (playTranslatedWord) playTranslatedWord.onclick = null;
             if (playTranslatedDef) playTranslatedDef.onclick = null;
             if (playTranslatedSentence) playTranslatedSentence.onclick = null;
-            translationDisplay.classList.remove("hidden");
-        }
-
-        const hasVoice = await hasHighQualityVoiceForLanguage(selectedLang);
-        if (playTranslatedDef) playTranslatedDef.disabled = !hasVoice;
-        if (playTranslatedSentence) playTranslatedSentence.disabled = !hasVoice;
-        if (!hasVoice) {
-            setTranslationAudioNote('Audio unavailable for this language.', true);
-        } else {
+            if (playTranslatedWord) playTranslatedWord.disabled = true;
+            if (playTranslatedDef) playTranslatedDef.disabled = true;
+            if (playTranslatedSentence) playTranslatedSentence.disabled = true;
             setTranslationAudioNote('');
+            translationDisplay.classList.remove("hidden");
         }
 
         const translationSection = translationDisplay.closest('.translation-compact');
@@ -5723,7 +6146,13 @@ function showEndModal(win) {
     if (languageSelect) {
         const pinned = appSettings.translation?.pinned;
         const pinnedLang = appSettings.translation?.lang || 'en';
-        languageSelect.value = pinned ? pinnedLang : 'en';
+        const preferredTranslationLang = resolvedAudienceMode === 'young-eal'
+            ? getYoungAudienceDefaultTranslationLanguage()
+            : getPreferredTranslationLanguage();
+        const defaultLang = (!pinned && preferredTranslationLang && preferredTranslationLang !== 'en')
+            ? preferredTranslationLang
+            : 'en';
+        languageSelect.value = pinned ? pinnedLang : defaultLang;
         translationDisplay.classList.add("hidden");
 
         if (pinCheckbox) {
@@ -5774,16 +6203,14 @@ function showEndModal(win) {
 function openTeacherMode() {
     modalOverlay.classList.remove("hidden");
     teacherModal.classList.remove("hidden");
-    const inp = document.getElementById("custom-word-input");
-    inp.value = "";
-    document.getElementById("teacher-error").textContent = "";
-    setTeacherTab('audio');
-    
-    // Initialize voice control settings
-    initTeacherVoiceControl();
+    const errorEl = document.getElementById("teacher-error");
+    if (errorEl) errorEl.textContent = "";
+
+    if (!teacherToolsInitialized) {
+        initTeacherTools();
+        teacherToolsInitialized = true;
+    }
     applySettings();
-    
-    inp.focus();
 }
 
 /* ==========================================
@@ -5941,12 +6368,10 @@ function updateVoiceIndicator() {
 }
 
 function handleTeacherSubmit() {
-    const input = document.getElementById("custom-word-input");
-    const rawValue = input ? input.value : '';
-    const applied = applyCustomWordChallenge(rawValue, { source: 'teacher', closeTeacherModal: true });
-    if (applied && input) {
-        input.value = '';
-    }
+    const input = document.getElementById("quick-custom-word-input");
+    if (!input) return;
+    applyCustomWordChallenge(input.value, { source: 'quick' });
+    input.value = '';
 }
 
 function closeModal() {
@@ -6314,8 +6739,13 @@ function confetti() {
 const YOUNG_AUDIENCE_WORD_REPLACEMENTS = [
     [/\bguy\b/gi, 'person'],
     [/\bgross\b/gi, 'messy'],
+    [/\bscary\b/gi, 'surprising'],
     [/\bcrazy\b/gi, 'silly'],
     [/\bterrible\b/gi, 'not great'],
+    [/\bhurt\b/gi, 'feel sore'],
+    [/\bhate\b/gi, 'do not enjoy'],
+    [/\bfight scene\b/gi, 'action scene'],
+    [/\bfight\b/gi, 'game'],
     [/\bcrash(?:ed|ing)?\b/gi, 'bumped'],
     [/\bshriek(?:ed|ing)?\b/gi, 'made a loud sound'],
     [/\bstupid\b/gi, 'tricky'],
@@ -6323,36 +6753,41 @@ const YOUNG_AUDIENCE_WORD_REPLACEMENTS = [
     [/\bawkwardly\b/gi, 'carefully']
 ];
 
-const YOUNG_AUDIENCE_BLOCKLIST = /\b(kill|killed|dead|blood|drunk|weapon|gun|tax bill)\b/i;
+const YOUNG_AUDIENCE_BLOCKLIST = /\b(kill|killed|dead|blood|drunk|weapon|gun|tax bill|middle finger|war|battle)\b/i;
 const YOUNG_AUDIENCE_EXTRA_BLOCKLIST = [
-    /\b(violence|violent|murder|murdered|corpse|knife|bomb|suicide|self-harm)\b/i,
+    /\b(violence|violent|murder|murdered|corpse|knife|bomb|suicide|self-harm|shoot|shooting|attack)\b/i,
     /\b(booze|hangover|intoxicated)\b/i,
-    /\b(sex|sexual|porn|nude|naked)\b/i
+    /\b(sex|sexual|porn|nude|naked)\b/i,
+    /\b(flipped\s+off|pointed\s+to\s+the\s+middle|inappropriate\s+gesture)\b/i
 ];
 const KID_SAFE_TEXT_FALLBACKS = {
     en: {
-        definition: (word) => `"${word}" is a school word we can practice in reading and writing.`,
-        sentence: (word) => `We can use "${word}" in a short class sentence.`
+        definition: (word) => `"${word}" is a class word we can decode, read, and use to share clear ideas.`,
+        sentence: (word) => `Try this: "Our team used ${word} in a sentence and gave it a silly classroom twist."`
     },
     es: {
-        definition: (word) => `"${word}" es una palabra escolar para practicar lectura y escritura.`,
-        sentence: (word) => `Podemos usar "${word}" en una oración corta de clase.`
+        definition: (word) => `"${word}" es una palabra de clase para decodificar, leer y usar al explicar ideas.`,
+        sentence: (word) => `Prueba: "Nuestro equipo usó ${word} en una oración y le dio un toque divertido."`
     },
     zh: {
-        definition: (word) => `"${word}" 是我们可以在课堂上练习的词。`,
-        sentence: (word) => `我们可以在短句里使用 "${word}"。`
+        definition: (word) => `"${word}" 是课堂练习词，可以用来练习解码、阅读和表达想法。`,
+        sentence: (word) => `试一试：“我们把 ${word} 放进句子里，还加了一点有趣的创意。”`
     },
     tl: {
-        definition: (word) => `"${word}" ay salitang pampaaralan na maaari nating sanayin sa pagbasa at pagsulat.`,
-        sentence: (word) => `Maaari nating gamitin ang "${word}" sa maikling pangungusap sa klase.`
+        definition: (word) => `"${word}" ay salitang pang-klase para sa pagde-decode, pagbasa, at malinaw na paliwanag.`,
+        sentence: (word) => `Subukan ito: "Ginamit namin ang ${word} sa pangungusap at nilagyan ng masayang twist."`
     },
     vi: {
-        definition: (word) => `"${word}" là từ dùng trong lớp để luyện đọc và viết.`,
-        sentence: (word) => `Chúng ta có thể dùng "${word}" trong một câu ngắn ở lớp.`
+        definition: (word) => `"${word}" là từ luyện tập trên lớp để giải mã, đọc và diễn đạt ý rõ ràng.`,
+        sentence: (word) => `Hãy thử: "Nhóm em dùng ${word} trong câu và thêm một chi tiết vui."`
     },
     ms: {
-        definition: (word) => `"${word}" ialah perkataan kelas untuk latihan membaca dan menulis.`,
-        sentence: (word) => `Kita boleh guna "${word}" dalam ayat kelas yang ringkas.`
+        definition: (word) => `"${word}" ialah perkataan kelas untuk latihan menyahkod, membaca, dan menerangkan idea.`,
+        sentence: (word) => `Cuba ini: "Kumpulan kami guna ${word} dalam ayat dengan sentuhan yang menyeronokkan."`
+    },
+    hi: {
+        definition: (word) => `"${word}" कक्षा में पढ़ने, समझने और साफ़ बोलने के लिए अभ्यास शब्द है।`,
+        sentence: (word) => `यह आज़माएँ: "हमारी टीम ने ${word} का वाक्य में सही और मज़ेदार उपयोग किया।"`
     }
 };
 
@@ -6540,7 +6975,7 @@ function getManualYoungOverride(word, languageCode = 'en', field = 'definition')
 
 function buildKidSafeEntryVariant(word, entry = {}) {
     const safeEntry = cloneWordEntry(entry);
-    ['en', 'es', 'zh', 'tl', 'vi', 'ms'].forEach((langCode) => {
+    ['en', 'es', 'zh', 'tl', 'vi', 'ms', 'hi'].forEach((langCode) => {
         const langEntry = (entry?.[langCode] && typeof entry[langCode] === 'object')
             ? entry[langCode]
             : null;
@@ -6628,13 +7063,28 @@ function getWordCopyForAudience(word, languageCode = 'en', mode = getResolvedAud
     if (!key) return { definition: '', sentence: '', languageCode: normalizePackedTtsLanguage(languageCode) };
     const lang = normalizePackedTtsLanguage(languageCode);
     const entry = getWordEntryForAudience(key, mode);
-    const localized = (lang === 'en')
-        ? (entry?.en || entry || null)
-        : (entry?.[lang] || entry?.en || entry || null);
+    const englishCopy = entry?.en || entry || null;
+    const localizedCopy = lang === 'en'
+        ? englishCopy
+        : ((entry?.[lang] && typeof entry[lang] === 'object') ? entry[lang] : null);
     return {
-        definition: cleanAudienceText(localized?.def || entry?.def || ''),
-        sentence: cleanAudienceText(localized?.sentence || entry?.sentence || ''),
-        languageCode: lang
+        word: cleanAudienceText(
+            lang === 'en'
+                ? ''
+                : (localizedCopy?.word || localizedCopy?.label || '')
+        ),
+        definition: cleanAudienceText(
+            lang === 'en'
+                ? (englishCopy?.def || entry?.def || '')
+                : (localizedCopy?.def || '')
+        ),
+        sentence: cleanAudienceText(
+            lang === 'en'
+                ? (englishCopy?.sentence || entry?.sentence || '')
+                : (localizedCopy?.sentence || '')
+        ),
+        languageCode: lang,
+        hasLocalizedCopy: !!(localizedCopy?.def || localizedCopy?.sentence)
     };
 }
 
@@ -6659,6 +7109,25 @@ function getResolvedAudienceMode() {
         return 'young-eal';
     }
     return 'general';
+}
+
+function sanitizeRevealText(value, {
+    word = '',
+    field = 'definition',
+    languageCode = 'en',
+    allowFallback = true,
+    maxWords = null
+} = {}) {
+    const lang = normalizePackedTtsLanguage(languageCode);
+    let text = trimToFirstSentence(value);
+    const limit = Number.isFinite(maxWords) && maxWords > 0
+        ? Math.max(6, Math.min(32, maxWords))
+        : (field === 'sentence' ? 24 : 20);
+    text = truncateForAudienceLanguage(text, lang, limit);
+    if (!text || isYoungAudienceUnsafeText(text)) {
+        return allowFallback ? getKidSafeFallbackText(word, field, lang) : '';
+    }
+    return ensureEndingPunctuationForLanguage(text, lang);
 }
 
 function simplifyRevealDefinition(definitionText, word, languageCode = 'en') {
@@ -6732,23 +7201,25 @@ function renderAudienceModeNote(mode) {
 
 const BONUS_CONTENT = {
     jokes: [
-        "Why did the bicycle fall over? Because it was two-tired!",
-        "What do you call a bear with no teeth? A gummy bear!",
-        "Why don't scientists trust atoms? Because they make up everything!",
-        "What do you call a fish wearing a bowtie? Sofishticated!",
-        "Why did the math book look sad? Because it had too many problems!",
-        "What do you call a sleeping bull? A bulldozer!",
-        "Why did the cookie go to the doctor? Because it felt crumbly!",
-        "What do you call a dinosaur that crashes his car? Tyrannosaurus Wrecks!",
-        "Why can't you give Elsa a balloon? Because she will let it go!",
-        "What do you call a snowman in summer? A puddle!",
-        "Why did the pencil cross the road? To draw the other side!",
-        "What do you call cheese that isn't yours? Nacho cheese!",
-        "Why did the tomato blush? Because it saw the salad dressing!",
-        "What do you call a lazy kangaroo? A pouch potato!",
-        "Why did the kid bring a ladder to school? To go to high school!",
-        "What do you call a sleeping dinosaur? A dino-snore!",
-        "Why did the banana wear sunscreen? Because it didn't want to peel!"
+        "What do you call cheese that is not yours? Nacho cheese.",
+        "Why did the student bring a ladder to school? To go to high school.",
+        "Why did the math book look worried? It had too many problems.",
+        "What did one pencil say to the other? You are looking sharp.",
+        "Why did the computer go to class? To improve its byte skills.",
+        "What kind of music do planets like? Neptunes.",
+        "Why did the cookie go to the nurse? It felt crummy.",
+        "What did the ocean say to the beach? Nothing, it just waved.",
+        "Why did the broom miss class? It swept in.",
+        "What has four wheels and flies? A garbage truck."
+    ],
+    riddles: [
+        "I have keys but no locks and space but no room. What am I? A keyboard.",
+        "What has hands but cannot clap? A clock.",
+        "What gets wetter as it dries? A towel.",
+        "What can travel around the world while staying in one corner? A stamp.",
+        "I am full of holes but still hold water. What am I? A sponge.",
+        "What has many teeth but cannot bite? A comb.",
+        "What comes down but never goes up? Rain."
     ],
     facts: [
         "Honey never spoils! Archaeologists have found 3,000-year-old honey that's still edible.",
@@ -6790,15 +7261,26 @@ const BONUS_CONTENT = {
 
 const BONUS_CONTENT_YOUNG = {
     jokes: [
-        "Why did the pencil win a prize? It had a sharp idea!",
-        "What do you call a happy book? A novel smile!",
-        "Why did the crayon feel proud? It stayed inside the lines!",
-        "What do you call a dancing letter? A letter-step!",
-        "Why did the clock go to class? To stay on time!",
-        "What did one light bulb say to the other? You brighten my day!",
-        "Why did the eraser smile? It fixed a mistake!",
-        "What do you call a careful cat? A purr-fectionist!",
-        "Why did the banana join music class? It had great peel!"
+        "What do you call a sleeping dinosaur? A dino-snore.",
+        "Why did the teddy bear skip dessert? It was stuffed.",
+        "What kind of tree fits in your hand? A palm tree.",
+        "Why did the banana go to school? To become a little brighter.",
+        "What did one plate say to the other plate? Lunch is on me.",
+        "What do you call cheese that is not yours? Nacho cheese.",
+        "Why did the pencil smile? It had a bright idea.",
+        "What did one wall say to the other wall? I will meet you at the corner.",
+        "Why did the broom miss class? It swept in.",
+        "What did the zero say to the eight? Nice belt."
+    ],
+    riddles: [
+        "I have a face and two hands, but no arms or legs. What am I? A clock.",
+        "What has many teeth but cannot bite? A comb.",
+        "What goes up but never comes down? Your age.",
+        "What can you catch but not throw? A cold.",
+        "What has to be broken before you can use it? An egg.",
+        "What has four wheels and flies? A garbage truck.",
+        "What has one eye but cannot see? A needle.",
+        "What is full of holes but still holds water? A sponge."
     ],
     facts: [
         "Octopuses have three hearts.",
@@ -6825,7 +7307,43 @@ const BONUS_CONTENT_YOUNG = {
 };
 
 function getBonusContentPool() {
-    return getResolvedAudienceMode() === 'young-eal' ? BONUS_CONTENT_YOUNG : BONUS_CONTENT;
+    const mode = getResolvedAudienceMode();
+    const targetMode = mode === 'young-eal' ? 'young-eal' : 'general';
+    const primaryPool = targetMode === 'young-eal' ? BONUS_CONTENT_YOUNG : BONUS_CONTENT;
+    const fallbackPool = BONUS_CONTENT_YOUNG;
+
+    const normalized = {};
+    ['jokes', 'riddles', 'facts', 'quotes'].forEach((type) => {
+        const primaryBucket = filterBonusBucket(primaryPool[type], targetMode);
+        if (primaryBucket.length) {
+            normalized[type] = primaryBucket;
+            return;
+        }
+        normalized[type] = filterBonusBucket(fallbackPool[type], 'young-eal');
+    });
+    return normalized;
+}
+
+function normalizeBonusLine(text = '') {
+    return cleanAudienceText(text).replace(/\s+([,.;!?])/g, '$1');
+}
+
+function isSafeBonusLine(text = '') {
+    if (!text) return false;
+    if (isYoungAudienceUnsafeText(text)) return false;
+    return !CUSTOM_WORD_BLOCK_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function isClearBonusLine(text = '', mode = 'general') {
+    const limit = mode === 'young-eal' ? 20 : 28;
+    return countWords(text) <= limit;
+}
+
+function filterBonusBucket(items = [], mode = 'general') {
+    if (!Array.isArray(items)) return [];
+    return items
+        .map((item) => normalizeBonusLine(item))
+        .filter((item) => item && isSafeBonusLine(item) && isClearBonusLine(item, mode));
 }
 
 function shouldShowBonusContent() {
@@ -6840,8 +7358,8 @@ function showBonusContent() {
     const pool = getBonusContentPool();
     if (!pool) return;
 
-    // Randomly choose joke, fact, or quote
-    const types = ['jokes', 'facts', 'quotes'].filter((type) => Array.isArray(pool[type]) && pool[type].length);
+    // Randomly choose joke, riddle, fact, or quote
+    const types = ['jokes', 'riddles', 'facts', 'quotes'].filter((type) => Array.isArray(pool[type]) && pool[type].length);
     if (!types.length) return;
     const lastKey = localStorage.getItem('last_bonus_key');
     let type = types[Math.floor(Math.random() * types.length)];
@@ -6856,8 +7374,20 @@ function showBonusContent() {
     }
     localStorage.setItem('last_bonus_key', `${type}:${content}`);
     
-    const emoji = type === 'jokes' ? '😄' : type === 'facts' ? '🌟' : '💭';
-    const title = type === 'jokes' ? 'Joke Time!' : type === 'facts' ? 'Fun Fact!' : 'Inspiration';
+    const emoji = type === 'jokes'
+        ? '😄'
+        : type === 'riddles'
+            ? '🧩'
+            : type === 'facts'
+                ? '🌟'
+                : '💭';
+    const title = type === 'jokes'
+        ? 'Joke Time!'
+        : type === 'riddles'
+            ? 'Riddle Time!'
+            : type === 'facts'
+                ? 'Fun Fact!'
+                : 'Inspiration';
 
     const bonusModal = document.getElementById('bonus-modal');
     if (!bonusModal) return;
@@ -9709,7 +10239,11 @@ function normalizeTextForTTS(text) {
 
 async function speakText(text, rateType = 'word') {
     if (!text) return;
-    const type = rateType === 'sentence' ? 'sentence' : (rateType === 'phoneme' ? 'phoneme' : 'word');
+    const normalizedRateType = String(rateType || 'word').toLowerCase();
+    const type = normalizedRateType === 'definition' || normalizedRateType === 'def'
+        ? 'def'
+        : (normalizedRateType === 'sentence' ? 'sentence' : (normalizedRateType === 'phoneme' ? 'phoneme' : 'word'));
+    const speechType = type === 'def' ? 'sentence' : type;
     const packedPlayed = await tryPlayPackedTtsForCurrentWord({
         text,
         languageCode: 'en',
@@ -9720,7 +10254,7 @@ async function speakText(text, rateType = 'word') {
     const voices = await getVoicesForSpeech();
     const preferred = pickBestEnglishVoice(voices);
     const fallbackLang = preferred ? preferred.lang : getPreferredEnglishDialect();
-    speakEnglishText(text, type, preferred, fallbackLang);
+    speakEnglishText(text, speechType, preferred, fallbackLang);
 }
 
 function speakSpelling(grapheme) {
@@ -10163,20 +10697,7 @@ function initAdventureMode() {
 }
 
 function initClassroomDock() {
-    const headerActions = document.querySelector('.header-actions');
-    if (!headerActions || document.getElementById('classroom-btn')) return;
-    const btn = document.createElement('button');
-    btn.id = 'classroom-btn';
-    btn.type = 'button';
-    btn.className = 'link-btn';
-    btn.textContent = 'Classroom';
-    btn.addEventListener('click', () => toggleClassroomDock());
-    headerActions.insertBefore(btn, headerActions.firstChild);
-
     ensureClassroomDock();
-    if (appSettings.classroom?.dockOpen) {
-        toggleClassroomDock(true);
-    }
 }
 
 let classroomFileUrl = null;
@@ -10275,9 +10796,20 @@ function ensureMoreToolsMenu() {
     const wrapper = document.createElement('div');
     wrapper.className = 'more-tools-wrapper';
     wrapper.innerHTML = `
-        <button type="button" id="more-tools-btn" class="link-btn" aria-haspopup="menu" aria-expanded="false">Tools ▾</button>
+        <button type="button" id="more-tools-btn" class="link-btn" aria-haspopup="menu" aria-expanded="false">Activities ▾</button>
         <div id="more-tools-menu" class="more-tools-menu hidden" role="menu" aria-label="Tools menu">
+            <a href="word-quest.html" class="more-tools-item" role="menuitem">Word Quest</a>
+            <a href="cloze.html" class="more-tools-item" role="menuitem">Story Fill</a>
+            <a href="comprehension.html" class="more-tools-item" role="menuitem">Read & Think</a>
+            <a href="fluency.html" class="more-tools-item" role="menuitem">Speed Sprint</a>
+            <a href="madlibs.html" class="more-tools-item" role="menuitem">Silly Stories</a>
+            <a href="writing.html" class="more-tools-item" role="menuitem">Write & Build</a>
+            <a href="plan-it.html" class="more-tools-item" role="menuitem">Plan-It</a>
+            <a href="number-sense.html" class="more-tools-item" role="menuitem">Number Sense</a>
+            <a href="operations.html" class="more-tools-item" role="menuitem">Operations</a>
+            <a href="teacher-report.html" class="more-tools-item" role="menuitem">Teacher Report</a>
             <button type="button" id="menu-sound-lab" class="more-tools-item" role="menuitem">Sound Lab</button>
+            <button type="button" id="menu-classroom-dock" class="more-tools-item" role="menuitem">Classroom Dock</button>
         </div>
     `;
     headerActions.appendChild(wrapper);
@@ -10285,6 +10817,7 @@ function ensureMoreToolsMenu() {
     const btn = wrapper.querySelector('#more-tools-btn');
     const menu = wrapper.querySelector('#more-tools-menu');
     const soundLab = wrapper.querySelector('#menu-sound-lab');
+    const classroomDock = wrapper.querySelector('#menu-classroom-dock');
 
     const closeMenu = () => {
         menu.classList.add('hidden');
@@ -10305,6 +10838,18 @@ function ensureMoreToolsMenu() {
             openPhonemeGuide();
         });
     }
+    if (classroomDock) {
+        classroomDock.addEventListener('click', () => {
+            closeMenu();
+            toggleClassroomDock(true);
+        });
+    }
+
+    wrapper.querySelectorAll('a.more-tools-item').forEach((link) => {
+        link.addEventListener('click', () => {
+            closeMenu();
+        });
+    });
 }
 
 function organizeHeaderActions() {

@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CORNERSTONE MTSS — Learning Hub</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="style.css" />
     <script src="platform.js" defer></script>
     <script src="class-blocks.js" defer></script>
@@ -18,9 +19,7 @@
         </h1>
         <nav class="header-actions" aria-label="Primary">
           <a class="link-btn active" aria-current="page" href="index.html">Home</a>
-          <a class="link-btn" href="word-quest.html">Start Activity</a>
-          <a class="link-btn" href="teacher-report.html" data-student-hidden="true">Teacher Report</a>
-          <button id="home-header-toggle" class="link-btn" type="button">Workspace</button>
+          <a class="link-btn" href="index.html#role-dashboard">Start</a>
         </nav>
       </div>
     </header>
@@ -29,28 +28,28 @@
       <section class="home-card home-hero home-hero-lite" aria-label="Welcome">
         <div>
           <div class="home-kicker">CORNERSTONE MTSS</div>
-          <h2>Welcome. Choose your role to begin.</h2>
+          <h2>Who is using Cornerstone right now?</h2>
           <p class="home-lede">
-            A calm, guided start for every user. You will get a tailored next step first, then deeper tools only when needed.
+            Start in under a minute: pick a role, launch one routine, and get a clear next step.
           </p>
 
-          <div class="home-start-flow" aria-label="Start flow">
-            <span class="home-flow-chip">1. Choose role</span>
-            <span class="home-flow-chip">2. Start recommended path</span>
-            <span class="home-flow-chip">3. Open workspace tools</span>
+          <div class="home-entry-segments" aria-label="Choose your pathway group">
+            <button type="button" class="home-entry-segment active" data-entry-group="student">Student</button>
+            <button type="button" class="home-entry-segment" data-entry-group="parent">Parent / Caregiver</button>
+            <button type="button" class="home-entry-segment" data-entry-group="school">School Team</button>
           </div>
 
           <div class="home-role-picker" aria-label="Role quick select">
-            <button type="button" class="home-role-pick" data-role-target="teacher">Teacher</button>
-            <button type="button" class="home-role-pick" data-role-target="learning-support">Learning Support</button>
-            <button type="button" class="home-role-pick" data-role-target="eal">EAL</button>
-            <button type="button" class="home-role-pick" data-role-target="slp">SLP</button>
-            <button type="button" class="home-role-pick" data-role-target="counselor">Counselor</button>
-            <button type="button" class="home-role-pick" data-role-target="psychologist">Psychologist</button>
-            <button type="button" class="home-role-pick" data-role-target="admin">Administrator</button>
-            <button type="button" class="home-role-pick" data-role-target="dean">Dean</button>
-            <button type="button" class="home-role-pick" data-role-target="parent">Parent</button>
-            <button type="button" class="home-role-pick" data-role-target="student">Student</button>
+            <button type="button" class="home-role-pick" data-role-target="student" data-entry-group="student">Student</button>
+            <button type="button" class="home-role-pick" data-role-target="parent" data-entry-group="parent">Parent / Caregiver</button>
+            <button type="button" class="home-role-pick hidden" data-role-target="teacher" data-entry-group="school">Teacher</button>
+            <button type="button" class="home-role-pick hidden" data-role-target="learning-support" data-entry-group="school">Learning Support</button>
+            <button type="button" class="home-role-pick hidden" data-role-target="eal" data-entry-group="school">EAL</button>
+            <button type="button" class="home-role-pick hidden" data-role-target="slp" data-entry-group="school">SLP</button>
+            <button type="button" class="home-role-pick hidden" data-role-target="counselor" data-entry-group="school">Counselor</button>
+            <button type="button" class="home-role-pick hidden" data-role-target="psychologist" data-entry-group="school">Psychologist</button>
+            <button type="button" class="home-role-pick hidden" data-role-target="admin" data-entry-group="school">Administrator</button>
+            <button type="button" class="home-role-pick hidden" data-role-target="dean" data-entry-group="school">Dean</button>
           </div>
 
           <div class="home-cta-row" aria-label="Quick start">
@@ -58,41 +57,75 @@
             <button id="home-toggle-workspace" class="home-cta ghost" type="button">Show Workspace Tools</button>
           </div>
           <p id="home-role-preview" class="home-role-preview muted" aria-live="polite">
-            Select a role to preview your first recommended action.
+            Select a role to preview your first recommended launch.
           </p>
         </div>
 
         <aside class="home-hero-panel home-hero-panel-lite" aria-label="Guided first steps">
-          <div class="home-mini-title">First Session Plan</div>
-          <ol class="home-quick-steps">
-            <li>Pick your role.</li>
-            <li>Use the recommended first activity.</li>
-            <li>Run one short session (10-15 minutes).</li>
-            <li>Open workspace tools if you want deeper controls.</li>
-          </ol>
-          <div class="home-visual-mode" aria-label="Visual style controls">
-            <div class="home-mini-title">Visual style</div>
-            <div class="home-visual-mode-row" role="group" aria-label="Home visual style">
-              <button id="home-visual-fun" class="home-visual-chip active" type="button" aria-pressed="true">Fun</button>
-              <button id="home-visual-calm" class="home-visual-chip" type="button" aria-pressed="false">Calm</button>
+          <div class="home-mini-title">Simple, then powerful</div>
+          <div class="home-next-steps" aria-label="Guided steps">
+            <div class="home-next-step"><span>1</span>Pick role</div>
+            <div class="home-next-step"><span>2</span>Run one focused block</div>
+            <div class="home-next-step"><span>3</span>Capture the next move</div>
+          </div>
+          <div class="home-story-visual" aria-label="Cornerstone values">
+            <div class="home-story-row">
+              <div class="home-story-pill">Tiered support, one shared system</div>
+              <div class="home-story-pill">Fast gap detection and clear intervention moves</div>
+              <div class="home-story-pill">Aligned teacher, specialist, and family communication</div>
             </div>
           </div>
-          <p class="home-mini-hint">Calm mode reduces visual noise without changing tools.</p>
+          <p class="home-mini-hint">Open Workspace Tools for placement, language/audio defaults, and reports.</p>
         </aside>
       </section>
 
       <section id="home-workspace-start" class="home-card" data-home-detail aria-label="Placement">
         <div class="home-card-header">
-          <h2>Placement (Quick Screener)</h2>
+          <h2>Workspace Tools</h2>
           <p class="home-subtitle">
-            Answer a few quick questions and get a recommended starting focus for Word Quest.
+            Configure language/audio defaults and run placement from one place.
           </p>
         </div>
+
+        <details class="home-quick-setup-details" aria-label="Language and audio setup">
+          <summary>Language + Audio Setup</summary>
+          <div class="home-starter-settings" aria-label="Language and audio starter">
+            <label class="home-field-label" for="home-quick-language">Home language support</label>
+            <select id="home-quick-language" class="home-select">
+              <option value="en">English</option>
+              <option value="es">Spanish (Español)</option>
+              <option value="zh">Chinese (简体中文)</option>
+              <option value="hi">Hindi (हिन्दी)</option>
+              <option value="tl">Tagalog</option>
+              <option value="ms">Malay (Bahasa Melayu)</option>
+              <option value="vi">Vietnamese (Tiếng Việt)</option>
+            </select>
+            <label class="home-field-label" for="home-quick-voice-dialect">Narration voice</label>
+            <select id="home-quick-voice-dialect" class="home-select">
+              <option value="en-US">American English</option>
+              <option value="en-GB">British English</option>
+            </select>
+            <label class="home-field-label" for="home-quick-voice-pack">Audio pack</label>
+            <select id="home-quick-voice-pack" class="home-select">
+              <option value="default">Default voice pack</option>
+            </select>
+            <label class="home-check-row compact">
+              <input id="home-quick-autohear" type="checkbox" />
+              <span>Auto-read word, definition, and sentence</span>
+            </label>
+            <p id="home-quick-voice-note" class="home-mini-hint">
+              Set this once so Word Quest uses your preferred class voice right away.
+            </p>
+            <p id="home-quick-language-note" class="home-mini-hint">
+              This sets your default reveal translation and can be changed anytime.
+            </p>
+          </div>
+        </details>
 
         <div class="home-placement-grid">
           <div id="placement-summary" class="home-placement-summary" aria-live="polite"></div>
           <div class="home-cta-row" aria-label="Placement actions">
-            <button id="placement-start" class="home-cta primary" type="button">Start placement</button>
+            <button id="placement-start" class="home-cta primary" type="button">Start placement screener</button>
             <a id="placement-open-word-quest" class="home-cta ghost" href="word-quest.html">Open Word Quest</a>
           </div>
         </div>
@@ -259,22 +292,22 @@
         <div class="home-path-grid">
           <a class="home-path-step" href="word-quest.html">
             <div class="home-step-kicker">Step 1</div>
-            <div class="home-step-title">Word Quest</div>
+            <div class="home-step-title">Decode Quest</div>
             <div class="home-step-desc">Pattern-focused word practice with feedback, audio, and optional game modes.</div>
           </a>
           <a class="home-path-step" href="fluency.html">
             <div class="home-step-kicker">Step 2</div>
-            <div class="home-step-title">Speed Sprint</div>
+            <div class="home-step-title">Fluency Sprint</div>
             <div class="home-step-desc">Timed practice to build accuracy, rate, and confidence.</div>
           </a>
           <a class="home-path-step" href="comprehension.html">
             <div class="home-step-kicker">Step 3</div>
-            <div class="home-step-title">Read &amp; Think</div>
+            <div class="home-step-title">Meaning Lab</div>
             <div class="home-step-desc">Short passages with questions and quick feedback.</div>
           </a>
           <a class="home-path-step" href="writing.html">
             <div class="home-step-kicker">Step 4</div>
-            <div class="home-step-title">Write &amp; Build</div>
+            <div class="home-step-title">Writing Studio</div>
             <div class="home-step-desc">Plan → draft → revise with scaffolds and sentence starters.</div>
           </a>
         </div>
@@ -288,52 +321,52 @@
 
         <div class="home-activity-grid">
           <a class="home-activity" href="word-quest.html">
-            <div class="home-activity-title">Word Quest</div>
+            <div class="home-activity-title">Decode Quest</div>
             <div class="home-activity-desc">Guess the word, hear it spoken, and build pattern awareness.</div>
             <div class="home-activity-meta">Decoding • Vocabulary • Audio</div>
           </a>
           <a class="home-activity" href="cloze.html">
-            <div class="home-activity-title">Story Fill</div>
+            <div class="home-activity-title">Sentence Lab</div>
             <div class="home-activity-desc">Fill the blanks from a word bank to strengthen context and syntax.</div>
             <div class="home-activity-meta">Syntax • Meaning • SEL prompts</div>
           </a>
           <a class="home-activity" href="comprehension.html">
-            <div class="home-activity-title">Read &amp; Think</div>
+            <div class="home-activity-title">Meaning Lab</div>
             <div class="home-activity-desc">Answer questions and explain thinking with scaffolds.</div>
             <div class="home-activity-meta">Comprehension • Strategy</div>
           </a>
           <a class="home-activity" href="fluency.html">
-            <div class="home-activity-title">Speed Sprint</div>
+            <div class="home-activity-title">Fluency Sprint</div>
             <div class="home-activity-desc">Timed reading practice with simple tracking.</div>
             <div class="home-activity-meta">Fluency • Accuracy</div>
           </a>
           <a class="home-activity" href="madlibs.html">
-            <div class="home-activity-title">Silly Stories</div>
+            <div class="home-activity-title">Story Remix</div>
             <div class="home-activity-desc">Playful language practice with templates.</div>
             <div class="home-activity-meta">Grammar • Vocabulary • Fun</div>
           </a>
           <a class="home-activity" href="writing.html">
-            <div class="home-activity-title">Write &amp; Build</div>
+            <div class="home-activity-title">Writing Studio</div>
             <div class="home-activity-desc">Structured planning and drafting for stronger writing.</div>
             <div class="home-activity-meta">Writing • Organization</div>
           </a>
           <a class="home-activity" href="plan-it.html">
-            <div class="home-activity-title">Plan-It</div>
+            <div class="home-activity-title">Intervention Studio</div>
             <div class="home-activity-desc">Executive-function scenarios: plan steps and order tasks.</div>
             <div class="home-activity-meta">SEL • EF • Routines</div>
           </a>
           <a class="home-activity" href="number-sense.html">
-            <div class="home-activity-title">Number Sense Sprint</div>
+            <div class="home-activity-title">Number Sense Lab</div>
             <div class="home-activity-desc">Short numeracy probes with quick feedback and intervention-ready logging.</div>
             <div class="home-activity-meta">Numeracy • MTSS • Progress Monitoring</div>
           </a>
           <a class="home-activity" href="operations.html">
-            <div class="home-activity-title">Operation Builder</div>
+            <div class="home-activity-title">Strategy Studio</div>
             <div class="home-activity-desc">Strategy-first operation practice with explicit coaching and session evidence.</div>
             <div class="home-activity-meta">Operations • Conceptual Math • Intervention</div>
           </a>
           <a class="home-activity" href="teacher-report.html" data-student-hidden="true">
-            <div class="home-activity-title">Teacher Report</div>
+            <div class="home-activity-title">Impact Dashboard</div>
             <div class="home-activity-desc">Printable growth summary with standards-based mastery heatmap.</div>
             <div class="home-activity-meta">Reports • Standards • Heatmap</div>
           </a>
