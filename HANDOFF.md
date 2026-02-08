@@ -55,7 +55,7 @@ node -e "const https=require('https');https.get('https://bkseatown.github.io/Cor
 - Kid-safe reveal clarity: `9.3/10`
 - Overall stabilization: `9.2/10`
 
-## New local (not yet pushed) work
+## Latest pushed work (`af111db1`)
 - Files changed: `index.html`, `home.js`, `style.css`.
 - Home now runs as a real 4-step onboarding wizard:
   - Step 1 role (Student / Parent-Caregiver / School Team)
@@ -74,7 +74,7 @@ node -e "const https=require('https');https.get('https://bkseatown.github.io/Cor
 - Tagalog translation audio can still show as unavailable for some words in Word Quest when no packed TL clip exists (UI now fails safely instead of playing wrong-language audio).
 
 ## Next max-impact steps
-1. Push the new Home wizard pass to `main`, then verify live behavior with cache-busted URLs.
+1. Verify GitHub Pages deployment has finished for `af111db1` and confirm cache-busted live pages show the wizard.
 2. Finish TL/ES/ZH Azure clip coverage for any words still falling back to disabled translation audio.
 3. Refresh visual baselines (`home`, `word-quest`) after stakeholder sign-off on new Home layout.
 
